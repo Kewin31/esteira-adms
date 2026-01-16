@@ -12,149 +12,93 @@ warnings.filterwarnings('ignore')
 # CONFIGURAÇÃO DA PÁGINA
 # ============================================
 st.set_page_config(
-    page_title="Dashboard Esteira ADMS | GEAT",
+    page_title="Esteira ADMS - Dashboard",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ============================================
-# CSS PERSONALIZADO - ESTILO EXECUTIVO
+# CSS PERSONALIZADO - MELHORIAS VISUAIS
 # ============================================
 st.markdown("""
 <style>
-    /* Estilos gerais - Estilo Executivo */
+    /* Estilos gerais */
     .main-header {
-        background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         padding: 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
         color: white;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
-    .metric-card-exec {
+    .metric-card {
         background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border: 1px solid #e9ecef;
+        padding: 1.2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #2a5298;
         margin-bottom: 1rem;
-        transition: transform 0.3s ease;
+        transition: transform 0.2s;
     }
     
-    .metric-card-exec:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
     }
     
     .metric-value {
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 700;
-        color: #1e3799;
+        color: #1e3c72;
         margin: 0;
         line-height: 1;
     }
     
     .metric-label {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         color: #6c757d;
         margin: 0.5rem 0 0 0;
         font-weight: 500;
     }
     
-    .metric-delta-positive {
+    .metric-delta {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 0.3rem;
+    }
+    
+    .delta-positive {
         color: #28a745;
-        font-size: 0.9rem;
-        font-weight: 600;
     }
     
-    .metric-delta-negative {
+    .delta-negative {
         color: #dc3545;
-        font-size: 0.9rem;
-        font-weight: 600;
     }
     
-    .section-title-exec {
-        color: #1e3799;
-        border-bottom: 3px solid #1e3799;
+    .delta-neutral {
+        color: #6c757d;
+    }
+    
+    .section-title {
+        color: #2d3748;
+        border-bottom: 2px solid #2a5298;
         padding-bottom: 0.5rem;
         margin-bottom: 1.5rem;
         font-size: 1.3rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    /* Sidebar Executivo */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
-    }
-    
-    .sidebar-section {
-        background: white;
-        padding: 1rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        border: 1px solid #dee2e6;
-    }
-    
-    /* Gráficos */
-    .plotly-graph-div {
-        border-radius: 12px;
-        border: 1px solid #e9ecef;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    /* Status */
-    .status-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
         font-weight: 600;
     }
     
-    .status-success { background: #d4edda; color: #155724; }
-    .status-warning { background: #fff3cd; color: #856404; }
-    .status-danger { background: #f8d7da; color: #721c24; }
+    /* Botão de limpar cache melhorado */
+    .stButton > button[kind="secondary"] {
+        border: 1px solid #dc3545;
+        color: #dc3545;
+    }
     
-    /* Botões */
-    .stButton > button {
-        background: linear-gradient(135deg, #1e3799 0%, #0c2461 100%);
+    .stButton > button[kind="secondary"]:hover {
+        background-color: #dc3545;
         color: white;
-        border: none;
-        padding: 0.5rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(30, 55, 153, 0.3);
-    }
-    
-    /* Rodapé */
-    .footer-exec {
-        text-align: center;
-        margin-top: 3rem;
-        padding-top: 1.5rem;
-        border-top: 2px solid #e9ecef;
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-    
-    .developer-badge {
-        display: inline-block;
-        background: linear-gradient(135deg, #1e3799 0%, #0c2461 100%);
-        color: white;
-        padding: 0.5rem 1.5rem;
-        border-radius: 20px;
-        font-weight: 600;
-        margin-top: 0.5rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -162,168 +106,163 @@ st.markdown("""
 # ============================================
 # FUNÇÕES AUXILIARES
 # ============================================
-def formatar_nome_brasileiro(nome_completo):
-    """Formata nomes no estilo brasileiro"""
-    if pd.isna(nome_completo):
+def formatar_nome_responsavel(nome):
+    """Corrige o formato dos nomes dos responsáveis"""
+    if pd.isna(nome):
         return "Não informado"
     
-    nome = str(nome_completo).strip().title()
+    nome_str = str(nome).strip()
     
-    # Lista de correções específicas
+    # Se for e-mail, extrair a parte antes do @
+    if '@' in nome_str:
+        partes = nome_str.split('@')[0]
+        
+        # Dividir por pontos, underlines ou hífens
+        for separador in ['.', '_', '-']:
+            if separador in partes:
+                partes = partes.replace(separador, ' ')
+        
+        # Capitalizar e remover números
+        partes = ' '.join([p.capitalize() for p in partes.split() if not p.isdigit()])
+        return partes
+    
+    # Se já for um nome, apenas capitalizar
+    nome_formatado = nome_str.title()
+    
+    # Corrigir conectivos comuns
     correcoes = {
-        'Da ': 'da ',
-        'De ': 'de ',
-        'Do ': 'do ',
-        'Das ': 'das ',
-        'Dos ': 'dos ',
-        'E ': 'e ',
-        'Adm': 'ADM',
-        'Sre': 'SRE',
-        'Ti': 'TI',
-        'Rh': 'RH',
-        'Dp': 'DP',
-        'Fin': 'FIN',
-        'Com': 'COM',
-        'Tec': 'TEC',
+        ' Da ': ' da ',
+        ' De ': ' de ',
+        ' Do ': ' do ',
+        ' Das ': ' das ',
+        ' Dos ': ' dos ',
+        ' E ': ' e ',
     }
     
-    # Aplicar correções
     for errado, correto in correcoes.items():
-        if nome.startswith(errado):
-            nome = correto + nome[len(errado):]
-        nome = nome.replace(' ' + errado, ' ' + correto)
+        nome_formatado = nome_formatado.replace(errado, correto)
     
-    # Extrair primeiro e último nome para e-mails
-    if '@' in nome:
-        partes = nome.split('@')[0].split('.')
-        if len(partes) >= 2:
-            primeiro = partes[0].title()
-            ultimo = partes[-1].title()
-            # Formatar como "Primeiro Último"
-            nome = f"{primeiro} {ultimo}"
-        else:
-            nome = partes[0].title()
-    
-    return nome
+    return nome_formatado
 
-def calcular_crescimento(df_atual, df_anterior, coluna):
-    """Calcula crescimento percentual entre períodos"""
-    if df_anterior.empty:
-        return 0
+def calcular_crescimento(valor_atual, valor_anterior):
+    """Calcula crescimento percentual"""
+    if valor_anterior == 0:
+        return 0, "neutral"
     
-    atual = len(df_atual)
-    anterior = len(df_anterior)
+    crescimento = ((valor_atual - valor_anterior) / valor_anterior) * 100
     
-    if anterior == 0:
-        return 0
-    
-    crescimento = ((atual - anterior) / anterior) * 100
-    return round(crescimento, 1)
+    if crescimento > 0:
+        return round(crescimento, 1), "positive"
+    elif crescimento < 0:
+        return round(crescimento, 1), "negative"
+    else:
+        return 0, "neutral"
 
-def criar_indicador(valor, label, crescimento=None, icone="📊"):
-    """Cria card de indicador executivo"""
-    delta_html = ""
+def criar_card_indicador(valor, label, crescimento=None, icone="📊"):
+    """Cria card de indicador visualmente atraente"""
     if crescimento is not None:
-        if crescimento > 0:
-            delta_html = f'<div class="metric-delta-positive">📈 +{crescimento}%</div>'
-        elif crescimento < 0:
-            delta_html = f'<div class="metric-delta-negative">📉 {crescimento}%</div>'
+        valor_cresc, tipo_cresc = crescimento
+        if tipo_cresc == "positive":
+            delta_html = f'<div class="metric-delta delta-positive">📈 +{valor_cresc}%</div>'
+        elif tipo_cresc == "negative":
+            delta_html = f'<div class="metric-delta delta-negative">📉 {valor_cresc}%</div>'
         else:
-            delta_html = f'<div style="color: #6c757d; font-size: 0.9rem;">➡️ Estável</div>'
+            delta_html = f'<div class="metric-delta delta-neutral">➡️ Estável</div>'
+    else:
+        delta_html = ''
     
-    return f"""
-    <div class="metric-card-exec">
-        <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 1.5rem; margin-right: 0.5rem;">{icone}</span>
-            <div>
+    return f'''
+    <div class="metric-card">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+            <span style="font-size: 1.5rem;">{icone}</span>
+            <div style="flex-grow: 1;">
                 <div class="metric-value">{valor:,}</div>
                 <div class="metric-label">{label}</div>
                 {delta_html}
             </div>
         </div>
     </div>
-    """
+    '''
 
 @st.cache_data
-def carregar_arquivo_local(caminho_arquivo):
-    """Carrega arquivo do sistema de arquivos"""
+def carregar_dados(uploaded_file=None, caminho_arquivo=None):
+    """Carrega e processa os dados"""
     try:
-        if os.path.exists(caminho_arquivo):
+        if uploaded_file:
+            content = uploaded_file.getvalue().decode('utf-8-sig')
+        elif caminho_arquivo and os.path.exists(caminho_arquivo):
             with open(caminho_arquivo, 'r', encoding='utf-8-sig') as f:
                 content = f.read()
-            
-            lines = content.split('\n')
-            
-            # Encontrar cabeçalho
-            header_line = None
+        else:
+            return None, "Nenhum arquivo fornecido"
+        
+        lines = content.split('\n')
+        
+        # Encontrar cabeçalho
+        header_line = None
+        for i, line in enumerate(lines):
+            if line.startswith('"Chamado","Tipo Chamado"'):
+                header_line = i
+                break
+        
+        if header_line is None:
             for i, line in enumerate(lines):
-                if line.startswith('"Chamado","Tipo Chamado"'):
+                if '"Chamado"' in line and '"Tipo Chamado"' in line:
                     header_line = i
                     break
-            
-            if header_line is None:
-                for i, line in enumerate(lines):
-                    if '"Chamado"' in line and '"Tipo Chamado"' in line:
-                        header_line = i
-                        break
-            
-            if header_line is None:
-                return None, "Formato de arquivo inválido"
-            
-            # Ler dados
-            data_str = '\n'.join(lines[header_line:])
-            df = pd.read_csv(io.StringIO(data_str), quotechar='"', dtype={'Chamado': str})
-            
-            # Renomear colunas para português
-            col_mapping = {
-                'Chamado': 'ID_Chamado',
-                'Tipo Chamado': 'Tipo_Chamado',
-                'Responsável': 'Responsável',
-                'Status': 'Status',
-                'Criado': 'Data_Criação',
-                'Modificado': 'Data_Modificação',
-                'Modificado por': 'Modificado_Por',
-                'Prioridade': 'Prioridade',
-                'Sincronização': 'Sincronização',
-                'SRE': 'SRE',
-                'Empresa': 'Empresa',
-                'Revisões': 'Revisões'
-            }
-            
-            df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
-            
-            # Converter datas
-            date_columns = ['Data_Criação', 'Data_Modificação']
-            for col in date_columns:
-                if col in df.columns:
-                    df[col] = pd.to_datetime(df[col], errors='coerce', format='ISO8601')
-            
-            # Extrair informações temporais
-            if 'Data_Criação' in df.columns:
-                df['Ano'] = df['Data_Criação'].dt.year
-                df['Mês'] = df['Data_Criação'].dt.month
-                df['Dia'] = df['Data_Criação'].dt.day
-                df['Mês_Ano'] = df['Data_Criação'].dt.strftime('%b/%Y')
-                df['Nome_Mês'] = df['Data_Criação'].dt.strftime('%B')
-                df['Nome_Mês_PT'] = df['Data_Criação'].dt.month.map({
-                    1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
-                    5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
-                    9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
-                })
-                df['Ano_Mês'] = df['Data_Criação'].dt.strftime('%Y-%m')
-            
-            # Formatar nomes dos responsáveis
-            if 'Responsável' in df.columns:
-                df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_brasileiro)
-            
-            # Converter revisões
-            if 'Revisões' in df.columns:
-                df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
-            
-            return df, "✅ Arquivo carregado com sucesso"
         
-        else:
-            return None, "Arquivo não encontrado"
+        if header_line is None:
+            return None, "Formato de arquivo inválido"
+        
+        # Ler dados
+        data_str = '\n'.join(lines[header_line:])
+        df = pd.read_csv(io.StringIO(data_str), quotechar='"')
+        
+        # Renomear colunas
+        col_mapping = {
+            'Chamado': 'Chamado',
+            'Tipo Chamado': 'Tipo_Chamado',
+            'Responsável': 'Responsável',
+            'Status': 'Status',
+            'Criado': 'Criado',
+            'Modificado': 'Modificado',
+            'Modificado por': 'Modificado_por',
+            'Prioridade': 'Prioridade',
+            'Sincronização': 'Sincronização',
+            'SRE': 'SRE',
+            'Empresa': 'Empresa',
+            'Revisões': 'Revisões'
+        }
+        
+        df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
+        
+        # Formatar nomes dos responsáveis
+        if 'Responsável' in df.columns:
+            df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
+        
+        # Converter datas
+        date_columns = ['Criado', 'Modificado']
+        for col in date_columns:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+        
+        # Extrair informações temporais
+        if 'Criado' in df.columns:
+            df['Ano'] = df['Criado'].dt.year
+            df['Mês'] = df['Criado'].dt.month
+            df['Mês_Ano'] = df['Criado'].dt.strftime('%b/%Y')
+            df['Nome_Mês'] = df['Criado'].dt.month.map({
+                1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+            })
+            df['Ano_Mês'] = df['Criado'].dt.strftime('%Y-%m')
+        
+        # Converter revisões para numérico
+        if 'Revisões' in df.columns:
+            df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
+        
+        return df, "✅ Dados carregados com sucesso"
     
     except Exception as e:
         return None, f"Erro: {str(e)}"
@@ -332,334 +271,264 @@ def carregar_arquivo_local(caminho_arquivo):
 # SIDEBAR - FILTROS
 # ============================================
 with st.sidebar:
-    st.markdown("""
-    <div style="text-align: center; padding: 1rem 0;">
-        <h3 style="color: #1e3799; margin: 0;">⚙️ Filtros</h3>
-        <p style="color: #6c757d; margin: 0; font-size: 0.9rem;">Personalize sua análise</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
+    st.markdown("## ⚙️ Filtros")
     st.markdown("---")
     
     # Inicializar session state
     if 'df_original' not in st.session_state:
         st.session_state.df_original = None
         st.session_state.df_filtrado = None
-        st.session_state.status_carregamento = "📂 Aguardando dados..."
     
     # Upload de arquivo
-    with st.container():
-        st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-        st.markdown("**📤 Importar Dados**")
-        
-        uploaded_file = st.file_uploader(
-            "Selecione o arquivo CSV",
-            type=['csv'],
-            label_visibility="collapsed"
-        )
-        
-        if uploaded_file is not None:
-            with st.spinner('Processando dados...'):
-                df_novo, status = carregar_arquivo_local(uploaded_file.name)
-                if df_novo is not None:
-                    # Salvar conteúdo do arquivo temporariamente
-                    with open(uploaded_file.name, 'wb') as f:
-                        f.write(uploaded_file.getbuffer())
-                    
-                    df_novo, status = carregar_arquivo_local(uploaded_file.name)
-                    if df_novo is not None:
-                        st.session_state.df_original = df_novo
-                        st.session_state.df_filtrado = df_novo.copy()
-                        st.session_state.status_carregamento = f"✅ {status}"
-                        st.success("Dados carregados!")
-                        os.remove(uploaded_file.name)  # Limpar arquivo temporário
-                        st.rerun()
-                    else:
-                        st.error(status)
-        st.markdown('</div>', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader(
+        "📤 Carregar arquivo CSV",
+        type=['csv'],
+        help="Faça upload do arquivo da esteira de demandas"
+    )
     
-    # Carregar arquivo local automaticamente
+    if uploaded_file is not None:
+        with st.spinner('Processando dados...'):
+            df_novo, status = carregar_dados(uploaded_file=uploaded_file)
+            if df_novo is not None:
+                st.session_state.df_original = df_novo
+                st.session_state.df_filtrado = df_novo.copy()
+                st.success(status)
+                st.rerun()
+            else:
+                st.error(status)
+    
+    # Tentar carregar arquivo local
     if st.session_state.df_original is None:
         caminhos = ['data/esteira_demandas.csv', 'esteira_demandas.csv', 'dados.csv']
         for caminho in caminhos:
             if os.path.exists(caminho):
-                df_carregado, status = carregar_arquivo_local(caminho)
-                if df_carregado is not None:
-                    st.session_state.df_original = df_carregado
-                    st.session_state.df_filtrado = df_carregado.copy()
-                    st.session_state.status_carregamento = f"✅ {status}"
+                df_local, status = carregar_dados(caminho_arquivo=caminho)
+                if df_local is not None:
+                    st.session_state.df_original = df_local
+                    st.session_state.df_filtrado = df_local.copy()
                     st.rerun()
                 break
     
-    # Filtros apenas se houver dados
-    if st.session_state.df_original is not None:
-        with st.container():
-            st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-            st.markdown("**🔍 Filtros de Análise**")
-            
-            df = st.session_state.df_filtrado.copy() if st.session_state.df_filtrado is not None else st.session_state.df_original.copy()
-            
-            # Filtro por Ano
-            if 'Ano' in df.columns:
-                anos = sorted(df['Ano'].dropna().unique().astype(int))
-                ano_selecionado = st.selectbox(
-                    "📅 Selecione o Ano",
-                    options=anos,
-                    index=len(anos)-1 if anos else 0
-                )
-                df = df[df['Ano'] == ano_selecionado]
-            
-            # Filtro por Responsável
-            if 'Responsável_Formatado' in df.columns:
-                responsaveis = ['Todos os Responsáveis'] + sorted(df['Responsável_Formatado'].dropna().unique())
-                responsavel_selecionado = st.selectbox(
-                    "👤 Filtrar por Responsável",
-                    options=responsaveis
-                )
-                if responsavel_selecionado != 'Todos os Responsáveis':
-                    df = df[df['Responsável_Formatado'] == responsavel_selecionado]
-            
-            # Busca por Chamado
-            busca_chamado = st.text_input(
-                "🔎 Buscar Chamado (ID)",
-                placeholder="Digite o ID do chamado..."
-            )
-            if busca_chamado:
-                df = df[df['ID_Chamado'].astype(str).str.contains(busca_chamado, na=False)]
-            
-            # Filtro por Status
-            if 'Status' in df.columns:
-                status_opcoes = ['Todos os Status'] + sorted(df['Status'].dropna().unique())
-                status_selecionado = st.selectbox(
-                    "📊 Filtrar por Status",
-                    options=status_opcoes
-                )
-                if status_selecionado != 'Todos os Status':
-                    df = df[df['Status'] == status_selecionado]
-            
-            # Filtro por Tipo
-            if 'Tipo_Chamado' in df.columns:
-                tipos = ['Todos os Tipos'] + sorted(df['Tipo_Chamado'].dropna().unique())
-                tipo_selecionado = st.selectbox(
-                    "📝 Filtrar por Tipo",
-                    options=tipos
-                )
-                if tipo_selecionado != 'Todos os Tipos':
-                    df = df[df['Tipo_Chamado'] == tipo_selecionado]
-            
-            # Atualizar dados filtrados
-            st.session_state.df_filtrado = df
-            
-            st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
-            st.markdown('</div>', unsafe_allow_html=True)
+    # Filtrar por responsável
+    if st.session_state.df_filtrado is not None:
+        st.markdown("### 🔍 Filtrar por Responsável")
         
-        # Botões de ação
-        with st.container():
-            st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-            st.markdown("**⚡ Ações Rápidas**")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("🔄 Limpar Filtros", use_container_width=True):
-                    st.session_state.df_filtrado = st.session_state.df_original.copy()
-                    st.rerun()
-            
-            with col2:
-                if st.button("🗑️ Limpar Cache", use_container_width=True, type="secondary"):
-                    st.cache_data.clear()
-                    st.session_state.clear()
-                    st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        st.info(st.session_state.status_carregamento)
+        # Obter lista única de responsáveis formatados
+        responsaveis = ['Todos'] + sorted(st.session_state.df_filtrado['Responsável_Formatado'].dropna().unique().tolist())
+        
+        responsavel_selecionado = st.selectbox(
+            "Selecione o responsável:",
+            options=responsaveis
+        )
+        
+        if responsavel_selecionado != 'Todos':
+            df_filtrado = st.session_state.df_filtrado[
+                st.session_state.df_filtrado['Responsável_Formatado'] == responsavel_selecionado
+            ].copy()
+        else:
+            df_filtrado = st.session_state.df_filtrado.copy()
+        
+        st.session_state.df_filtrado = df_filtrado
+        st.markdown(f"**Registros filtrados:** {len(df_filtrado):,}")
+    
+    st.markdown("---")
+    
+    # Botão para limpar cache - FUNCIONANDO
+    if st.button("🗑️ **Limpar Cache do Sistema**", type="secondary", use_container_width=True):
+        st.cache_data.clear()
+        st.session_state.clear()
+        st.success("Cache limpo com sucesso!")
+        st.rerun()
 
 # ============================================
 # CONTEÚDO PRINCIPAL
 # ============================================
 
-# HEADER EXECUTIVO
+# Header
 st.markdown("""
 <div class="main-header">
-    <div style="display: flex; align-items: center; justify-content: space-between;">
-        <div>
-            <h1 style="color: white; margin: 0; font-size: 1.8rem; font-weight: 700;">📊 DASHBOARD ESTEIRA ADMS</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 0.3rem 0 0 0; font-size: 1rem;">
-            Sistema Executivo de Análise de Demandas | Monitoramento em Tempo Real
-            </p>
-        </div>
-        <div style="background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 8px;">
-            <p style="margin: 0; color: white; font-size: 0.9rem;">
-            <strong>GEAT</strong> | Gestão Estratégica
-            </p>
-        </div>
-    </div>
+    <h1 style="color: white; margin: 0;">📊 Dashboard Esteira ADMS</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0;">
+    Análise e monitoramento de demandas
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
 # ============================================
-# INDICADORES PRINCIPAIS COM CRESCIMENTO
+# EXIBIR DASHBOARD SE HOUVER DADOS
 # ============================================
 if st.session_state.df_original is not None:
-    df_atual = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
+    df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
+    
+    # ============================================
+    # INDICADORES PRINCIPAIS COM CRESCIMENTO
+    # ============================================
+    st.markdown("## 📈 Indicadores Principais")
     
     # Calcular dados do período anterior para comparação
-    if 'Ano' in df_atual.columns and 'Data_Criação' in df_atual.columns:
-        ano_atual = df_atual['Ano'].mode()[0] if not df_atual['Ano'].mode().empty else df_atual['Ano'].max()
-        df_periodo_anterior = st.session_state.df_original[
+    if 'Ano' in df.columns:
+        ano_atual = df['Ano'].mode()[0] if not df['Ano'].mode().empty else df['Ano'].max()
+        df_ano_anterior = st.session_state.df_original[
             st.session_state.df_original['Ano'] == (ano_atual - 1)
-        ]
+        ] if not st.session_state.df_original.empty else pd.DataFrame()
     else:
-        df_periodo_anterior = pd.DataFrame()
-    
-    st.markdown("## 📈 INDICADORES DE DESEMPENHO")
+        df_ano_anterior = pd.DataFrame()
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        total_atual = len(df_atual)
-        total_anterior = len(df_periodo_anterior)
-        crescimento_total = calcular_crescimento(df_atual, df_periodo_anterior, 'total')
-        st.markdown(criar_indicador(total_atual, "Total de Demandas", crescimento_total, "📋"), unsafe_allow_html=True)
+        total_atual = len(df)
+        total_anterior = len(df_ano_anterior) if not df_ano_anterior.empty else 0
+        crescimento_total = calcular_crescimento(total_atual, total_anterior)
+        st.markdown(criar_card_indicador(
+            total_atual, 
+            "Total de Demandas", 
+            crescimento_total, 
+            "📋"
+        ), unsafe_allow_html=True)
     
     with col2:
-        if 'Status' in df_atual.columns:
-            sincronizados = len(df_atual[df_atual['Status'] == 'Sincronizado'])
-            sincronizados_anterior = len(df_periodo_anterior[df_periodo_anterior['Status'] == 'Sincronizado']) if not df_periodo_anterior.empty else 0
-            crescimento_sinc = calcular_crescimento(
-                df_atual[df_atual['Status'] == 'Sincronizado'], 
-                df_periodo_anterior[df_periodo_anterior['Status'] == 'Sincronizado'] if not df_periodo_anterior.empty else pd.DataFrame(),
-                'sincronizados'
-            )
-            st.markdown(criar_indicador(sincronizados, "Sincronizados", crescimento_sinc, "✅"), unsafe_allow_html=True)
+        if 'Status' in df.columns:
+            sincronizados = len(df[df['Status'] == 'Sincronizado'])
+            sincronizados_anterior = len(df_ano_anterior[df_ano_anterior['Status'] == 'Sincronizado']) if not df_ano_anterior.empty else 0
+            crescimento_sinc = calcular_crescimento(sincronizados, sincronizados_anterior)
+            st.markdown(criar_card_indicador(
+                sincronizados,
+                "Sincronizados",
+                crescimento_sinc,
+                "✅"
+            ), unsafe_allow_html=True)
     
     with col3:
-        if 'Tipo_Chamado' in df_atual.columns:
-            correcoes = len(df_atual[df_atual['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)])
-            correcoes_anterior = len(df_periodo_anterior[df_periodo_anterior['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)]) if not df_periodo_anterior.empty else 0
-            crescimento_corr = calcular_crescimento(
-                df_atual[df_atual['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)],
-                df_periodo_anterior[df_periodo_anterior['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)] if not df_periodo_anterior.empty else pd.DataFrame(),
-                'correcoes'
-            )
-            st.markdown(criar_indicador(correcoes, "Correções/Ajustes", crescimento_corr, "🔧"), unsafe_allow_html=True)
+        if 'Tipo_Chamado' in df.columns:
+            correcoes = len(df[df['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)])
+            correcoes_anterior = len(df_ano_anterior[df_ano_anterior['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)]) if not df_ano_anterior.empty else 0
+            crescimento_corr = calcular_crescimento(correcoes, correcoes_anterior)
+            st.markdown(criar_card_indicador(
+                correcoes,
+                "Correções/Ajustes",
+                crescimento_corr,
+                "🔧"
+            ), unsafe_allow_html=True)
     
     with col4:
-        if 'Revisões' in df_atual.columns:
-            total_revisoes = int(df_atual['Revisões'].sum())
-            total_revisoes_anterior = int(df_periodo_anterior['Revisões'].sum()) if not df_periodo_anterior.empty else 0
-            crescimento_rev = 0 if total_revisoes_anterior == 0 else round(((total_revisoes - total_revisoes_anterior) / total_revisoes_anterior) * 100, 1)
-            st.markdown(criar_indicador(total_revisoes, "Total de Revisões", crescimento_rev, "📝"), unsafe_allow_html=True)
+        if 'Revisões' in df.columns:
+            total_revisoes = int(df['Revisões'].sum())
+            total_revisoes_anterior = int(df_ano_anterior['Revisões'].sum()) if not df_ano_anterior.empty else 0
+            crescimento_rev = calcular_crescimento(total_revisoes, total_revisoes_anterior)
+            st.markdown(criar_card_indicador(
+                total_revisoes,
+                "Total de Revisões",
+                crescimento_rev,
+                "📝"
+            ), unsafe_allow_html=True)
     
     # ============================================
     # GRÁFICO DE DEMANDAS POR MÊS COM SELEÇÃO DE ANO
     # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title-exec">📅 DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+    st.markdown("## 📅 Demandas por Mês")
     
-    if 'Ano' in df_atual.columns and 'Nome_Mês_PT' in df_atual.columns:
-        col_ano, col_vazio = st.columns([1, 3])
-        
-        with col_ano:
-            anos_disponiveis = sorted(df_atual['Ano'].unique())
-            ano_grafico = st.selectbox(
-                "Selecione o ano para análise:",
-                options=anos_disponiveis,
-                key="ano_grafico"
-            )
+    if 'Ano' in df.columns and 'Nome_Mês' in df.columns:
+        # Seletor de ano
+        anos_disponiveis = sorted(df['Ano'].unique())
+        ano_selecionado = st.selectbox(
+            "Selecione o ano para visualizar:",
+            options=anos_disponiveis,
+            index=len(anos_disponiveis)-1 if anos_disponiveis else 0,
+            key="ano_demandas_mes"
+        )
         
         # Filtrar dados para o ano selecionado
-        df_ano = df_atual[df_atual['Ano'] == ano_grafico].copy()
+        df_ano = df[df['Ano'] == ano_selecionado].copy()
         
         if not df_ano.empty:
             # Ordenar meses corretamente
             ordem_meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                           'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
             
-            demandas_por_mes = df_ano.groupby('Nome_Mês_PT').size().reindex(ordem_meses).reset_index()
+            # Agrupar por mês
+            demandas_por_mes = df_ano.groupby('Nome_Mês').size().reset_index()
             demandas_por_mes.columns = ['Mês', 'Quantidade']
-            demandas_por_mes = demandas_por_mes.fillna(0)
             
-            # Criar gráfico com valores
-            fig_mes = go.Figure()
+            # Reordenar para manter ordem cronológica
+            demandas_por_mes['Mês'] = pd.Categorical(demandas_por_mes['Mês'], categories=ordem_meses, ordered=True)
+            demandas_por_mes = demandas_por_mes.sort_values('Mês').reset_index(drop=True)
             
-            fig_mes.add_trace(go.Bar(
-                x=demandas_por_mes['Mês'],
-                y=demandas_por_mes['Quantidade'],
-                text=demandas_por_mes['Quantidade'].astype(int),
-                textposition='outside',
-                marker_color='#1e3799',
-                marker_line_color='#0c2461',
-                marker_line_width=1,
-                opacity=0.9
-            ))
-            
-            fig_mes.update_layout(
-                title=f"Demandas em {ano_grafico}",
-                xaxis_title="Mês",
-                yaxis_title="Quantidade de Demandas",
-                plot_bgcolor='white',
-                height=450,
-                showlegend=False,
-                margin=dict(t=50, b=50, l=50, r=50),
-                xaxis=dict(
-                    tickangle=45,
-                    gridcolor='rgba(0,0,0,0.05)'
-                ),
-                yaxis=dict(
-                    gridcolor='rgba(0,0,0,0.05)'
-                )
+            # Criar gráfico com valores explícitos
+            fig_mes = px.bar(
+                demandas_por_mes,
+                x='Mês',
+                y='Quantidade',
+                title=f'Demandas em {ano_selecionado}',
+                labels={'Quantidade': 'Número de Demandas', 'Mês': 'Mês'},
+                text='Quantidade',
+                color='Quantidade',
+                color_continuous_scale='blues'
             )
             
-            # Adicionar valor total
-            total_ano = int(demandas_por_mes['Quantidade'].sum())
-            fig_mes.add_annotation(
-                x=0.5, y=0.95,
-                xref="paper", yref="paper",
-                text=f"Total no ano: {total_ano:,} demandas",
-                showarrow=False,
-                font=dict(size=12, color="#1e3799"),
-                bgcolor="rgba(255,255,255,0.8)",
-                bordercolor="#1e3799",
-                borderwidth=1,
-                borderpad=4
+            fig_mes.update_traces(
+                texttemplate='%{text}',
+                textposition='outside',
+                marker_line_color='rgb(8,48,107)',
+                marker_line_width=1.5,
+                opacity=0.9
+            )
+            
+            fig_mes.update_layout(
+                xaxis_title="Mês",
+                yaxis_title="Número de Demandas",
+                plot_bgcolor='white',
+                showlegend=False,
+                height=450,
+                xaxis=dict(
+                    tickangle=45,
+                    tickmode='array',
+                    tickvals=list(range(12)),
+                    ticktext=ordem_meses
+                )
             )
             
             st.plotly_chart(fig_mes, use_container_width=True)
             
-            # Estatísticas mensais
-            mes_max = demandas_por_mes.loc[demandas_por_mes['Quantidade'].idxmax()]
-            mes_min = demandas_por_mes.loc[demandas_por_mes['Quantidade'].idxmin()]
-            
+            # Estatísticas do ano selecionado
             col_stats1, col_stats2, col_stats3 = st.columns(3)
             with col_stats1:
-                st.metric("Mês com mais demandas", f"{mes_max['Mês']}: {int(mes_max['Quantidade']):,}")
+                total_ano = demandas_por_mes['Quantidade'].sum()
+                st.metric(f"Total em {ano_selecionado}", f"{total_ano:,}")
+            
             with col_stats2:
-                st.metric("Mês com menos demandas", f"{mes_min['Mês']}: {int(mes_min['Quantidade']):,}")
+                mes_max = demandas_por_mes.loc[demandas_por_mes['Quantidade'].idxmax()]
+                st.metric("Mês com mais demandas", f"{mes_max['Mês']}: {mes_max['Quantidade']:,}")
+            
             with col_stats3:
                 media_mensal = int(demandas_por_mes['Quantidade'].mean())
                 st.metric("Média mensal", f"{media_mensal:,}")
     
     # ============================================
-    # ERROS POR MÊS/ANO (BASEADO EM REVISÕES)
+    # ERROS POR MÊS/ANO (BASEADO EM REVISÕES) - CORRIGIDO
     # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title-exec">📈 ANÁLISE DE REVISÕES POR MÊS</div>', unsafe_allow_html=True)
+    st.markdown("## 📈 Erros/Retrabalhos por Mês (Baseado em Revisões)")
     
-    if 'Revisões' in df_atual.columns and 'Ano_Mês' in df_atual.columns:
-        # Considerar revisões como indicador de retrabalho/erros
-        df_revisoes = df_atual[df_atual['Revisões'] > 0].copy()
+    if 'Revisões' in df.columns and 'Ano_Mês' in df.columns:
+        # Filtrar apenas registros com revisões (indicador de retrabalho/erro)
+        df_com_revisoes = df[df['Revisões'] > 0].copy()
         
-        if not df_revisoes.empty:
-            revisoes_por_mes = df_revisoes.groupby('Ano_Mês').agg({
+        if not df_com_revisoes.empty:
+            # Agrupar por mês/ano
+            revisoes_por_mes = df_com_revisoes.groupby('Ano_Mês').agg({
                 'Revisões': 'sum',
-                'ID_Chamado': 'count'
+                'Chamado': 'count'
             }).reset_index()
             
             revisoes_por_mes.columns = ['Período', 'Total_Revisões', 'Chamados_Com_Revisão']
             revisoes_por_mes = revisoes_por_mes.sort_values('Período')
             
+            # Criar gráfico combinado
             fig_erros = go.Figure()
             
+            # Barras para total de revisões
             fig_erros.add_trace(go.Bar(
                 x=revisoes_por_mes['Período'],
                 y=revisoes_por_mes['Total_Revisões'],
@@ -667,9 +536,10 @@ if st.session_state.df_original is not None:
                 text=revisoes_por_mes['Total_Revisões'],
                 textposition='outside',
                 marker_color='#e74c3c',
-                opacity=0.9
+                opacity=0.8
             ))
             
+            # Linha para chamados com revisão
             fig_erros.add_trace(go.Scatter(
                 x=revisoes_por_mes['Período'],
                 y=revisoes_por_mes['Chamados_Com_Revisão'],
@@ -680,11 +550,11 @@ if st.session_state.df_original is not None:
             ))
             
             fig_erros.update_layout(
-                title="Evolução de Revisões (Indicador de Retrabalho)",
-                xaxis_title="Período (Mês/Ano)",
-                yaxis_title="Total de Revisões",
+                title='Evolução de Revisões (Indicador de Retrabalho/Erro)',
+                xaxis_title='Período (Mês/Ano)',
+                yaxis_title='Total de Revisões',
                 yaxis2=dict(
-                    title="Chamados com Revisão",
+                    title='Chamados com Revisão',
                     overlaying='y',
                     side='right'
                 ),
@@ -704,31 +574,37 @@ if st.session_state.df_original is not None:
             st.plotly_chart(fig_erros, use_container_width=True)
             
             # Estatísticas de revisões
-            col_rev1, col_rev2, col_rev3 = st.columns(3)
-            with col_rev1:
-                st.metric("Média de revisões por chamado", f"{df_atual['Revisões'].mean():.1f}")
-            with col_rev2:
-                chamados_com_revisao = len(df_atual[df_atual['Revisões'] > 0])
-                percent_revisao = (chamados_com_revisao / len(df_atual)) * 100
-                st.metric("Chamados com revisão", f"{percent_revisao:.1f}%")
-            with col_rev3:
-                st.metric("Maior nº de revisões", f"{int(df_atual['Revisões'].max())}")
+            col_erro1, col_erro2, col_erro3 = st.columns(3)
+            with col_erro1:
+                chamados_com_revisao = len(df_com_revisoes)
+                percentual = (chamados_com_revisao / len(df)) * 100
+                st.metric("Chamados com revisão", f"{chamados_com_revisao:,}", f"{percentual:.1f}% do total")
+            
+            with col_erro2:
+                media_revisoes = df_com_revisoes['Revisões'].mean()
+                st.metric("Média de revisões", f"{media_revisoes:.1f}")
+            
+            with col_erro3:
+                max_revisoes = int(df_com_revisoes['Revisões'].max())
+                st.metric("Máximo de revisões", f"{max_revisoes:,}")
         else:
-            st.info("✅ Nenhuma revisão registrada no período")
+            st.info("✅ Nenhum registro com revisões encontrado no período")
     
     # ============================================
-    # TOP RANKINGS
+    # GRÁFICOS EXISTENTES (mantidos da versão anterior)
     # ============================================
-    col_rank1, col_rank2 = st.columns(2)
+    st.markdown("---")
     
-    with col_rank1:
-        st.markdown('<div class="section-title-exec">👥 TOP 10 - RESPONSÁVEIS</div>', unsafe_allow_html=True)
+    col_grafico1, col_grafico2 = st.columns(2)
+    
+    with col_grafico1:
+        st.markdown("### 👥 Top 10 Responsáveis")
         
-        if 'Responsável_Formatado' in df_atual.columns:
-            top_responsaveis = df_atual['Responsável_Formatado'].value_counts().head(10).reset_index()
+        if 'Responsável_Formatado' in df.columns:
+            top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
             top_responsaveis.columns = ['Responsável', 'Demandas']
             
-            fig_top = px.bar(
+            fig_resp = px.bar(
                 top_responsaveis,
                 x='Demandas',
                 y='Responsável',
@@ -736,16 +612,15 @@ if st.session_state.df_original is not None:
                 title='',
                 text='Demandas',
                 color='Demandas',
-                color_continuous_scale='Blues'
+                color_continuous_scale='blues'
             )
             
-            fig_top.update_traces(
-                textposition='outside',
-                marker_line_color='#0c2461',
-                marker_line_width=1
+            fig_resp.update_traces(
+                texttemplate='%{text}',
+                textposition='outside'
             )
             
-            fig_top.update_layout(
+            fig_resp.update_layout(
                 height=400,
                 plot_bgcolor='white',
                 showlegend=False,
@@ -753,47 +628,69 @@ if st.session_state.df_original is not None:
                 margin=dict(t=20, b=20, l=20, r=20)
             )
             
-            st.plotly_chart(fig_top, use_container_width=True)
+            st.plotly_chart(fig_resp, use_container_width=True)
     
-    with col_rank2:
-        st.markdown('<div class="section-title-exec">🏆 TOP SRE - SINCRONISMOS</div>', unsafe_allow_html=True)
+    with col_grafico2:
+        st.markdown("### 📊 Distribuição por Status")
         
-        if 'SRE' in df_atual.columns and 'Status' in df_atual.columns:
-            df_sincronizados = df_atual[df_atual['Status'] == 'Sincronizado']
-            
-            if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
-                top_sre = df_sincronizados['SRE'].value_counts().head(10).reset_index()
-                top_sre.columns = ['SRE', 'Sincronismos']
-                
-                fig_sre = px.bar(
-                    top_sre,
-                    x='Sincronismos',
-                    y='SRE',
-                    orientation='h',
-                    title='',
-                    text='Sincronismos',
-                    color='Sincronismos',
-                    color_continuous_scale='Greens'
-                )
-                
-                fig_sre.update_traces(
-                    textposition='outside',
-                    marker_line_color='#27ae60',
-                    marker_line_width=1
-                )
-                
-                fig_sre.update_layout(
-                    height=400,
-                    plot_bgcolor='white',
-                    showlegend=False,
-                    yaxis={'categoryorder': 'total ascending'},
-                    margin=dict(t=20, b=20, l=20, r=20)
-                )
-                
-                st.plotly_chart(fig_sre, use_container_width=True)
-            else:
-                st.info("Sem dados de SRE disponíveis")
+        if 'Status' in df.columns:
+            status_dist = df['Status'].value_counts()
+            fig_status = px.pie(
+                values=status_dist.values,
+                names=status_dist.index,
+                title='',
+                hole=0.4,
+                color_discrete_sequence=px.colors.qualitative.Set3
+            )
+            fig_status.update_traces(
+                textposition='inside', 
+                textinfo='percent+label',
+                textfont_size=12
+            )
+            fig_status.update_layout(height=400)
+            st.plotly_chart(fig_status, use_container_width=True)
     
     # ============================================
-    # VISÃO DETALHADA
-    # =
+    # ÚLTIMAS DEMANDAS
+    # ============================================
+    st.markdown("---")
+    st.markdown("### 🕒 Últimas Demandas Registradas")
+    
+    if 'Criado' in df.columns:
+        ultimas_demandas = df.sort_values('Criado', ascending=False).head(10)
+        
+        display_cols = []
+        if 'Chamado' in ultimas_demandas.columns:
+            display_cols.append('Chamado')
+        if 'Tipo_Chamado' in ultimas_demandas.columns:
+            display_cols.append('Tipo_Chamado')
+        if 'Responsável_Formatado' in ultimas_demandas.columns:
+            display_cols.append('Responsável')
+            ultimas_demandas['Responsável'] = ultimas_demandas['Responsável_Formatado']
+        if 'Status' in ultimas_demandas.columns:
+            display_cols.append('Status')
+        if 'Criado' in ultimas_demandas.columns:
+            display_cols.append('Data_Criação')
+            ultimas_demandas['Data_Criação'] = ultimas_demandas['Criado'].dt.strftime('%d/%m/%Y %H:%M')
+        
+        if display_cols:
+            st.dataframe(
+                ultimas_demandas[display_cols],
+                use_container_width=True,
+                height=300
+            )
+
+else:
+    # Tela inicial
+    st.info("📂 Faça upload do arquivo CSV da esteira de demandas na barra lateral para começar a análise")
+
+# ============================================
+# RODAPÉ
+# ============================================
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; color: #666; font-size: 0.9rem;">
+    <p>Desenvolvido por <strong>Kewin Marcel Ramirez Ferreira | GEAT</strong></p>
+    <p>Dashboard Esteira ADMS • © 2024</p>
+</div>
+""", unsafe_allow_html=True)
