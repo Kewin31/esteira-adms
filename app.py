@@ -2,359 +2,643 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
+import warnings
+warnings.filterwarnings('ignore')
 
-# Configuração da página
+# ============================================
+# CONFIGURAÇÃO DA PÁGINA
+# ============================================
 st.set_page_config(
-    page_title="Esteira de Demandas ADMS",
+    page_title="Esteira ADMS - Dashboard",
     page_icon="📊",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Título com atualização
-st.title("📊 Esteira de Demandas ADMS")
-
-# Processar o arquivo CSV
-@st.cache_data
-def load_data(file):
-    # Ler o arquivo CSV
-    content = file.getvalue().decode('utf-8-sig')
-    
-    # Encontrar onde começam os dados (após o schema)
-    lines = content.split('\n')
-    
-    # Procurar a linha de cabeçalho
-    header_line = None
-    for i, line in enumerate(lines):
-        if line.startswith('"Chamado","Tipo Chamado"'):
-            header_line = i
-            break
-    
-    if header_line is None:
-        # Tentar encontrar com formato ligeiramente diferente
-        for i, line in enumerate(lines):
-            if '"Chamado"' in line and '"Tipo Chamado"' in line:
-                header_line = i
-                break
-    
-    if header_line is None:
-        st.error("Não foi possível encontrar o cabeçalho dos dados no arquivo.")
-        return pd.DataFrame()
-    
-    # Ler os dados a partir da linha do cabeçalho
-    data_str = '\n'.join(lines[header_line:])
-    df = pd.read_csv(io.StringIO(data_str), quotechar='"')
-    
-    # Renomear colunas para padronizar
-    col_mapping = {
-        'Chamado': 'Chamado',
-        'Tipo Chamado': 'Tipo Chamado',
-        'Responsável': 'Responsável',
-        'Status': 'Status',
-        'Criado': 'Criado',
-        'Modificado': 'Modificado',
-        'Modificado por': 'Modificado por',
-        'Prioridade': 'Prioridade',
-        'Sincronização': 'Sincronização',
-        'SRE': 'SRE',
-        'Empresa': 'Empresa',
-        'Revisões': 'Revisões'
+# ============================================
+# CSS PERSONALIZADO
+# ============================================
+st.markdown("""
+<style>
+    /* Estilos gerais */
+    .main-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
-    # Renomear colunas para nomes mais consistentes
-    df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
+    .metric-card {
+        background: white;
+        padding: 1.2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-left: 4px solid #667eea;
+        margin-bottom: 1rem;
+    }
     
-    # Converter colunas de data
+    .footer {
+        text-align: center;
+        margin-top: 3rem;
+        padding: 1rem;
+        color: #666;
+        font-size: 0.9rem;
+        border-top: 1px solid #eaeaea;
+    }
+    
+    .section-title {
+        color: #2d3748;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 1.4rem;
+    }
+    
+    /* Botões */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 5px;
+        font-weight: 500;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2rem;
+        background-color: transparent;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        padding: 0.5rem 1rem;
+        border-radius: 5px 5px 0 0;
+    }
+    
+    /* Uploader */
+    .uploadedFile {
+        background-color: #f7fafc;
+        border: 2px dashed #cbd5e0;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    /* Dataframe */
+    .dataframe {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ============================================
+# FUNÇÕES AUXILIARES
+# ============================================
+def extrair_nome(email):
+    """Extrai nome do e-mail ou string"""
+    if pd.isna(email):
+        return "Não informado"
+    
+    email_str = str(email).strip()
+    
+    # Se for e-mail, extrair nome antes do @
+    if '@' in email_str:
+        nome = email_str.split('@')[0]
+        # Remover pontos e números, capitalizar
+        nome = nome.replace('.', ' ').replace('_', ' ').title()
+        # Remover números no final
+        while nome and nome[-1].isdigit():
+            nome = nome[:-1]
+        return nome.strip()
+    else:
+        # Já é um nome
+        return email_str.title()
+
+def processar_dados(df):
+    """Processa os dados e extrai informações"""
+    # Extrair nomes dos responsáveis
+    if 'Responsável' in df.columns:
+        df['Responsável_Nome'] = df['Responsável'].apply(extrair_nome)
+    
+    # Converter datas
     date_columns = ['Criado', 'Modificado']
     for col in date_columns:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce', format='ISO8601')
     
-    # Extrair ano da data de criação
+    # Extrair informações de tempo
     if 'Criado' in df.columns:
         df['Ano'] = df['Criado'].dt.year
+        df['Mês'] = df['Criado'].dt.month
+        df['Dia'] = df['Criado'].dt.day
+        df['Mês_Ano'] = df['Criado'].dt.strftime('%b/%Y')
+        df['Dia_Mês'] = df['Criado'].dt.strftime('%d/%m')
     
-    # Converter Revisões para numérico
+    # Converter revisões
     if 'Revisões' in df.columns:
         df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
     
     return df
 
-# Interface principal
-uploaded_file = st.file_uploader("📁 Carregue o arquivo CSV da Esteira de Demandas", type=['csv'])
-
-if uploaded_file is not None:
-    # Carregar dados
-    df = load_data(uploaded_file)
+@st.cache_data
+def load_data(file):
+    """Carrega e processa o arquivo CSV"""
+    try:
+        # Ler o arquivo CSV
+        content = file.getvalue().decode('utf-8-sig')
+        lines = content.split('\n')
+        
+        # Encontrar cabeçalho
+        header_line = None
+        for i, line in enumerate(lines):
+            if line.startswith('"Chamado","Tipo Chamado"'):
+                header_line = i
+                break
+        
+        if header_line is None:
+            for i, line in enumerate(lines):
+                if '"Chamado"' in line and '"Tipo Chamado"' in line:
+                    header_line = i
+                    break
+        
+        if header_line is None:
+            st.error("Formato de arquivo inválido.")
+            return pd.DataFrame()
+        
+        # Ler dados
+        data_str = '\n'.join(lines[header_line:])
+        df = pd.read_csv(io.StringIO(data_str), quotechar='"')
+        
+        # Renomear colunas
+        col_mapping = {
+            'Chamado': 'Chamado',
+            'Tipo Chamado': 'Tipo_Chamado',
+            'Responsável': 'Responsável',
+            'Status': 'Status',
+            'Criado': 'Criado',
+            'Modificado': 'Modificado',
+            'Modificado por': 'Modificado_por',
+            'Prioridade': 'Prioridade',
+            'Sincronização': 'Sincronização',
+            'SRE': 'SRE',
+            'Empresa': 'Empresa',
+            'Revisões': 'Revisões'
+        }
+        
+        df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
+        
+        # Processar dados
+        df = processar_dados(df)
+        
+        return df
     
-    if not df.empty:
-        # Mostrar data de atualização
-        last_update = df['Modificado'].max() if 'Modificado' in df.columns else datetime.now()
-        st.sidebar.markdown(f"**Atualizado em:** {last_update.strftime('%d/%m/%Y %H:%M') if pd.notnull(last_update) else 'N/A'}")
-        
-        # Filtrar por ano
-        if 'Ano' in df.columns:
-            anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
-            ano_selecionado = st.sidebar.selectbox(
-                "📅 Selecione o Ano para Análise",
-                options=anos_disponiveis,
-                index=len(anos_disponiveis)-1 if anos_disponiveis else 0
-            )
-            
-            df_filtrado = df[df['Ano'] == ano_selecionado].copy()
-        else:
-            st.warning("Não foi possível extrair o ano dos dados.")
-            df_filtrado = df.copy()
-            ano_selecionado = "Todos"
-        
-        # Mostrar estatísticas básicas
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            total_demandas = len(df_filtrado)
-            st.metric("Total de Demandas", total_demandas)
-        
-        with col2:
-            sincronizados = len(df_filtrado[df_filtrado['Status'] == 'Sincronizado']) if 'Status' in df_filtrado.columns else 0
-            st.metric("Sincronizados", sincronizados)
-        
-        with col3:
-            if 'Tipo Chamado' in df_filtrado.columns:
-                correcoes = len(df_filtrado[df_filtrado['Tipo Chamado'].str.contains('Correção', na=False)])
-                st.metric("Correções/Ajustes", correcoes)
-            else:
-                st.metric("Correções/Ajustes", 0)
-        
-        with col4:
-            if 'Revisões' in df_filtrado.columns:
-                total_revisoes = df_filtrado['Revisões'].sum()
-                st.metric("Total de Revisões", total_revisoes)
-            else:
-                st.metric("Total de Revisões", 0)
-        
-        # Abas para diferentes visualizações
-        tab1, tab2, tab3, tab4 = st.tabs(["📈 Visão Geral", "👥 Por Responsável", "🏢 Por Empresa", "📋 Dados Detalhados"])
-        
-        with tab1:
-            st.subheader(f"Visão Geral - Ano {ano_selecionado}")
-            
-            # Gráfico 1: Distribuição por Tipo de Chamado
-            if 'Tipo Chamado' in df_filtrado.columns:
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    tipo_dist = df_filtrado['Tipo Chamado'].value_counts()
-                    fig1 = px.pie(
-                        values=tipo_dist.values,
-                        names=tipo_dist.index,
-                        title="Distribuição por Tipo de Chamado",
-                        color_discrete_sequence=px.colors.qualitative.Set3
-                    )
-                    fig1.update_traces(textposition='inside', textinfo='percent+label')
-                    st.plotly_chart(fig1, use_container_width=True)
-                
-                with col2:
-                    # Gráfico 2: Distribuição por Status
-                    if 'Status' in df_filtrado.columns:
-                        status_dist = df_filtrado['Status'].value_counts()
-                        fig2 = px.bar(
-                            x=status_dist.index,
-                            y=status_dist.values,
-                            title="Distribuição por Status",
-                            labels={'x': 'Status', 'y': 'Quantidade'},
-                            color=status_dist.values,
-                            color_continuous_scale='Viridis'
-                        )
-                        st.plotly_chart(fig2, use_container_width=True)
-            
-            # Gráfico 3: Evolução mensal
-            if 'Criado' in df_filtrado.columns:
-                df_filtrado['Mês'] = df_filtrado['Criado'].dt.strftime('%Y-%m')
-                evolucao_mensal = df_filtrado.groupby('Mês').size().reset_index(name='Quantidade')
-                
-                fig3 = px.line(
-                    evolucao_mensal,
-                    x='Mês',
-                    y='Quantidade',
-                    title="Evolução Mensal de Demandas",
-                    markers=True
-                )
-                fig3.update_xaxes(tickangle=45)
-                st.plotly_chart(fig3, use_container_width=True)
-        
-        with tab2:
-            st.subheader(f"Análise por Responsável - Ano {ano_selecionado}")
-            
-            # CORREÇÃO: Analisar por quem criou o card (Responsável) e não quem modificou
-            if 'Responsável' in df_filtrado.columns:
-                # Limpar e padronizar emails
-                df_filtrado['Responsável_limpo'] = df_filtrado['Responsável'].str.strip().str.lower()
-                
-                # Gráfico 4: Top 10 responsáveis por quantidade de demandas criadas
-                top_responsaveis = df_filtrado['Responsável_limpo'].value_counts().head(10)
-                
-                fig4 = px.bar(
-                    x=top_responsaveis.values,
-                    y=top_responsaveis.index,
-                    orientation='h',
-                    title="Top 10 Responsáveis por Demandas Criadas",
-                    labels={'x': 'Quantidade de Demandas', 'y': 'Responsável'},
-                    color=top_responsaveis.values,
-                    color_continuous_scale='Blues'
-                )
-                st.plotly_chart(fig4, use_container_width=True)
-                
-                # Gráfico 5: Tipo de chamado por responsável
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    if 'Tipo Chamado' in df_filtrado.columns:
-                        tipo_por_responsavel = df_filtrado.groupby(['Responsável_limpo', 'Tipo Chamado']).size().unstack(fill_value=0)
-                        tipo_por_responsavel = tipo_por_responsavel.head(10)  # Top 10
-                        
-                        fig5 = px.bar(
-                            tipo_por_responsavel,
-                            barmode='group',
-                            title="Tipo de Chamado por Responsável (Top 10)",
-                            labels={'value': 'Quantidade', 'variable': 'Tipo Chamado'}
-                        )
-                        fig5.update_xaxes(tickangle=45)
-                        st.plotly_chart(fig5, use_container_width=True)
-                
-                with col2:
-                    # Gráfico 6: Revisões por responsável
-                    if 'Revisões' in df_filtrado.columns:
-                        revisoes_por_responsavel = df_filtrado.groupby('Responsável_limpo')['Revisões'].sum().sort_values(ascending=False).head(10)
-                        
-                        fig6 = px.bar(
-                            x=revisoes_por_responsavel.values,
-                            y=revisoes_por_responsavel.index,
-                            orientation='h',
-                            title="Top 10 Responsáveis por Total de Revisões",
-                            labels={'x': 'Total de Revisões', 'y': 'Responsável'},
-                            color=revisoes_por_responsavel.values,
-                            color_continuous_scale='Reds'
-                        )
-                        st.plotly_chart(fig6, use_container_width=True)
-        
-        with tab3:
-            st.subheader(f"Análise por Empresa - Ano {ano_selecionado}")
-            
-            if 'Empresa' in df_filtrado.columns:
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    # Gráfico 7: Distribuição por Empresa
-                    empresa_dist = df_filtrado['Empresa'].value_counts()
-                    fig7 = px.pie(
-                        values=empresa_dist.values,
-                        names=empresa_dist.index,
-                        title="Distribuição por Empresa",
-                        color_discrete_sequence=px.colors.qualitative.Pastel
-                    )
-                    fig7.update_traces(textposition='inside', textinfo='percent+label')
-                    st.plotly_chart(fig7, use_container_width=True)
-                
-                with col2:
-                    # Gráfico 8: Tipo de chamado por empresa
-                    if 'Tipo Chamado' in df_filtrado.columns:
-                        tipo_por_empresa = df_filtrado.groupby(['Empresa', 'Tipo Chamado']).size().unstack(fill_value=0)
-                        
-                        fig8 = px.bar(
-                            tipo_por_empresa,
-                            barmode='group',
-                            title="Tipo de Chamado por Empresa",
-                            labels={'value': 'Quantidade', 'variable': 'Tipo Chamado'}
-                        )
-                        st.plotly_chart(fig8, use_container_width=True)
-                
-                # Gráfico 9: Status por empresa
-                if 'Status' in df_filtrado.columns:
-                    status_por_empresa = df_filtrado.groupby(['Empresa', 'Status']).size().unstack(fill_value=0)
-                    
-                    fig9 = px.bar(
-                        status_por_empresa,
-                        barmode='group',
-                        title="Status por Empresa",
-                        labels={'value': 'Quantidade', 'variable': 'Status'}
-                    )
-                    st.plotly_chart(fig9, use_container_width=True)
-        
-        with tab4:
-            st.subheader(f"Dados Detalhados - Ano {ano_selecionado}")
-            
-            # Filtros para a tabela
-            st.subheader("Filtros")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                if 'Tipo Chamado' in df_filtrado.columns:
-                    tipos = ['Todos'] + list(df_filtrado['Tipo Chamado'].dropna().unique())
-                    tipo_filtro = st.selectbox("Tipo de Chamado", tipos)
-            
-            with col2:
-                if 'Status' in df_filtrado.columns:
-                    status_list = ['Todos'] + list(df_filtrado['Status'].dropna().unique())
-                    status_filtro = st.selectbox("Status", status_list)
-            
-            with col3:
-                if 'Empresa' in df_filtrado.columns:
-                    empresas = ['Todos'] + list(df_filtrado['Empresa'].dropna().unique())
-                    empresa_filtro = st.selectbox("Empresa", empresas)
-            
-            # Aplicar filtros
-            df_filtrado_tabela = df_filtrado.copy()
-            
-            if 'Tipo Chamado' in df_filtrado_tabela.columns and tipo_filtro != 'Todos':
-                df_filtrado_tabela = df_filtrado_tabela[df_filtrado_tabela['Tipo Chamado'] == tipo_filtro]
-            
-            if 'Status' in df_filtrado_tabela.columns and status_filtro != 'Todos':
-                df_filtrado_tabela = df_filtrado_tabela[df_filtrado_tabela['Status'] == status_filtro]
-            
-            if 'Empresa' in df_filtrado_tabela.columns and empresa_filtro != 'Todos':
-                df_filtrado_tabela = df_filtrado_tabela[df_filtrado_tabela['Empresa'] == empresa_filtro]
-            
-            # Mostrar tabela
-            st.dataframe(
-                df_filtrado_tabela[[
-                    'Chamado', 'Tipo Chamado', 'Responsável', 'Status', 
-                    'Criado', 'Modificado', 'Prioridade', 'Empresa', 'Revisões'
-                ]].sort_values('Criado', ascending=False),
-                use_container_width=True,
-                height=400
-            )
-            
-            # Opção para download dos dados filtrados
-            csv = df_filtrado_tabela.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                label="📥 Download dos dados filtrados (CSV)",
-                data=csv,
-                file_name=f"esteira_demandas_filtrado_{ano_selecionado}.csv",
-                mime="text/csv"
-            )
-        
-        # Resumo estatístico
-        st.sidebar.subheader("📊 Resumo Estatístico")
-        
-        if 'Revisões' in df_filtrado.columns:
-            st.sidebar.metric("Média de Revisões", f"{df_filtrado['Revisões'].mean():.1f}")
-            st.sidebar.metric("Máximo de Revisões", df_filtrado['Revisões'].max())
-        
-        if 'Tipo Chamado' in df_filtrado.columns:
-            tipo_mais_comum = df_filtrado['Tipo Chamado'].mode()[0] if not df_filtrado['Tipo Chamado'].mode().empty else "N/A"
-            st.sidebar.metric("Tipo Mais Comum", tipo_mais_comum)
-        
-        if 'Empresa' in df_filtrado.columns:
-            empresa_mais_comum = df_filtrado['Empresa'].mode()[0] if not df_filtrado['Empresa'].mode().empty else "N/A"
-            st.sidebar.metric("Empresa Mais Comum", empresa_mais_comum)
-        
-    else:
-        st.error("Não foi possível carregar os dados do arquivo.")
-else:
-    st.info("👆 Por favor, faça upload do arquivo CSV para começar a análise.")
+    except Exception as e:
+        st.error(f"Erro ao processar arquivo: {str(e)}")
+        return pd.DataFrame()
 
-# Rodapé
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Desenvolvido para análise da Esteira de Demandas ADMS**")
+# ============================================
+# INTERFACE PRINCIPAL
+# ============================================
+
+# Header principal
+st.markdown("""
+<div class="main-header">
+    <h1 style="color: white; margin: 0;">📊 Demandas Esteira ADMS</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0;">Dashboard de análise e monitoramento de demandas</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Barra superior com informações
+col_header1, col_header2, col_header3 = st.columns([2, 1, 2])
+with col_header1:
+    st.markdown("**Sistema de Gestão de Demandas**")
+with col_header3:
+    st.markdown("**Última atualização:** Aguardando dados...")
+
+# Upload de arquivo (com opção de usar cache)
+upload_col1, upload_col2 = st.columns([3, 1])
+
+with upload_col1:
+    uploaded_file = st.file_uploader(
+        "📁 **Importar nova base de dados**",
+        type=['csv'],
+        help="Carregue o arquivo CSV mais recente da esteira de demandas"
+    )
+
+with upload_col2:
+    if st.button("🔄 Limpar Cache", type="secondary"):
+        st.cache_data.clear()
+        st.rerun()
+
+# Verificar se há dados em cache
+if 'df' not in st.session_state:
+    st.session_state.df = None
+    st.session_state.last_update = None
+
+# Carregar dados
+if uploaded_file is not None:
+    with st.spinner('Processando dados...'):
+        df = load_data(uploaded_file)
+        if not df.empty:
+            st.session_state.df = df
+            st.session_state.last_update = datetime.now()
+            st.success("✅ Base de dados carregada com sucesso!")
+        else:
+            st.error("Erro ao processar o arquivo.")
+
+# Usar dados em cache ou carregados
+df = st.session_state.df
+
+if df is not None and not df.empty:
+    # Atualizar header com data
+    with col_header3:
+        if 'Modificado' in df.columns:
+            last_update = df['Modificado'].max()
+            if pd.notnull(last_update):
+                st.markdown(f"**Última atualização:** {last_update.strftime('%d/%m/%Y %H:%M')}")
+            else:
+                st.markdown(f"**Última atualização:** {st.session_state.last_update.strftime('%d/%m/%Y %H:%M')}")
+    
+    # ============================================
+    # KPI CARDS
+    # ============================================
+    st.markdown("## 📈 Indicadores Principais")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_demandas = len(df)
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3 style="margin: 0; color: #2d3748;">{total_demandas}</h3>
+            <p style="margin: 0; color: #718096;">Total de Demandas</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        if 'Status' in df.columns:
+            sincronizados = len(df[df['Status'] == 'Sincronizado'])
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3 style="margin: 0; color: #2d3748;">{sincronizados}</h3>
+                <p style="margin: 0; color: #718096;">Sincronizados</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col3:
+        if 'Tipo_Chamado' in df.columns:
+            correcoes = len(df[df['Tipo_Chamado'].str.contains('Correção', na=False)])
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3 style="margin: 0; color: #2d3748;">{correcoes}</h3>
+                <p style="margin: 0; color: #718096;">Correções/Ajustes</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col4:
+        if 'Revisões' in df.columns:
+            total_revisoes = df['Revisões'].sum()
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3 style="margin: 0; color: #2d3748;">{total_revisoes}</h3>
+                <p style="margin: 0; color: #718096;">Total de Revisões</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # ============================================
+    # PRIMEIRA LINHA DE GRÁFICOS
+    # ============================================
+    col_left, col_right = st.columns(2)
+    
+    with col_left:
+        st.markdown('<div class="section-title">📅 Demandas por Mês/Ano</div>', unsafe_allow_html=True)
+        
+        if 'Mês_Ano' in df.columns:
+            demandas_mes = df.groupby('Mês_Ano').size().reset_index(name='Quantidade')
+            demandas_mes = demandas_mes.sort_values('Mês_Ano')
+            
+            fig_mes = px.bar(
+                demandas_mes,
+                x='Mês_Ano',
+                y='Quantidade',
+                title='',
+                color='Quantidade',
+                color_continuous_scale='Viridis',
+                text='Quantidade'
+            )
+            fig_mes.update_traces(textposition='outside')
+            fig_mes.update_layout(
+                xaxis_title="Mês/Ano",
+                yaxis_title="Quantidade",
+                plot_bgcolor='white',
+                showlegend=False
+            )
+            st.plotly_chart(fig_mes, use_container_width=True)
+    
+    with col_right:
+        st.markdown('<div class="section-title">📊 Demandas do Mês Atual</div>', unsafe_allow_html=True)
+        
+        # Filtrar mês atual
+        mes_atual = datetime.now().month
+        ano_atual = datetime.now().year
+        df_mes_atual = df[(df['Criado'].dt.month == mes_atual) & (df['Criado'].dt.year == ano_atual)]
+        
+        if not df_mes_atual.empty and 'Dia_Mês' in df_mes_atual.columns:
+            demandas_dia = df_mes_atual.groupby('Dia_Mês').size().reset_index(name='Quantidade')
+            demandas_dia = demandas_dia.sort_values('Dia_Mês')
+            
+            fig_dia = px.line(
+                demandas_dia,
+                x='Dia_Mês',
+                y='Quantidade',
+                title='',
+                markers=True,
+                line_shape='spline'
+            )
+            fig_dia.update_traces(line=dict(color='#667eea', width=3))
+            fig_dia.update_layout(
+                xaxis_title="Dia do Mês",
+                yaxis_title="Quantidade",
+                plot_bgcolor='white'
+            )
+            st.plotly_chart(fig_dia, use_container_width=True)
+        else:
+            st.info("Sem dados para o mês atual")
+    
+    # ============================================
+    # SEGUNDA LINHA - TOP RANKINGS
+    # ============================================
+    col_left2, col_right2 = st.columns(2)
+    
+    with col_left2:
+        st.markdown('<div class="section-title">🏆 Top 10 - Mais Revisões</div>', unsafe_allow_html=True)
+        
+        if 'Responsável_Nome' in df.columns and 'Revisões' in df.columns:
+            top_revisoes = df.groupby('Responsável_Nome')['Revisões'].sum().reset_index()
+            top_revisoes = top_revisoes.sort_values('Revisões', ascending=False).head(10)
+            
+            fig_top = px.bar(
+                top_revisoes,
+                x='Revisões',
+                y='Responsável_Nome',
+                orientation='h',
+                title='',
+                color='Revisões',
+                color_continuous_scale='Reds',
+                text='Revisões'
+            )
+            fig_top.update_traces(textposition='outside')
+            fig_top.update_layout(
+                xaxis_title="Total de Revisões",
+                yaxis_title="Responsável",
+                plot_bgcolor='white',
+                showlegend=False,
+                yaxis={'categoryorder': 'total ascending'}
+            )
+            st.plotly_chart(fig_top, use_container_width=True)
+    
+    with col_right2:
+        st.markdown('<div class="section-title">👥 Top 10 - Mais Demandas</div>', unsafe_allow_html=True)
+        
+        if 'Responsável_Nome' in df.columns:
+            top_demandas = df['Responsável_Nome'].value_counts().head(10).reset_index()
+            top_demandas.columns = ['Responsável_Nome', 'Quantidade']
+            
+            fig_demandas = px.bar(
+                top_demandas,
+                x='Quantidade',
+                y='Responsável_Nome',
+                orientation='h',
+                title='',
+                color='Quantidade',
+                color_continuous_scale='Blues',
+                text='Quantidade'
+            )
+            fig_demandas.update_traces(textposition='outside')
+            fig_demandas.update_layout(
+                xaxis_title="Quantidade de Demandas",
+                yaxis_title="Responsável",
+                plot_bgcolor='white',
+                showlegend=False,
+                yaxis={'categoryorder': 'total ascending'}
+            )
+            st.plotly_chart(fig_demandas, use_container_width=True)
+    
+    # ============================================
+    # ÚLTIMAS DEMANDAS REGISTRADAS
+    # ============================================
+    st.markdown('<div class="section-title">🕒 Últimas Demandas Registradas</div>', unsafe_allow_html=True)
+    
+    if 'Criado' in df.columns:
+        ultimas_demandas = df.sort_values('Criado', ascending=False).head(10)
+        
+        # Formatar colunas para exibição
+        display_cols = []
+        if 'Chamado' in ultimas_demandas.columns:
+            display_cols.append('Chamado')
+        if 'Tipo_Chamado' in ultimas_demandas.columns:
+            display_cols.append('Tipo_Chamado')
+        if 'Responsável_Nome' in ultimas_demandas.columns:
+            display_cols.append('Responsável_Nome')
+        if 'Status' in ultimas_demandas.columns:
+            display_cols.append('Status')
+        if 'Prioridade' in ultimas_demandas.columns:
+            display_cols.append('Prioridade')
+        if 'Criado' in ultimas_demandas.columns:
+            display_cols.append('Criado')
+        
+        if display_cols:
+            # Estilizar a tabela
+            st.dataframe(
+                ultimas_demandas[display_cols],
+                use_container_width=True,
+                height=300,
+                column_config={
+                    "Criado": st.column_config.DatetimeColumn(
+                        "Data Criação",
+                        format="DD/MM/YYYY HH:mm"
+                    ),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        help="Status da demanda"
+                    )
+                }
+            )
+    
+    # ============================================
+    # VISUALIZAÇÕES DETALHADAS (TABS)
+    # ============================================
+    st.markdown("## 📋 Visualizações Detalhadas")
+    
+    tab1, tab2, tab3 = st.tabs(["📊 Distribuição Geral", "🏢 Por Empresa", "📁 Dados Completos"])
+    
+    with tab1:
+        col_tab1, col_tab2 = st.columns(2)
+        
+        with col_tab1:
+            if 'Tipo_Chamado' in df.columns:
+                tipo_dist = df['Tipo_Chamado'].value_counts()
+                fig_tipo = px.pie(
+                    values=tipo_dist.values,
+                    names=tipo_dist.index,
+                    title="Distribuição por Tipo de Chamado",
+                    hole=0.4,
+                    color_discrete_sequence=px.colors.qualitative.Set3
+                )
+                fig_tipo.update_traces(textposition='inside', textinfo='percent+label')
+                st.plotly_chart(fig_tipo, use_container_width=True)
+        
+        with col_tab2:
+            if 'Status' in df.columns:
+                status_dist = df['Status'].value_counts()
+                fig_status = px.bar(
+                    x=status_dist.index,
+                    y=status_dist.values,
+                    title="Distribuição por Status",
+                    labels={'x': 'Status', 'y': 'Quantidade'},
+                    color=status_dist.values,
+                    color_continuous_scale='Viridis'
+                )
+                st.plotly_chart(fig_status, use_container_width=True)
+    
+    with tab2:
+        if 'Empresa' in df.columns:
+            empresa_dist = df['Empresa'].value_counts()
+            fig_empresa = px.pie(
+                values=empresa_dist.values,
+                names=empresa_dist.index,
+                title="Distribuição por Empresa",
+                color_discrete_sequence=px.colors.qualitative.Pastel
+            )
+            fig_empresa.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig_empresa, use_container_width=True)
+    
+    with tab3:
+        # Filtros para tabela detalhada
+        st.subheader("Filtros Avançados")
+        
+        col_filt1, col_filt2, col_filt3 = st.columns(3)
+        
+        with col_filt1:
+            if 'Tipo_Chamado' in df.columns:
+                tipos = ['Todos'] + list(df['Tipo_Chamado'].dropna().unique())
+                tipo_filtro = st.selectbox("Tipo de Chamado", tipos)
+        
+        with col_filt2:
+            if 'Status' in df.columns:
+                status_list = ['Todos'] + list(df['Status'].dropna().unique())
+                status_filtro = st.selectbox("Status", status_list)
+        
+        with col_filt3:
+            if 'Empresa' in df.columns:
+                empresas = ['Todos'] + list(df['Empresa'].dropna().unique())
+                empresa_filtro = st.selectbox("Empresa", empresas)
+        
+        # Aplicar filtros
+        df_filtrado = df.copy()
+        
+        if 'Tipo_Chamado' in df_filtrado.columns and tipo_filtro != 'Todos':
+            df_filtrado = df_filtrado[df_filtrado['Tipo_Chamado'] == tipo_filtro]
+        
+        if 'Status' in df_filtrado.columns and status_filtro != 'Todos':
+            df_filtrado = df_filtrado[df_filtrado['Status'] == status_filtro]
+        
+        if 'Empresa' in df_filtrado.columns and empresa_filtro != 'Todos':
+            df_filtrado = df_filtrado[df_filtrado['Empresa'] == empresa_filtro]
+        
+        # Mostrar dados filtrados
+        st.dataframe(
+            df_filtrado[[
+                'Chamado', 'Tipo_Chamado', 'Responsável_Nome', 'Status',
+                'Criado', 'Modificado', 'Prioridade', 'Empresa', 'Revisões'
+            ]].sort_values('Criado', ascending=False),
+            use_container_width=True,
+            height=400
+        )
+        
+        # Botão de download
+        csv = df_filtrado.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(
+            label="📥 Exportar Dados Filtrados (CSV)",
+            data=csv,
+            file_name=f"esteira_demandas_filtrado_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+
+else:
+    # Tela inicial sem dados
+    st.markdown("""
+    <div style="text-align: center; padding: 4rem; background: #f7fafc; border-radius: 10px;">
+        <h3 style="color: #4a5568;">📊 Dashboard Esteira ADMS</h3>
+        <p style="color: #718096; margin-bottom: 2rem;">
+            Faça upload do arquivo CSV para visualizar as análises da esteira de demandas.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Instruções
+    with st.expander("ℹ️ Instruções de uso", expanded=True):
+        st.markdown("""
+        1. **Prepare seu arquivo**: Exporte os dados da esteira ADMS em formato CSV
+        2. **Faça o upload**: Use o botão acima para carregar o arquivo
+        3. **Visualize**: Os dados serão processados e as análises serão exibidas
+        
+        **Funcionalidades disponíveis:**
+        - 📈 Indicadores principais em tempo real
+        - 📊 Gráficos interativos de distribuição
+        - 🏆 Ranking de responsáveis
+        - 📅 Análise temporal por mês e dia
+        - 📋 Tabela detalhada com filtros
+        - 📥 Exportação de dados
+        """)
+
+# ============================================
+# RODAPÉ
+# ============================================
+st.markdown("---")
+
+footer_col1, footer_col2, footer_col3 = st.columns([1, 2, 1])
+
+with footer_col1:
+    st.markdown("**Versão:** 1.0.0")
+
+with footer_col2:
+    st.markdown("""
+    <div style="text-align: center;">
+        <p style="color: #666; font-size: 0.9rem;">
+        © 2024 Esteira ADMS Dashboard | 
+        <strong style="color: #e53e3e;">⚠️ Proibida a reprodução total ou parcial</strong>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with footer_col3:
+    st.markdown("**Desenvolvedor:** Kewin Marcel Ramirez Ferreira")
+
+# Adicionar informações técnicas
+with st.expander("🔧 Informações técnicas", expanded=False):
+    if df is not None:
+        col_info1, col_info2 = st.columns(2)
+        with col_info1:
+            st.write("**Estatísticas:**")
+            st.write(f"- Total de registros: {len(df)}")
+            if 'Criado' in df.columns:
+                st.write(f"- Período: {df['Criado'].min().strftime('%d/%m/%Y')} a {df['Criado'].max().strftime('%d/%m/%Y')}")
+            if 'Revisões' in df.columns:
+                st.write(f"- Média de revisões: {df['Revisões'].mean():.1f}")
+        
+        with col_info2:
+            st.write("**Colunas disponíveis:**")
+            st.write(", ".join(df.columns.tolist()))
+    else:
+        st.info("Carregue um arquivo para ver informações técnicas")
