@@ -251,7 +251,6 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             df['Mês_Num'] = df['Criado'].dt.month
             df['Dia'] = df['Criado'].dt.day
             df['Hora'] = df['Criado'].dt.hour
-            df['Data_Dia'] = df['Criado'].dt.date
             df['Mês_Ano'] = df['Criado'].dt.strftime('%b/%Y')
             df['Nome_Mês'] = df['Criado'].dt.month.map({
                 1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
@@ -343,15 +342,17 @@ with st.sidebar:
             
             df = st.session_state.df_original.copy()
             
-            # FILTRO POR ANO - NA BARRA LATERAL
+            # FILTRO POR ANO (NOVO)
             if 'Ano' in df.columns:
-                anos = sorted(df['Ano'].dropna().unique().astype(int))
-                ano_selecionado = st.selectbox(
-                    "📅 Ano de Análise",
-                    options=anos,
-                    index=len(anos)-1 if anos else 0
-                )
-                df = df[df['Ano'] == ano_selecionado]
+                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
+                if anos_disponiveis:
+                    anos_opcoes = ['Todos os Anos'] + list(anos_disponiveis)
+                    ano_selecionado = st.selectbox(
+                        "📅 Ano",
+                        options=anos_opcoes
+                    )
+                    if ano_selecionado != 'Todos os Anos':
+                        df = df[df['Ano'] == ano_selecionado]
             
             # FILTRO POR RESPONSÁVEL
             if 'Responsável_Formatado' in df.columns:
@@ -523,26 +524,39 @@ if st.session_state.df_original is not None:
     # ============================================
     st.markdown("---")
     
+    # ATUALIZADO: Adicionada nova aba para chamados sincronizados por dia
     tab1, tab2, tab3 = st.tabs(["📅 Evolução de Demandas", "📊 Análise de Revisões", "📈 Sincronizados por Dia"])
     
     with tab1:
-        # Cabeçalho sem seletor de ano (agora está na sidebar)
-        st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+        # Cabeçalho com seletor de ano no lado direito
+        col_titulo, col_seletor = st.columns([3, 1])
         
-        if 'Ano' in df.columns and 'Nome_Mês' in df.columns:
-            # Determinar o ano selecionado na sidebar
-            ano_atual = df['Ano'].iloc[0] if not df.empty else datetime.now().year
+        with col_titulo:
+            st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+        
+        with col_seletor:
+            if 'Ano' in df.columns:
+                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
+                if anos_disponiveis:
+                    ano_selecionado = st.selectbox(
+                        "Selecionar Ano:",
+                        options=anos_disponiveis,
+                        index=len(anos_disponiveis)-1,
+                        label_visibility="collapsed",
+                        key="ano_evolucao"
+                    )
+        
+        if 'Ano' in df.columns and 'Nome_Mês' in df.columns and anos_disponiveis:
+            # Filtrar dados para o ano selecionado
+            df_ano = df[df['Ano'] == ano_selecionado].copy()
             
-            if not df.empty:
+            if not df_ano.empty:
                 # Ordem dos meses completos
                 ordem_meses_completa = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                                        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
                 
                 ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
                                          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-                
-                # Filtrar dados para o ano atual (já filtrado na sidebar)
-                df_ano = df.copy()
                 
                 # Criar dataframe com todos os meses do ano
                 todos_meses = pd.DataFrame({
@@ -575,7 +589,7 @@ if st.session_state.df_original is not None:
                 ))
                 
                 fig_mes.update_layout(
-                    title=f"Demandas em {ano_atual}",
+                    title=f"Demandas em {ano_selecionado}",
                     xaxis_title="Mês",
                     yaxis_title="Número de Demandas",
                     plot_bgcolor='white',
@@ -727,44 +741,68 @@ if st.session_state.df_original is not None:
             else:
                 st.info("✅ Nenhuma revisão registrada na base de dados atual.")
     
+    # NOVA ABA: Chamados Sincronizados por Dia
     with tab3:
-        st.markdown('<div class="section-title-exec">📈 SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
         
-        if 'Status' in df.columns and 'Data_Dia' in df.columns:
-            # Filtrar apenas os sincronizados
+        if 'Status' in df.columns and 'Criado' in df.columns:
+            # Filtrar apenas chamados sincronizados
             df_sincronizados = df[df['Status'] == 'Sincronizado'].copy()
             
             if not df_sincronizados.empty:
-                # Agrupar por dia
-                sincronizados_por_dia = df_sincronizados.groupby('Data_Dia').size().reset_index()
+                # Extrair data sem hora
+                df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
+                
+                # Agrupar por data
+                sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
                 sincronizados_por_dia.columns = ['Data', 'Quantidade']
+                
+                # Ordenar por data
                 sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
                 
-                # Criar gráfico de linha
-                fig_sinc_dia = go.Figure()
+                # Criar gráfico de linha com área
+                fig_dia = go.Figure()
                 
-                fig_sinc_dia.add_trace(go.Scatter(
+                fig_dia.add_trace(go.Scatter(
                     x=sincronizados_por_dia['Data'],
                     y=sincronizados_por_dia['Quantidade'],
                     mode='lines+markers',
-                    name='Sincronizados',
-                    line=dict(color='#28a745', width=2.5),
+                    name='Chamados Sincronizados',
+                    line=dict(color='#28a745', width=3),
                     marker=dict(size=8, color='#218838'),
                     fill='tozeroy',
-                    fillcolor='rgba(40, 167, 69, 0.1)'
+                    fillcolor='rgba(40, 167, 69, 0.2)'
                 ))
                 
-                fig_sinc_dia.update_layout(
-                    title='Evolução de Chamados Sincronizados por Dia',
+                # Adicionar média móvel de 7 dias
+                sincronizados_por_dia['Media_Movel'] = sincronizados_por_dia['Quantidade'].rolling(window=7, min_periods=1).mean()
+                
+                fig_dia.add_trace(go.Scatter(
+                    x=sincronizados_por_dia['Data'],
+                    y=sincronizados_por_dia['Media_Movel'],
+                    mode='lines',
+                    name='Média Móvel (7 dias)',
+                    line=dict(color='#dc3545', width=2, dash='dash')
+                ))
+                
+                fig_dia.update_layout(
+                    title='Evolução Diária de Chamados Sincronizados',
                     xaxis_title='Data',
-                    yaxis_title='Quantidade de Sincronizados',
+                    yaxis_title='Número de Chamados Sincronizados',
                     plot_bgcolor='white',
-                    height=450,
+                    height=500,
                     showlegend=True,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    ),
                     margin=dict(t=50, b=50, l=50, r=50),
                     xaxis=dict(
                         gridcolor='rgba(0,0,0,0.05)',
-                        tickformat='%d/%m/%Y'
+                        showgrid=True
                     ),
                     yaxis=dict(
                         gridcolor='rgba(0,0,0,0.05)',
@@ -772,48 +810,309 @@ if st.session_state.df_original is not None:
                     )
                 )
                 
-                st.plotly_chart(fig_sinc_dia, use_container_width=True)
+                st.plotly_chart(fig_dia, use_container_width=True)
                 
-                # Gráfico de barras para os dias com mais sincronizados
-                col_barras1, col_barras2 = st.columns(2)
+                # Estatísticas
+                col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
                 
-                with col_barras1:
-                    # Top 10 dias com mais sincronizados
-                    top_dias = sincronizados_por_dia.sort_values('Quantidade', ascending=False).head(10)
-                    
-                    fig_top_dias = px.bar(
-                        top_dias,
-                        x='Quantidade',
-                        y='Data',
-                        orientation='h',
-                        title='Top 10 Dias com Mais Sincronizados',
-                        text='Quantidade',
-                        color='Quantidade',
-                        color_continuous_scale='Greens'
-                    )
-                    
-                    fig_top_dias.update_traces(
-                        texttemplate='%{text}',
-                        textposition='outside',
-                        marker_line_color='#218838',
-                        marker_line_width=1,
-                        opacity=0.9
-                    )
-                    
-                    fig_top_dias.update_layout(
-                        height=400,
-                        plot_bgcolor='white',
-                        showlegend=False,
-                        yaxis={'categoryorder': 'total ascending'},
-                        margin=dict(t=50, b=20, l=20, r=20),
-                        xaxis_title="Quantidade",
-                        yaxis_title="Data"
-                    )
-                    
-                    st.plotly_chart(fig_top_dias, use_container_width=True)
+                with col_stat1:
+                    total_sincronizados = sincronizados_por_dia['Quantidade'].sum()
+                    st.metric("Total Sincronizados", f"{total_sincronizados:,}")
                 
-                with col_barras2:
-                    # Estatísticas de sincronizados por dia
-                    st.markdown("### 📊 Estatísticas Diárias")
-                    
-                    col_stats1, col_stats
+                with col_stat2:
+                    media_diaria = sincronizados_por_dia['Quantidade'].mean()
+                    st.metric("Média Diária", f"{media_diaria:.1f}")
+                
+                with col_stat3:
+                    max_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmax()]
+                    st.metric("Dia com Mais", f"{max_dia['Data'].strftime('%d/%m')}: {int(max_dia['Quantidade'])}")
+                
+                with col_stat4:
+                    min_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmin()]
+                    st.metric("Dia com Menos", f"{min_dia['Data'].strftime('%d/%m')}: {int(min_dia['Quantidade'])}")
+                
+                # Gráfico de calor (calendário) - opcional
+                st.markdown("### 📅 Visualização por Calendário")
+                
+                # Preparar dados para heatmap
+                df_sincronizados['Ano'] = df_sincronizados['Criado'].dt.year
+                df_sincronizados['Mês'] = df_sincronizados['Criado'].dt.month
+                df_sincronizados['Dia_do_Mes'] = df_sincronizados['Criado'].dt.day
+                df_sincronizados['Dia_da_Semana'] = df_sincronizados['Criado'].dt.dayofweek
+                
+                # Agrupar por mês e dia
+                heatmap_data = df_sincronizados.groupby(['Ano', 'Mês', 'Dia_do_Mes']).size().reset_index()
+                heatmap_data.columns = ['Ano', 'Mês', 'Dia', 'Quantidade']
+                
+                # Criar pivot table para heatmap
+                pivot_data = heatmap_data.pivot_table(
+                    index='Dia',
+                    columns='Mês',
+                    values='Quantidade',
+                    aggfunc='sum',
+                    fill_value=0
+                )
+                
+                # Nomes dos meses
+                meses_nomes = {
+                    1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                    5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                    9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+                }
+                
+                # Renomear colunas
+                pivot_data = pivot_data.rename(columns=meses_nomes)
+                
+                # Criar heatmap
+                fig_heatmap = px.imshow(
+                    pivot_data,
+                    labels=dict(x="Mês", y="Dia do Mês", color="Chamados Sincronizados"),
+                    color_continuous_scale='Greens',
+                    title="Distribuição de Chamados Sincronizados por Dia e Mês"
+                )
+                
+                fig_heatmap.update_layout(
+                    height=400,
+                    margin=dict(t=50, b=50, l=50, r=50)
+                )
+                
+                st.plotly_chart(fig_heatmap, use_container_width=True)
+                
+            else:
+                st.info("ℹ️ Nenhum chamado sincronizado encontrado nos dados atuais.")
+        else:
+            st.warning("⚠️ Colunas necessárias (Status, Criado) não encontradas nos dados.")
+    
+    # ============================================
+    # TOP 10 RESPONSÁVEIS
+    # ============================================
+    st.markdown("---")
+    col_top, col_dist = st.columns([2, 1])
+    
+    with col_top:
+        st.markdown('<div class="section-title-exec">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
+        
+        if 'Responsável_Formatado' in df.columns:
+            top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
+            top_responsaveis.columns = ['Responsável', 'Demandas']
+            
+            fig_top = px.bar(
+                top_responsaveis,
+                x='Demandas',
+                y='Responsável',
+                orientation='h',
+                title='',
+                text='Demandas',
+                color='Demandas',
+                color_continuous_scale='Blues'
+            )
+            
+            fig_top.update_traces(
+                texttemplate='%{text}',
+                textposition='outside',
+                marker_line_color='#0c2461',
+                marker_line_width=1.5,
+                opacity=0.9
+            )
+            
+            fig_top.update_layout(
+                height=500,
+                plot_bgcolor='white',
+                showlegend=False,
+                yaxis={'categoryorder': 'total ascending'},
+                margin=dict(t=20, b=20, l=20, r=20),
+                xaxis_title="Número de Demandas",
+                yaxis_title=""
+            )
+            
+            st.plotly_chart(fig_top, use_container_width=True)
+    
+    with col_dist:
+        st.markdown('<div class="section-title-exec">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
+        
+        if 'Tipo_Chamado' in df.columns:
+            # Agrupar por tipo de chamado
+            tipos_chamado = df['Tipo_Chamado'].value_counts().reset_index()
+            tipos_chamado.columns = ['Tipo', 'Quantidade']
+            
+            # Ordenar por quantidade
+            tipos_chamado = tipos_chamado.sort_values('Quantidade', ascending=True)
+            
+            # Criar gráfico de barras horizontais
+            fig_tipos = px.bar(
+                tipos_chamado,
+                x='Quantidade',
+                y='Tipo',
+                orientation='h',
+                title='',
+                text='Quantidade',
+                color='Quantidade',
+                color_continuous_scale='Viridis'
+            )
+            
+            fig_tipos.update_traces(
+                texttemplate='%{text}',
+                textposition='outside',
+                marker_line_color='rgb(8,48,107)',
+                marker_line_width=1,
+                opacity=0.9
+            )
+            
+            fig_tipos.update_layout(
+                height=500,
+                plot_bgcolor='white',
+                showlegend=False,
+                yaxis={'categoryorder': 'total ascending'},
+                margin=dict(t=20, b=20, l=20, r=20),
+                xaxis_title="Quantidade",
+                yaxis_title=""
+            )
+            
+            st.plotly_chart(fig_tipos, use_container_width=True)
+    
+    # ============================================
+    # ÚLTIMAS DEMANDAS REGISTRADAS COM FILTROS
+    # ============================================
+    st.markdown("---")
+    st.markdown('<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
+    
+    if 'Criado' in df.columns:
+        # Filtros para a tabela
+        col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
+        
+        with col_filtro1:
+            qtd_demandas = st.slider(
+                "Número de demandas:",
+                min_value=5,
+                max_value=50,
+                value=15,
+                step=5
+            )
+        
+        with col_filtro2:
+            ordenar_por = st.selectbox(
+                "Ordenar por:",
+                options=['Data (Mais Recente)', 'Data (Mais Antiga)', 'Revisões (Maior)', 'Revisões (Menor)']
+            )
+        
+        with col_filtro3:
+            mostrar_colunas = st.multiselect(
+                "Colunas a mostrar:",
+                options=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Prioridade', 'Revisões', 'Empresa', 'Data'],
+                default=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Data']
+            )
+        
+        with col_filtro4:
+            # Filtro de busca por chamado específico
+            filtro_chamado_tabela = st.text_input(
+                "Filtrar por chamado:",
+                placeholder="Ex: 12345"
+            )
+        
+        # Aplicar ordenação
+        ultimas_demandas = df.copy()
+        
+        if ordenar_por == 'Data (Mais Recente)':
+            ultimas_demandas = ultimas_demandas.sort_values('Criado', ascending=False)
+        elif ordenar_por == 'Data (Mais Antiga)':
+            ultimas_demandas = ultimas_demandas.sort_values('Criado', ascending=True)
+        elif ordenar_por == 'Revisões (Maior)':
+            ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=False)
+        elif ordenar_por == 'Revisões (Menor)':
+            ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=True)
+        
+        # Aplicar filtro de busca por chamado
+        if filtro_chamado_tabela:
+            ultimas_demandas = ultimas_demandas[
+                ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_tabela, na=False)
+            ]
+        
+        # Limitar quantidade
+        ultimas_demandas = ultimas_demandas.head(qtd_demandas)
+        
+        # Preparar dados para exibição
+        display_data = pd.DataFrame()
+        
+        if 'Chamado' in mostrar_colunas and 'Chamado' in ultimas_demandas.columns:
+            display_data['Chamado'] = ultimas_demandas['Chamado']
+        
+        if 'Tipo_Chamado' in mostrar_colunas and 'Tipo_Chamado' in ultimas_demandas.columns:
+            display_data['Tipo'] = ultimas_demandas['Tipo_Chamado']
+        
+        if 'Responsável' in mostrar_colunas and 'Responsável_Formatado' in ultimas_demandas.columns:
+            display_data['Responsável'] = ultimas_demandas['Responsável_Formatado']
+        
+        if 'Status' in mostrar_colunas and 'Status' in ultimas_demandas.columns:
+            display_data['Status'] = ultimas_demandas['Status']
+        
+        if 'Prioridade' in mostrar_colunas and 'Prioridade' in ultimas_demandas.columns:
+            display_data['Prioridade'] = ultimas_demandas['Prioridade']
+        
+        if 'Revisões' in mostrar_colunas and 'Revisões' in ultimas_demandas.columns:
+            display_data['Revisões'] = ultimas_demandas['Revisões']
+        
+        if 'Empresa' in mostrar_colunas and 'Empresa' in ultimas_demandas.columns:
+            display_data['Empresa'] = ultimas_demandas['Empresa']
+        
+        if 'Data' in mostrar_colunas and 'Criado' in ultimas_demandas.columns:
+            display_data['Data Criação'] = ultimas_demandas['Criado'].dt.strftime('%d/%m/%Y %H:%M')
+        
+        if not display_data.empty:
+            st.dataframe(
+                display_data,
+                use_container_width=True,
+                height=400
+            )
+            
+            # Botão de exportação
+            csv = display_data.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 Exportar esta tabela",
+                data=csv,
+                file_name=f"ultimas_demandas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+else:
+    # TELA INICIAL
+    st.markdown("""
+    <div style="text-align: center; padding: 4rem; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
+        <h3 style="color: #495057;">📊 Esteira ADMS Dashboard</h3>
+        <p style="color: #6c757d; margin-bottom: 2rem;">
+            Sistema de análise e monitoramento de chamados - Setor SRE
+        </p>
+        <div style="margin-top: 2rem; padding: 2rem; background: white; border-radius: 8px; display: inline-block;">
+            <h4 style="color: #1e3799;">📋 Para começar:</h4>
+            <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
+            <p>2. <strong>Aplique os filtros</strong> para análise específica</p>
+            <p>3. <strong>Visualize os indicadores</strong> e métricas de desempenho</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ============================================
+# RODAPÉ COMPLETO
+# ============================================
+st.markdown("---")
+
+st.markdown("""
+<div class="footer-exec">
+    <div style="margin-bottom: 1rem;">
+        <p style="margin: 0; color: #495057; font-weight: 600;">
+        Desenvolvido por: <span style="color: #1e3799;">Kewin Marcel Ramirez Ferreira | GEAT</span>
+        </p>
+        <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.85rem;">
+        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: #1e3799; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
+        </p>
+    </div>
+    <div style="margin-top: 0.5rem;">
+        <p style="margin: 0; color: #6c757d; font-size: 0.8rem;">
+        © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
+        </p>
+        <p style="margin: 0.2rem 0 0 0; color: #adb5bd; font-size: 0.75rem;">
+        Versão 5.0 | SRE Monitoring Platform
+        </p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
