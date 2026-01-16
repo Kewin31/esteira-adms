@@ -195,15 +195,6 @@ def calcular_crescimento(valor_atual, valor_anterior):
     else:
         return None, "neutral"
 
-def calcular_percentual_revisoes(df):
-    """Calcula percentual de demandas sem revisões"""
-    if 'Revisões' not in df.columns or len(df) == 0:
-        return 0
-    
-    demandas_sem_revisoes = len(df[df['Revisões'] == 0])
-    percentual = (demandas_sem_revisoes / len(df)) * 100
-    return round(percentual, 1)
-
 def criar_card_indicador(valor, label, delta_info=None, icone="📊"):
     """Cria card de indicador visualmente atraente"""
     delta_html = ""
@@ -300,6 +291,7 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         if 'Criado' in df.columns:
             df['Ano'] = df['Criado'].dt.year
             df['Mês'] = df['Criado'].dt.month
+            df['Mês_Num'] = df['Criado'].dt.month
             df['Mês_Ano'] = df['Criado'].dt.strftime('%b/%Y')
             df['Nome_Mês'] = df['Criado'].dt.month.map({
                 1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
@@ -391,15 +383,36 @@ with st.sidebar:
             
             df = st.session_state.df_original.copy()
             
-            # FILTRO POR ANO
+            # FILTRO POR ANO - COM 2025 E 2026 ESPECÍFICOS
             if 'Ano' in df.columns:
-                anos = sorted(df['Ano'].dropna().unique().astype(int))
+                # Garantir que 2025 e 2026 estejam nas opções
+                anos_existentes = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes = []
+                
+                # Adicionar 2025 se não existir
+                if 2025 not in anos_existentes:
+                    anos_opcoes.append(2025)
+                
+                # Adicionar 2026 se não existir
+                if 2026 not in anos_existentes:
+                    anos_opcoes.append(2026)
+                
+                # Adicionar anos existentes
+                anos_opcoes.extend(anos_existentes)
+                anos_opcoes = sorted(list(set(anos_opcoes)))
+                
                 ano_selecionado = st.selectbox(
                     "📅 Ano de Análise",
-                    options=anos,
-                    index=len(anos)-1 if anos else 0
+                    options=anos_opcoes,
+                    index=len(anos_opcoes)-1 if anos_opcoes else 0
                 )
-                df = df[df['Ano'] == ano_selecionado]
+                
+                # Se o ano selecionado existir nos dados, filtrar
+                if ano_selecionado in anos_existentes:
+                    df = df[df['Ano'] == ano_selecionado]
+                else:
+                    # Se não existir, usar todos os dados
+                    st.info(f"Dados para {ano_selecionado} não encontrados. Mostrando todos os anos.")
             
             # FILTRO POR RESPONSÁVEL
             if 'Responsável_Formatado' in df.columns:
@@ -487,18 +500,10 @@ st.markdown("""
         <div>
             <h1 style="color: white; margin: 0; font-size: 1.8rem; font-weight: 700;">📊 ESTEIRA ADMS</h1>
             <p style="color: rgba(255,255,255,0.9); margin: 0.3rem 0 0 0; font-size: 1rem;">
-            Sistema de Análise de Demandas | SRE & Monitoramento
+            Sistema de Análise de Chamados | SRE
             </p>
             <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.9rem;">
-            Empresas: Energisa, Concessionárias Regionais | Função SRE: Garantia de Disponibilidade
-            </p>
-        </div>
-        <div style="background: rgba(255,255,255,0.15); padding: 0.5rem 1rem; border-radius: 8px; text-align: center;">
-            <p style="margin: 0; color: white; font-size: 0.9rem; font-weight: 600;">
-            ⚡ SRE Metrics
-            </p>
-            <p style="margin: 0; color: rgba(255,255,255,0.8); font-size: 0.8rem;">
-            SLA: 99.9% | MTTR: &lt; 4h
+            EMS | EMR | ESS
             </p>
         </div>
     </div>
@@ -514,7 +519,7 @@ if st.session_state.df_original is not None:
     # ============================================
     # INDICADORES PRINCIPAIS ATUALIZADOS
     # ============================================
-    st.markdown("## 📈 INDICADORES DE DESEMPENHO")
+    st.markdown("## 📈 INDICADORES PRINCIPAIS")
     
     # Calcular dados do período anterior
     if 'Ano' in df.columns:
@@ -564,13 +569,14 @@ if st.session_state.df_original is not None:
     
     with col4:
         if 'Revisões' in df.columns:
-            # Percentual de demandas sem revisões
-            percentual_sem_revisoes = calcular_percentual_revisoes(df)
+            total_revisoes = int(df['Revisões'].sum())
+            total_revisoes_anterior = int(df_ano_anterior['Revisões'].sum()) if not df_ano_anterior.empty else 0
+            crescimento_rev = calcular_crescimento(total_revisoes, total_revisoes_anterior)
             st.markdown(criar_card_indicador(
-                f"{percentual_sem_revisoes}%",
-                "Sem Revisões",
-                None,  # Sem delta para este indicador
-                "📈"
+                total_revisoes,
+                "Total de Revisões",
+                crescimento_rev,
+                "📝"
             ), unsafe_allow_html=True)
     
     # ============================================
@@ -585,43 +591,69 @@ if st.session_state.df_original is not None:
         st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
     
     with col_seletor:
+        # Criar lista de anos com 2025 e 2026 garantidos
         if 'Ano' in df.columns:
-            anos_disponiveis = sorted(df['Ano'].unique())
+            anos_existentes = sorted(df['Ano'].unique())
+            anos_opcoes = []
+            
+            # Adicionar 2025 e 2026 mesmo se não existirem
+            for ano in [2025, 2026]:
+                if ano not in anos_existentes:
+                    anos_opcoes.append(ano)
+            
+            # Adicionar anos existentes
+            anos_opcoes.extend(anos_existentes)
+            anos_opcoes = sorted(list(set(anos_opcoes)))
+            
             ano_grafico = st.selectbox(
                 "Ano:",
-                options=anos_disponiveis,
-                index=len(anos_disponiveis)-1 if anos_disponiveis else 0,
+                options=anos_opcoes,
+                index=anos_opcoes.index(2026) if 2026 in anos_opcoes else len(anos_opcoes)-1,
                 label_visibility="collapsed"
             )
     
     if 'Ano' in df.columns and 'Nome_Mês' in df.columns:
-        # Filtrar dados para o ano selecionado
-        df_ano = df[df['Ano'] == ano_grafico].copy()
+        # Filtrar dados para o ano selecionado se existir
+        if ano_grafico in df['Ano'].unique():
+            df_ano = df[df['Ano'] == ano_grafico].copy()
+        else:
+            df_ano = df.copy()
+            st.info(f"⚠️ Dados para {ano_grafico} não encontrados. Mostrando todos os anos.")
         
         if not df_ano.empty:
-            # Ordem dos meses
-            ordem_meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
-                          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+            # Ordem dos meses completos
+            ordem_meses_completa = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+            
+            ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                                     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+            
+            # Criar dataframe com todos os meses do ano
+            todos_meses = pd.DataFrame({
+                'Mês_Num': range(1, 13),
+                'Nome_Mês_Completo': ordem_meses_completa,
+                'Nome_Mês': ordem_meses_abreviados
+            })
             
             # Agrupar por mês
-            demandas_por_mes = df_ano.groupby('Nome_Mês').size().reset_index()
-            demandas_por_mes.columns = ['Mês', 'Quantidade']
+            demandas_por_mes = df_ano.groupby('Mês_Num').size().reset_index()
+            demandas_por_mes.columns = ['Mês_Num', 'Quantidade']
             
-            # Reordenar para manter ordem cronológica
-            demandas_por_mes['Mês'] = pd.Categorical(demandas_por_mes['Mês'], categories=ordem_meses, ordered=True)
-            demandas_por_mes = demandas_por_mes.sort_values('Mês').reset_index(drop=True)
+            # Juntar com todos os meses para garantir 12 meses
+            demandas_completas = pd.merge(todos_meses, demandas_por_mes, on='Mês_Num', how='left')
+            demandas_completas['Quantidade'] = demandas_completas['Quantidade'].fillna(0).astype(int)
             
             # Criar gráfico de linha
             fig_mes = go.Figure()
             
             fig_mes.add_trace(go.Scatter(
-                x=demandas_por_mes['Mês'],
-                y=demandas_por_mes['Quantidade'],
+                x=demandas_completas['Nome_Mês'],
+                y=demandas_completas['Quantidade'],
                 mode='lines+markers+text',
                 name='Demandas',
                 line=dict(color='#1e3799', width=3),
                 marker=dict(size=10, color='#0c2461'),
-                text=demandas_por_mes['Quantidade'],
+                text=demandas_completas['Quantidade'],
                 textposition='top center',
                 textfont=dict(size=12, color='#1e3799')
             ))
@@ -638,15 +670,16 @@ if st.session_state.df_original is not None:
                     gridcolor='rgba(0,0,0,0.05)',
                     tickmode='array',
                     tickvals=list(range(12)),
-                    ticktext=ordem_meses
+                    ticktext=ordem_meses_abreviados
                 ),
                 yaxis=dict(
-                    gridcolor='rgba(0,0,0,0.05)'
+                    gridcolor='rgba(0,0,0,0.05)',
+                    rangemode='tozero'
                 )
             )
             
             # Adicionar valor total
-            total_ano = int(demandas_por_mes['Quantidade'].sum())
+            total_ano = int(demandas_completas['Quantidade'].sum())
             fig_mes.add_annotation(
                 x=0.5, y=0.95,
                 xref="paper", yref="paper",
@@ -662,16 +695,16 @@ if st.session_state.df_original is not None:
             st.plotly_chart(fig_mes, use_container_width=True)
             
             # Estatísticas mensais
-            mes_max = demandas_por_mes.loc[demandas_por_mes['Quantidade'].idxmax()]
-            mes_min = demandas_por_mes.loc[demandas_por_mes['Quantidade'].idxmin()]
+            mes_max = demandas_completas.loc[demandas_completas['Quantidade'].idxmax()]
+            mes_min = demandas_completas.loc[demandas_completas['Quantidade'].idxmin()]
             
             col_stats1, col_stats2, col_stats3 = st.columns(3)
             with col_stats1:
-                st.metric("📈 Mês com mais demandas", f"{mes_max['Mês']}: {int(mes_max['Quantidade']):,}")
+                st.metric("📈 Mês com mais demandas", f"{mes_max['Nome_Mês_Completo']}: {int(mes_max['Quantidade']):,}")
             with col_stats2:
-                st.metric("📉 Mês com menos demandas", f"{mes_min['Mês']}: {int(mes_min['Quantidade']):,}")
+                st.metric("📉 Mês com menos demandas", f"{mes_min['Nome_Mês_Completo']}: {int(mes_min['Quantidade']):,}")
             with col_stats3:
-                media_mensal = int(demandas_por_mes['Quantidade'].mean())
+                media_mensal = int(demandas_completas['Quantidade'].mean())
                 st.metric("📊 Média mensal", f"{media_mensal:,}")
     
     # ============================================
@@ -707,7 +740,7 @@ if st.session_state.df_original is not None:
             )
             
             fig_top.update_layout(
-                height=500,  # MAIOR
+                height=500,
                 plot_bgcolor='white',
                 showlegend=False,
                 yaxis={'categoryorder': 'total ascending'},
@@ -719,16 +752,21 @@ if st.session_state.df_original is not None:
             st.plotly_chart(fig_top, use_container_width=True)
     
     with col_dist:
-        st.markdown('<div class="section-title-exec">📊 DISTRIBUIÇÃO POR STATUS</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title-exec">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
         
-        if 'Status' in df.columns:
-            status_dist = df['Status'].value_counts().reset_index()
-            status_dist.columns = ['Status', 'Quantidade']
+        if 'Tipo_Chamado' in df.columns:
+            # Agrupar por tipo de chamado
+            tipos_chamado = df['Tipo_Chamado'].value_counts().reset_index()
+            tipos_chamado.columns = ['Tipo', 'Quantidade']
             
-            fig_status = px.bar(
-                status_dist,
+            # Ordenar por quantidade
+            tipos_chamado = tipos_chamado.sort_values('Quantidade', ascending=True)
+            
+            # Criar gráfico de barras horizontais
+            fig_tipos = px.bar(
+                tipos_chamado,
                 x='Quantidade',
-                y='Status',
+                y='Tipo',
                 orientation='h',
                 title='',
                 text='Quantidade',
@@ -736,7 +774,7 @@ if st.session_state.df_original is not None:
                 color_continuous_scale='Viridis'
             )
             
-            fig_status.update_traces(
+            fig_tipos.update_traces(
                 texttemplate='%{text}',
                 textposition='outside',
                 marker_line_color='rgb(8,48,107)',
@@ -744,7 +782,7 @@ if st.session_state.df_original is not None:
                 opacity=0.9
             )
             
-            fig_status.update_layout(
+            fig_tipos.update_layout(
                 height=500,
                 plot_bgcolor='white',
                 showlegend=False,
@@ -754,7 +792,13 @@ if st.session_state.df_original is not None:
                 yaxis_title=""
             )
             
-            st.plotly_chart(fig_status, use_container_width=True)
+            st.plotly_chart(fig_tipos, use_container_width=True)
+            
+            # Mostrar tipos mais comuns
+            tipos_mais_comuns = tipos_chamado.nlargest(5, 'Quantidade')
+            st.markdown("**Tipos mais frequentes:**")
+            for _, row in tipos_mais_comuns.iterrows():
+                st.markdown(f"- **{row['Tipo']}**: {row['Quantidade']:,}")
     
     # ============================================
     # ÚLTIMAS DEMANDAS REGISTRADAS COM FILTROS
@@ -764,7 +808,7 @@ if st.session_state.df_original is not None:
     
     if 'Criado' in df.columns:
         # Filtros para a tabela
-        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
+        col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
         
         with col_filtro1:
             qtd_demandas = st.slider(
@@ -788,6 +832,13 @@ if st.session_state.df_original is not None:
                 default=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Data']
             )
         
+        with col_filtro4:
+            # Novo filtro de busca por chamado específico
+            filtro_chamado_tabela = st.text_input(
+                "Filtrar por chamado:",
+                placeholder="Ex: 12345"
+            )
+        
         # Aplicar ordenação
         ultimas_demandas = df.copy()
         
@@ -799,6 +850,12 @@ if st.session_state.df_original is not None:
             ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=False)
         elif ordenar_por == 'Revisões (Menor)':
             ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=True)
+        
+        # Aplicar filtro de busca por chamado
+        if filtro_chamado_tabela:
+            ultimas_demandas = ultimas_demandas[
+                ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_tabela, na=False)
+            ]
         
         # Limitar quantidade
         ultimas_demandas = ultimas_demandas.head(qtd_demandas)
@@ -846,6 +903,10 @@ if st.session_state.df_original is not None:
                 mime="text/csv",
                 use_container_width=True
             )
+            
+            # Mostrar estatísticas da tabela filtrada
+            if filtro_chamado_tabela:
+                st.info(f"Mostrando {len(display_data)} resultado(s) para o chamado: {filtro_chamado_tabela}")
 
 else:
     # TELA INICIAL
@@ -853,7 +914,7 @@ else:
     <div style="text-align: center; padding: 4rem; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
         <h3 style="color: #495057;">📊 Esteira ADMS Dashboard</h3>
         <p style="color: #6c757d; margin-bottom: 2rem;">
-            Sistema de análise e monitoramento de demandas - Setor SRE
+            Sistema de análise e monitoramento de chamados - Setor SRE
         </p>
         <div style="margin-top: 2rem; padding: 2rem; background: white; border-radius: 8px; display: inline-block;">
             <h4 style="color: #1e3799;">📋 Para começar:</h4>
@@ -884,7 +945,7 @@ st.markdown("""
         © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
         </p>
         <p style="margin: 0.2rem 0 0 0; color: #adb5bd; font-size: 0.75rem;">
-        Versão 3.0 | SRE Monitoring Platform
+        Versão 4.0 | SRE Monitoring Platform
         </p>
     </div>
 </div>
