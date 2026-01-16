@@ -162,20 +162,6 @@ def formatar_nome_responsavel(nome):
     # Se já for nome, apenas formatar
     return nome_str.title()
 
-def calcular_crescimento(valor_atual, valor_anterior):
-    """Calcula crescimento percentual"""
-    if valor_anterior == 0:
-        return None, "neutral"
-    
-    crescimento = ((valor_atual - valor_anterior) / valor_anterior) * 100
-    
-    if crescimento > 0:
-        return round(crescimento, 1), "positive"
-    elif crescimento < 0:
-        return round(crescimento, 1), "negative"
-    else:
-        return None, "neutral"
-
 def criar_card_indicador_simples(valor, label, icone="📊"):
     """Cria card de indicador SIMPLES - sem delta"""
     # Verificar se o valor é numérico para formatar com vírgula
@@ -467,23 +453,7 @@ if st.session_state.df_original is not None:
         data_min = df['Criado'].min()
         data_max = df['Criado'].max()
         
-        col_info1, col_info2, col_info3, col_info4 = st.columns(4)
-        
-        with col_info1:
-            st.metric("**Período inicial**", data_min.strftime('%d/%m/%Y'))
-        
-        with col_info2:
-            st.metric("**Período final**", data_max.strftime('%d/%m/%Y'))
-        
-        with col_info3:
-            if 'Ano' in df.columns:
-                anos = sorted(df['Ano'].unique())
-                st.metric("**Anos disponíveis**", ", ".join(map(str, anos)))
-        
-        with col_info4:
-            st.metric("**Última atualização**", datetime.now().strftime('%d/%m/%Y %H:%M'))
-        
-        # Linha informativa adicional
+        # Apenas uma linha informativa
         st.markdown(f"""
         <div class="info-base">
             <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}</p>
@@ -545,22 +515,35 @@ if st.session_state.df_original is not None:
     tab1, tab2 = st.tabs(["📅 Evolução de Demandas", "📊 Análise de Revisões"])
     
     with tab1:
-        st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+        # Cabeçalho com seletor de ano no lado direito
+        col_titulo, col_seletor = st.columns([3, 1])
         
-        if 'Ano' in df.columns and 'Nome_Mês' in df.columns:
-            # Determinar o ano mais recente para mostrar
-            ano_mais_recente = df['Ano'].max() if not df['Ano'].empty else datetime.now().year
+        with col_titulo:
+            st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+        
+        with col_seletor:
+            if 'Ano' in df.columns:
+                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
+                if anos_disponiveis:
+                    ano_selecionado = st.selectbox(
+                        "Selecionar Ano:",
+                        options=anos_disponiveis,
+                        index=len(anos_disponiveis)-1,
+                        label_visibility="collapsed",
+                        key="ano_evolucao"
+                    )
+        
+        if 'Ano' in df.columns and 'Nome_Mês' in df.columns and anos_disponiveis:
+            # Filtrar dados para o ano selecionado
+            df_ano = df[df['Ano'] == ano_selecionado].copy()
             
-            if not df.empty:
+            if not df_ano.empty:
                 # Ordem dos meses completos
                 ordem_meses_completa = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                                        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
                 
                 ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
                                          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-                
-                # Filtrar dados para o ano mais recente
-                df_ano = df[df['Ano'] == ano_mais_recente].copy()
                 
                 # Criar dataframe com todos os meses do ano
                 todos_meses = pd.DataFrame({
@@ -570,11 +553,8 @@ if st.session_state.df_original is not None:
                 })
                 
                 # Agrupar por mês
-                if not df_ano.empty:
-                    demandas_por_mes = df_ano.groupby('Mês_Num').size().reset_index()
-                    demandas_por_mes.columns = ['Mês_Num', 'Quantidade']
-                else:
-                    demandas_por_mes = pd.DataFrame({'Mês_Num': range(1, 13), 'Quantidade': 0})
+                demandas_por_mes = df_ano.groupby('Mês_Num').size().reset_index()
+                demandas_por_mes.columns = ['Mês_Num', 'Quantidade']
                 
                 # Juntar com todos os meses para garantir 12 meses
                 demandas_completas = pd.merge(todos_meses, demandas_por_mes, on='Mês_Num', how='left')
@@ -596,7 +576,7 @@ if st.session_state.df_original is not None:
                 ))
                 
                 fig_mes.update_layout(
-                    title=f"Demandas em {ano_mais_recente}",
+                    title=f"Demandas em {ano_selecionado}",
                     xaxis_title="Mês",
                     yaxis_title="Número de Demandas",
                     plot_bgcolor='white',
