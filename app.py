@@ -9,6 +9,7 @@ import time
 import hashlib
 import warnings
 from pytz import timezone
+import numpy as np
 warnings.filterwarnings('ignore')
 
 # ============================================
@@ -162,6 +163,49 @@ st.markdown("""
     .sre-stats {
         color: #6c757d;
         font-size: 0.85rem;
+    }
+    
+    /* Novos estilos para análises melhoradas */
+    .performance-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fff9 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #28a745;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .warning-card {
+        background: linear-gradient(135deg, #ffffff 0%, #fff8f8 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #dc3545;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .info-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fcff 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #17a2b8;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .trend-up {
+        color: #28a745;
+        font-weight: bold;
+    }
+    
+    .trend-down {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    .trend-neutral {
+        color: #6c757d;
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -376,6 +420,21 @@ def get_horario_brasilia():
         return datetime.now(tz).strftime('%d/%m/%Y %H:%M:%S')
     except:
         return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
+def criar_timeline_events(events):
+    """Cria uma timeline de eventos"""
+    timeline_html = '<div style="position: relative; padding-left: 20px; border-left: 2px solid #1e3799; margin: 20px 0;">'
+    for event in events:
+        timeline_html += f'''
+        <div style="position: relative; margin-bottom: 15px; padding-left: 15px;">
+            <div style="position: absolute; left: -28px; top: 0; width: 16px; height: 16px; 
+                       border-radius: 50%; background: #1e3799; border: 3px solid white; box-shadow: 0 0 0 2px #1e3799;"></div>
+            <div style="font-weight: 600; color: #1e3799;">{event['data']}</div>
+            <div style="color: #495057;">{event['descricao']}</div>
+        </div>
+        '''
+    timeline_html += '</div>'
+    return timeline_html
 
 # ============================================
 # SIDEBAR - FILTROS E CONTROLES (REORGANIZADO)
@@ -1166,156 +1225,904 @@ if st.session_state.df_original is not None:
                     )
     
     # ============================================
-    # ANÁLISES SIMPLIFICADAS (SEM ERROS)
+    # ANÁLISES MELHORADAS (COM NOVAS FUNCIONALIDADES)
     # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title-exec">🔍 ANÁLISES ADICIONAIS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title-exec">🔍 ANÁLISES AVANÇADAS</div>', unsafe_allow_html=True)
     
     # Criar abas para as análises adicionais
     tab_extra1, tab_extra2, tab_extra3 = st.tabs([
-        "📊 Score de Qualidade por Desenvolvedor",
-        "📅 Análise de Sazonalidade", 
-        "🔧 Análise de Erros Recorrentes"
+        "🚀 Performance de Desenvolvedores",
+        "📈 Análise de Sazonalidade", 
+        "⚡ Diagnóstico de Erros"
     ])
     
-    # ABA 1: SCORE DE QUALIDADE POR DESENVOLVEDOR - SIMPLIFICADA
+    # ABA 1: PERFORMANCE DE DESENVOLVEDORES - MELHORADA E DINÂMICA
     with tab_extra1:
-        st.markdown("### 📊 SCORE DE QUALIDADE POR DESENVOLVEDOR")
-        
-        st.info("""
-        **Objetivo:** Avaliar a qualidade do código enviado por cada desenvolvedor
-        
-        **Métrica Principal:** 
-        ```
-        Score = (Chamados sem revisão / Total de chamados) × 100
-        ```
-        
-        **Interpretação:**
-        - **Score ALTO (80-100%)**: Desenvolvedor produz código de alta qualidade
-        - **Score MÉDIO (60-80%)**: Qualidade satisfatória
-        - **Score BAIXO (<60%)**: Necessidade de atenção
-        """)
-        
-        if 'Responsável_Formatado' in df.columns and 'Revisões' in df.columns:
-            col_info1, col_info2 = st.columns(2)
+        # Container expansível para informações
+        with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
+            st.markdown("""
+            **Métricas Calculadas:**
             
-            with col_info1:
-                devs_qualidade_alta = df[df['Revisões'] == 0].groupby('Responsável_Formatado').size().reset_index()
-                devs_qualidade_alta.columns = ['Desenvolvedor', 'Chamados sem Revisão']
-                devs_qualidade_alta = devs_qualidade_alta.sort_values('Chamados sem Revisão', ascending=False)
-                
-                if not devs_qualidade_alta.empty:
-                    st.metric("Desenvolvedores com código limpo", len(devs_qualidade_alta))
-                    st.dataframe(devs_qualidade_alta.head(10), use_container_width=True)
+            ```
+            Score = (Chamados sem revisão / Total de chamados) × 100
+            Eficiência = (Sincronizados / Total) × 100
+            Produtividade = Total de chamados / Mês
+            ```
             
-            with col_info2:
-                total_devs = df['Responsável_Formatado'].nunique()
-                total_chamados = len(df)
-                chamados_sem_revisao = len(df[df['Revisões'] == 0])
-                taxa_sem_revisao = (chamados_sem_revisao / total_chamados * 100) if total_chamados > 0 else 0
-                
-                st.metric("Total de Desenvolvedores", f"{total_devs}")
-                st.metric("Taxa de código limpo", f"{taxa_sem_revisao:.1f}%")
-    
-    # ABA 2: ANÁLISE DE SAZONALIDADE - SIMPLIFICADA
-    with tab_extra2:
-        st.markdown("### 📅 ANÁLISE DE SAZONALIDADE")
+            **Indicadores:**
+            - 🟢 **Alto Performance**: Score > 80% + Alta produtividade
+            - 🟡 **Média Performance**: Score 60-80%
+            - 🔴 **Baixa Performance**: Score < 60%
+            """)
         
-        st.info("""
-        **Objetivo:** Identificar padrões temporais na geração de demandas
-        
-        **Análises disponíveis:**
-        1. **Padrões diários**: Horários de pico
-        2. **Padrões semanais**: Dias com maior volume
-        3. **Padrões mensais**: Sazonalidade ao longo do ano
-        """)
-        
-        if 'Criado' in df.columns:
-            df_temp = df.copy()
-            df_temp['Dia_Semana'] = df_temp['Criado'].dt.day_name()
-            df_temp['Hora'] = df_temp['Criado'].dt.hour
+        if 'Responsável_Formatado' in df.columns and 'Revisões' in df.columns and 'Status' in df.columns:
+            # Filtros para performance
+            col_filtro_perf1, col_filtro_perf2, col_filtro_perf3 = st.columns(3)
             
-            col_saz1, col_saz2 = st.columns(2)
-            
-            with col_saz1:
-                dias_semana = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                dias_portugues = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
-                
-                demanda_dia = df_temp['Dia_Semana'].value_counts().reindex(dias_semana).reset_index()
-                demanda_dia.columns = ['Dia_Semana', 'Quantidade']
-                demanda_dia['Dia_PT'] = dias_portugues
-                
-                fig_dias = px.bar(
-                    demanda_dia,
-                    x='Dia_PT',
-                    y='Quantidade',
-                    title='Demanda por Dia da Semana',
-                    color='Quantidade',
-                    color_continuous_scale='Blues'
+            with col_filtro_perf1:
+                min_chamados = st.slider(
+                    "Mínimo de chamados:",
+                    min_value=1,
+                    max_value=50,
+                    value=5,
+                    help="Filtrar desenvolvedores com pelo menos X chamados"
                 )
+            
+            with col_filtro_perf2:
+                periodo_perf = st.selectbox(
+                    "Período de análise:",
+                    options=["Últimos 30 dias", "Últimos 90 dias", "Todo o período", "Personalizado"],
+                    index=2
+                )
+            
+            with col_filtro_perf3:
+                ordenar_por = st.selectbox(
+                    "Ordenar por:",
+                    options=["Score de Qualidade", "Total de Chamados", "Eficiência", "Produtividade"],
+                    index=0
+                )
+            
+            # Filtrar dados conforme período selecionado
+            df_perf = df.copy()
+            if periodo_perf == "Últimos 30 dias" and 'Criado' in df_perf.columns:
+                data_limite = datetime.now() - timedelta(days=30)
+                df_perf = df_perf[df_perf['Criado'] >= data_limite]
+            elif periodo_perf == "Últimos 90 dias" and 'Criado' in df_perf.columns:
+                data_limite = datetime.now() - timedelta(days=90)
+                df_perf = df_perf[df_perf['Criado'] >= data_limite]
+            
+            # Calcular métricas por desenvolvedor
+            dev_metrics = []
+            devs = df_perf['Responsável_Formatado'].unique()
+            
+            for dev in devs:
+                dev_data = df_perf[df_perf['Responsável_Formatado'] == dev]
+                total_chamados = len(dev_data)
+                
+                if total_chamados >= min_chamados:
+                    # Chamados sem revisão
+                    sem_revisao = len(dev_data[dev_data['Revisões'] == 0])
+                    score_qualidade = (sem_revisao / total_chamados * 100) if total_chamados > 0 else 0
+                    
+                    # Eficiência (sincronizados)
+                    sincronizados = len(dev_data[dev_data['Status'] == 'Sincronizado'])
+                    eficiencia = (sincronizados / total_chamados * 100) if total_chamados > 0 else 0
+                    
+                    # Produtividade (chamados por mês)
+                    if 'Criado' in dev_data.columns:
+                        meses_ativos = dev_data['Criado'].dt.to_period('M').nunique()
+                        produtividade = total_chamados / meses_ativos if meses_ativos > 0 else 0
+                    else:
+                        produtividade = 0
+                    
+                    # Classificação
+                    if score_qualidade >= 80 and produtividade >= 5:
+                        classificacao = "🟢 Alto"
+                    elif score_qualidade >= 60:
+                        classificacao = "🟡 Médio"
+                    else:
+                        classificacao = "🔴 Baixo"
+                    
+                    dev_metrics.append({
+                        'Desenvolvedor': dev,
+                        'Total Chamados': total_chamados,
+                        'Sem Revisão': sem_revisao,
+                        'Score Qualidade': round(score_qualidade, 1),
+                        'Sincronizados': sincronizados,
+                        'Eficiência': round(eficiencia, 1),
+                        'Produtividade': round(produtividade, 1),
+                        'Classificação': classificacao
+                    })
+            
+            if dev_metrics:
+                # Converter para DataFrame
+                df_dev_metrics = pd.DataFrame(dev_metrics)
+                
+                # Ordenar
+                if ordenar_por == "Score de Qualidade":
+                    df_dev_metrics = df_dev_metrics.sort_values('Score Qualidade', ascending=False)
+                elif ordenar_por == "Total de Chamados":
+                    df_dev_metrics = df_dev_metrics.sort_values('Total Chamados', ascending=False)
+                elif ordenar_por == "Eficiência":
+                    df_dev_metrics = df_dev_metrics.sort_values('Eficiência', ascending=False)
+                elif ordenar_por == "Produtividade":
+                    df_dev_metrics = df_dev_metrics.sort_values('Produtividade', ascending=False)
+                
+                # Mostrar top 10
+                st.markdown(f"### 🏆 Top 10 Desenvolvedores ({ordenar_por})")
+                
+                # Gráfico de radar para top 3
+                if len(df_dev_metrics) >= 3:
+                    col_viz1, col_viz2 = st.columns([2, 1])
+                    
+                    with col_viz1:
+                        top3 = df_dev_metrics.head(3)
+                        
+                        categories = ['Score Qualidade', 'Eficiência', 'Produtividade', 'Total Chamados']
+                        
+                        fig_radar = go.Figure()
+                        
+                        for idx, row in top3.iterrows():
+                            values = [
+                                row['Score Qualidade'],
+                                row['Eficiência'],
+                                min(row['Produtividade'] * 10, 100),  # Normalizar produtividade
+                                min(row['Total Chamados'] * 2, 100)    # Normalizar total
+                            ]
+                            
+                            fig_radar.add_trace(go.Scatterpolar(
+                                r=values,
+                                theta=categories,
+                                fill='toself',
+                                name=row['Desenvolvedor'][:20] + ("..." if len(row['Desenvolvedor']) > 20 else "")
+                            ))
+                        
+                        fig_radar.update_layout(
+                            polar=dict(
+                                radialaxis=dict(
+                                    visible=True,
+                                    range=[0, 100]
+                                )),
+                            showlegend=True,
+                            title="Comparação Radar - Top 3 Desenvolvedores",
+                            height=400
+                        )
+                        
+                        st.plotly_chart(fig_radar, use_container_width=True)
+                    
+                    with col_viz2:
+                        st.markdown("### 📊 Estatísticas Gerais")
+                        avg_score = df_dev_metrics['Score Qualidade'].mean()
+                        avg_eff = df_dev_metrics['Eficiência'].mean()
+                        avg_prod = df_dev_metrics['Produtividade'].mean()
+                        
+                        st.metric("Média Score", f"{avg_score:.1f}%")
+                        st.metric("Média Eficiência", f"{avg_eff:.1f}%")
+                        st.metric("Média Produtividade", f"{avg_prod:.1f}/mês")
+                        
+                        # Distribuição por classificação
+                        dist_class = df_dev_metrics['Classificação'].value_counts()
+                        for classe, count in dist_class.items():
+                            st.markdown(f"{classe}: {count} devs")
+                
+                # Tabela completa
+                st.markdown("### 📋 Performance Detalhada")
+                st.dataframe(
+                    df_dev_metrics,
+                    use_container_width=True,
+                    height=400,
+                    column_config={
+                        "Desenvolvedor": st.column_config.TextColumn("Desenvolvedor", width="medium"),
+                        "Total Chamados": st.column_config.NumberColumn("Total", format="%d"),
+                        "Sem Revisão": st.column_config.NumberColumn("Sem Rev.", format="%d"),
+                        "Score Qualidade": st.column_config.NumberColumn("Score %", format="%.1f%%"),
+                        "Sincronizados": st.column_config.NumberColumn("Sinc.", format="%d"),
+                        "Eficiência": st.column_config.NumberColumn("Efic. %", format="%.1f%%"),
+                        "Produtividade": st.column_config.NumberColumn("Prod./Mês", format="%.1f"),
+                        "Classificação": st.column_config.TextColumn("Classif.")
+                    }
+                )
+                
+                # Heatmap de performance
+                st.markdown("### 🔥 Heatmap de Performance")
+                
+                # Preparar dados para heatmap
+                heatmap_data = df_dev_metrics.head(15).copy()
+                heatmap_data['Performance Index'] = (
+                    heatmap_data['Score Qualidade'] * 0.4 +
+                    heatmap_data['Eficiência'] * 0.3 +
+                    heatmap_data['Produtividade'] * 10 * 0.3  # Peso maior para produtividade
+                )
+                
+                fig_heat = px.imshow(
+                    heatmap_data[['Score Qualidade', 'Eficiência', 'Produtividade']].T,
+                    labels=dict(x="Desenvolvedor", y="Métrica", color="Valor"),
+                    x=heatmap_data['Desenvolvedor'],
+                    y=['Score Qualidade', 'Eficiência', 'Produtividade'],
+                    color_continuous_scale='RdYlGn',
+                    aspect="auto"
+                )
+                
+                fig_heat.update_layout(
+                    height=300,
+                    title="Mapa de Calor de Performance"
+                )
+                
+                st.plotly_chart(fig_heat, use_container_width=True)
+            else:
+                st.info("Nenhum desenvolvedor encontrado com os critérios selecionados.")
+    
+    # ABA 2: ANÁLISE DE SAZONALIDADE - MELHORADA COM PICO DE SINCRONIZAÇÕES
+    with tab_extra2:
+        with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
+            st.markdown("""
+            **Identificação de Padrões:**
+            - 📅 **Sazonalidade mensal**: Picos e vales ao longo do ano
+            - 📊 **Horários de pico**: Melhores momentos para sincronização
+            - 📈 **Tendências**: Evolução temporal das demandas
+            """)
+        
+        if 'Criado' in df.columns and 'Status' in df.columns:
+            # Filtros para sazonalidade
+            col_saz_filtro1, col_saz_filtro2, col_saz_filtro3 = st.columns(3)
+            
+            with col_saz_filtro1:
+                anos_saz = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_saz = ['Todos os Anos'] + list(anos_saz)
+                ano_saz = st.selectbox(
+                    "Selecionar Ano:",
+                    options=anos_opcoes_saz,
+                    index=len(anos_opcoes_saz)-1,
+                    key="ano_saz"
+                )
+            
+            with col_saz_filtro2:
+                if ano_saz != 'Todos os Anos':
+                    meses_ano = df[df['Ano'] == int(ano_saz)]['Mês'].unique()
+                    meses_opcoes = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_ano])
+                    mes_saz = st.selectbox(
+                        "Selecionar Mês:",
+                        options=meses_opcoes,
+                        key="mes_saz"
+                    )
+                else:
+                    mes_saz = 'Todos os Meses'
+            
+            with col_saz_filtro3:
+                tipo_analise = st.selectbox(
+                    "Tipo de Análise:",
+                    options=["Demandas Totais", "Apenas Sincronizados", "Comparativo"],
+                    index=0
+                )
+            
+            # Aplicar filtros
+            df_saz = df.copy()
+            
+            if ano_saz != 'Todos os Anos':
+                df_saz = df_saz[df_saz['Ano'] == int(ano_saz)]
+            
+            if mes_saz != 'Todos os Meses':
+                df_saz = df_saz[df_saz['Mês'] == int(mes_saz)]
+            
+            # Análise por dia da semana
+            st.markdown("### 📅 Padrões por Dia da Semana")
+            
+            # Mapear dias da semana
+            dias_semana = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            dias_portugues = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+            dia_mapping = dict(zip(dias_semana, dias_portugues))
+            
+            df_saz['Dia_Semana'] = df_saz['Criado'].dt.day_name()
+            df_saz['Dia_Semana_PT'] = df_saz['Dia_Semana'].map(dia_mapping)
+            
+            col_dia1, col_dia2 = st.columns(2)
+            
+            with col_dia1:
+                # Total por dia da semana
+                demanda_dia = df_saz['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
+                demanda_dia.columns = ['Dia', 'Total_Demandas']
+                
+                # Sincronizados por dia
+                sinc_dia = df_saz[df_saz['Status'] == 'Sincronizado']['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
+                sinc_dia.columns = ['Dia', 'Sincronizados']
+                
+                # Combinar dados
+                dados_dia = pd.merge(demanda_dia, sinc_dia, on='Dia', how='left').fillna(0)
+                dados_dia['Taxa_Sinc'] = (dados_dia['Sincronizados'] / dados_dia['Total_Demandas'] * 100).round(1)
+                
+                fig_dias = go.Figure()
+                
+                fig_dias.add_trace(go.Bar(
+                    x=dados_dia['Dia'],
+                    y=dados_dia['Total_Demandas'],
+                    name='Total Demandas',
+                    marker_color='#1e3799',
+                    text=dados_dia['Total_Demandas'],
+                    textposition='auto'
+                ))
+                
+                fig_dias.add_trace(go.Bar(
+                    x=dados_dia['Dia'],
+                    y=dados_dia['Sincronizados'],
+                    name='Sincronizados',
+                    marker_color='#28a745',
+                    text=dados_dia['Sincronizados'],
+                    textposition='auto'
+                ))
+                
+                fig_dias.add_trace(go.Scatter(
+                    x=dados_dia['Dia'],
+                    y=dados_dia['Taxa_Sinc'],
+                    name='Taxa Sinc (%)',
+                    yaxis='y2',
+                    mode='lines+markers',
+                    line=dict(color='#dc3545', width=3),
+                    marker=dict(size=8)
+                ))
+                
+                fig_dias.update_layout(
+                    title='Demandas e Sincronizações por Dia da Semana',
+                    barmode='group',
+                    yaxis=dict(title='Quantidade'),
+                    yaxis2=dict(
+                        title='Taxa Sinc (%)',
+                        overlaying='y',
+                        side='right',
+                        range=[0, 100]
+                    ),
+                    height=400,
+                    showlegend=True
+                )
+                
                 st.plotly_chart(fig_dias, use_container_width=True)
             
-            with col_saz2:
-                demanda_hora = df_temp['Hora'].value_counts().sort_index().reset_index()
-                demanda_hora.columns = ['Hora', 'Quantidade']
+            with col_dia2:
+                # Análise por hora do dia
+                st.markdown("### 🕐 Padrões por Hora do Dia")
                 
-                fig_horas = px.line(
-                    demanda_hora,
-                    x='Hora',
-                    y='Quantidade',
-                    title='Demanda por Hora do Dia',
-                    markers=True
+                df_saz['Hora'] = df_saz['Criado'].dt.hour
+                
+                # Total por hora
+                demanda_hora = df_saz['Hora'].value_counts().sort_index().reset_index()
+                demanda_hora.columns = ['Hora', 'Total_Demandas']
+                
+                # Sincronizados por hora
+                sinc_hora = df_saz[df_saz['Status'] == 'Sincronizado']['Hora'].value_counts().sort_index().reset_index()
+                sinc_hora.columns = ['Hora', 'Sincronizados']
+                
+                # Combinar dados
+                dados_hora = pd.merge(demanda_hora, sinc_hora, on='Hora', how='left').fillna(0)
+                dados_hora['Taxa_Sinc'] = (dados_hora['Sincronizados'] / dados_hora['Total_Demandas'] * 100).where(dados_hora['Total_Demandas'] > 0, 0).round(1)
+                
+                fig_horas = go.Figure()
+                
+                fig_horas.add_trace(go.Scatter(
+                    x=dados_hora['Hora'],
+                    y=dados_hora['Total_Demandas'],
+                    name='Total Demandas',
+                    mode='lines+markers',
+                    line=dict(color='#1e3799', width=3),
+                    marker=dict(size=8)
+                ))
+                
+                fig_horas.add_trace(go.Scatter(
+                    x=dados_hora['Hora'],
+                    y=dados_hora['Sincronizados'],
+                    name='Sincronizados',
+                    mode='lines+markers',
+                    line=dict(color='#28a745', width=3),
+                    marker=dict(size=8)
+                ))
+                
+                # Identificar picos
+                if not dados_hora.empty:
+                    pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
+                    pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
+                    
+                    # Adicionar anotações para picos
+                    fig_horas.add_annotation(
+                        x=pico_demanda['Hora'],
+                        y=pico_demanda['Total_Demandas'],
+                        text=f"Pico: {int(pico_demanda['Total_Demandas'])}<br>{pico_demanda['Hora']}:00h",
+                        showarrow=True,
+                        arrowhead=2,
+                        ax=0,
+                        ay=-40,
+                        bgcolor="white",
+                        bordercolor="black"
+                    )
+                    
+                    fig_horas.add_annotation(
+                        x=pico_sinc['Hora'],
+                        y=pico_sinc['Sincronizados'],
+                        text=f"Pico Sinc: {int(pico_sinc['Sincronizados'])}<br>{pico_sinc['Hora']}:00h",
+                        showarrow=True,
+                        arrowhead=2,
+                        ax=0,
+                        ay=40,
+                        bgcolor="white",
+                        bordercolor="green"
+                    )
+                
+                fig_horas.update_layout(
+                    title='Demandas por Hora do Dia',
+                    xaxis_title='Hora',
+                    yaxis_title='Quantidade',
+                    height=400,
+                    showlegend=True
                 )
-                fig_horas.update_traces(line=dict(width=3))
+                
                 st.plotly_chart(fig_horas, use_container_width=True)
+            
+            # Análise mensal com filtro de ano
+            if ano_saz != 'Todos os Anos':
+                st.markdown(f"### 📈 Sazonalidade Mensal - {ano_saz}")
+                
+                # Ordem dos meses
+                meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                
+                # Dados mensais
+                df_saz['Mês_Abrev'] = df_saz['Criado'].dt.strftime('%b')
+                demanda_mes = df_saz.groupby('Mês_Abrev').size().reindex(meses_ordem).reset_index()
+                demanda_mes.columns = ['Mês', 'Total']
+                
+                sinc_mes = df_saz[df_saz['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reindex(meses_ordem).reset_index()
+                sinc_mes.columns = ['Mês', 'Sincronizados']
+                
+                dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
+                dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).round(1)
+                
+                fig_mes_saz = go.Figure()
+                
+                fig_mes_saz.add_trace(go.Bar(
+                    x=dados_mes['Mês'],
+                    y=dados_mes['Total'],
+                    name='Total Demandas',
+                    marker_color='#1e3799',
+                    text=dados_mes['Total'],
+                    textposition='auto'
+                ))
+                
+                fig_mes_saz.add_trace(go.Bar(
+                    x=dados_mes['Mês'],
+                    y=dados_mes['Sincronizados'],
+                    name='Sincronizados',
+                    marker_color='#28a745',
+                    text=dados_mes['Sincronizados'],
+                    textposition='auto'
+                ))
+                
+                fig_mes_saz.add_trace(go.Scatter(
+                    x=dados_mes['Mês'],
+                    y=dados_mes['Taxa_Sinc'],
+                    name='Taxa Sinc (%)',
+                    yaxis='y2',
+                    mode='lines+markers',
+                    line=dict(color='#dc3545', width=3),
+                    marker=dict(size=8)
+                ))
+                
+                fig_mes_saz.update_layout(
+                    title=f'Distribuição Mensal - {ano_saz}',
+                    barmode='group',
+                    yaxis=dict(title='Quantidade'),
+                    yaxis2=dict(
+                        title='Taxa Sinc (%)',
+                        overlaying='y',
+                        side='right',
+                        range=[0, 100]
+                    ),
+                    height=400,
+                    showlegend=True
+                )
+                
+                st.plotly_chart(fig_mes_saz, use_container_width=True)
+                
+                # Estatísticas de pico
+                col_pico1, col_pico2, col_pico3 = st.columns(3)
+                
+                with col_pico1:
+                    mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
+                    st.metric("📈 Mês com mais demandas", 
+                             f"{mes_maior_demanda['Mês']}: {int(mes_maior_demanda['Total'])}")
+                
+                with col_pico2:
+                    mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
+                    st.metric("✅ Mês com mais sincronizações", 
+                             f"{mes_maior_sinc['Mês']}: {int(mes_maior_sinc['Sincronizados'])}")
+                
+                with col_pico3:
+                    melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
+                    st.metric("🏆 Melhor taxa de sincronização", 
+                             f"{melhor_taxa['Mês']}: {melhor_taxa['Taxa_Sinc']}%")
     
-    # ABA 3: ANÁLISE DE ERROS RECORRENTES - SIMPLIFICADA
+    # ABA 3: DIAGNÓSTICO DE ERROS - SURPREENDENTE
     with tab_extra3:
-        st.markdown("### 🔧 ANÁLISE DE ERROS RECORRENTES")
-        
-        st.info("""
-        **Objetivo:** Identificar padrões de erros frequentes para prevenção
-        
-        **Técnicas aplicadas:**
-        1. **Análise de texto** nas descrições
-        2. **Agrupamento por similaridade**
-        3. **Análise temporal** de evolução
-        """)
+        with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
+            st.markdown("""
+            **Análise Avançada de Erros:**
+            - 🔍 **Identificação de padrões recorrentes**
+            - 📊 **Análise de causas raiz**
+            - ⚡ **Recomendações automáticas**
+            - 🎯 **Foco em prevenção**
+            """)
         
         if 'Tipo_Chamado' in df.columns:
-            col_erro1, col_erro2 = st.columns(2)
+            # Filtros para diagnóstico
+            col_diag1, col_diag2, col_diag3 = st.columns(3)
             
-            with col_erro1:
-                tipos_erro = df['Tipo_Chamado'].value_counts().reset_index()
-                tipos_erro.columns = ['Tipo', 'Frequência']
-                
-                fig_tipos = px.pie(
-                    tipos_erro.head(10),
-                    values='Frequência',
-                    names='Tipo',
-                    title='Top 10 Tipos de Chamados',
-                    hole=0.4
+            with col_diag1:
+                anos_diag = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_diag = ['Todos os Anos'] + list(anos_diag)
+                ano_diag = st.selectbox(
+                    "Selecionar Ano:",
+                    options=anos_opcoes_diag,
+                    index=len(anos_opcoes_diag)-1,
+                    key="ano_diag"
                 )
-                st.plotly_chart(fig_tipos, use_container_width=True)
             
-            with col_erro2:
-                if 'Criado' in df.columns:
-                    df['Mes_Ano'] = df['Criado'].dt.strftime('%Y-%m')
-                    evol_tipos = df.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
-                    evol_tipos.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
+            with col_diag2:
+                if ano_diag != 'Todos os Anos':
+                    meses_diag = df[df['Ano'] == int(ano_diag)]['Mês'].unique()
+                    meses_opcoes_diag = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_diag])
+                    mes_diag = st.selectbox(
+                        "Selecionar Mês:",
+                        options=meses_opcoes_diag,
+                        key="mes_diag"
+                    )
+                else:
+                    mes_diag = 'Todos os Meses'
+            
+            with col_diag3:
+                tipo_analise_diag = st.selectbox(
+                    "Foco da Análise:",
+                    options=["Tipos de Erro", "Tendências Temporais", "Impacto nos SREs", "Recomendações"],
+                    index=0
+                )
+            
+            # Aplicar filtros
+            df_diag = df.copy()
+            
+            if ano_diag != 'Todos os Anos':
+                df_diag = df_diag[df_diag['Ano'] == int(ano_diag)]
+            
+            if mes_diag != 'Todos os Meses':
+                df_diag = df_diag[df_diag['Mês'] == int(mes_diag)]
+            
+            # Análise principal baseada na seleção
+            if tipo_analise_diag == "Tipos de Erro":
+                st.markdown("### 🔍 Análise de Tipos de Erro")
+                
+                # Distribuição por tipo
+                tipos_erro = df_diag['Tipo_Chamado'].value_counts().reset_index()
+                tipos_erro.columns = ['Tipo', 'Frequência']
+                tipos_erro['Percentual'] = (tipos_erro['Frequência'] / len(df_diag) * 100).round(1)
+                
+                col_tipo1, col_tipo2 = st.columns([2, 1])
+                
+                with col_tipo1:
+                    # Gráfico de pizza
+                    fig_pizza = px.pie(
+                        tipos_erro.head(10),
+                        values='Frequência',
+                        names='Tipo',
+                        title='Distribuição dos 10 Tipos Mais Frequentes',
+                        hole=0.4,
+                        color_discrete_sequence=px.colors.sequential.RdBu
+                    )
                     
-                    top_tipos = df['Tipo_Chamado'].value_counts().head(5).index.tolist()
-                    evol_top = evol_tipos[evol_tipos['Tipo'].isin(top_tipos)]
+                    fig_pizza.update_traces(
+                        textposition='inside',
+                        textinfo='percent+label',
+                        hoverinfo='label+percent+value'
+                    )
                     
-                    fig_evol = px.line(
+                    st.plotly_chart(fig_pizza, use_container_width=True)
+                
+                with col_tipo2:
+                    st.markdown("### 📊 Top 5 Tipos")
+                    
+                    for idx, row in tipos_erro.head(5).iterrows():
+                        st.markdown(f"""
+                        <div class="{'warning-card' if row['Percentual'] > 10 else 'info-card'}" style="margin-bottom: 10px;">
+                            <strong>{row['Tipo']}</strong><br>
+                            <small>Frequência: {row['Frequência']}</small><br>
+                            <small>Percentual: {row['Percentual']}%</small>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Análise de severidade (baseada em revisões)
+                if 'Revisões' in df_diag.columns:
+                    st.markdown("### ⚠️ Análise de Severidade")
+                    
+                    severidade = df_diag.groupby('Tipo_Chamado').agg({
+                        'Revisões': ['mean', 'max', 'sum'],
+                        'Chamado': 'count'
+                    }).round(2)
+                    
+                    severidade.columns = ['Média_Revisões', 'Max_Revisões', 'Total_Revisões', 'Contagem']
+                    severidade = severidade.sort_values('Média_Revisões', ascending=False)
+                    
+                    # Identificar tipos problemáticos
+                    severidade['Severidade'] = pd.qcut(
+                        severidade['Média_Revisões'],
+                        q=3,
+                        labels=['Baixa', 'Média', 'Alta']
+                    )
+                    
+                    st.dataframe(
+                        severidade.head(10),
+                        use_container_width=True,
+                        column_config={
+                            "Média_Revisões": st.column_config.NumberColumn("Média Rev.", format="%.1f"),
+                            "Max_Revisões": st.column_config.NumberColumn("Máx. Rev.", format="%d"),
+                            "Total_Revisões": st.column_config.NumberColumn("Total Rev.", format="%d"),
+                            "Contagem": st.column_config.NumberColumn("Qtd Chamados", format="%d"),
+                            "Severidade": st.column_config.TextColumn("Nível Severidade")
+                        }
+                    )
+            
+            elif tipo_analise_diag == "Tendências Temporais":
+                st.markdown("### 📈 Tendências Temporais de Erros")
+                
+                if 'Criado' in df_diag.columns:
+                    # Agrupar por mês
+                    df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
+                    
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
+                    evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
+                    
+                    # Top 5 tipos para análise
+                    top_tipos = df_diag['Tipo_Chamado'].value_counts().head(5).index.tolist()
+                    evol_top = evolucao[evolucao['Tipo'].isin(top_tipos)]
+                    
+                    # Gráfico de linha
+                    fig_tendencia = px.line(
                         evol_top,
                         x='Mês_Ano',
                         y='Quantidade',
                         color='Tipo',
                         title='Evolução dos Tipos Mais Frequentes',
-                        markers=True
+                        markers=True,
+                        line_shape='spline'
                     )
-                    st.plotly_chart(fig_evol, use_container_width=True)
+                    
+                    fig_tendencia.update_layout(
+                        height=400,
+                        xaxis_title="Mês/Ano",
+                        yaxis_title="Quantidade de Ocorrências",
+                        hovermode='x unified'
+                    )
+                    
+                    st.plotly_chart(fig_tendencia, use_container_width=True)
+                    
+                    # Detecção de tendências
+                    st.markdown("### 🔍 Detecção de Tendências")
+                    
+                    # Calcular crescimento para cada tipo
+                    tendencias = []
+                    for tipo in top_tipos:
+                        tipo_data = evol_top[evol_top['Tipo'] == tipo].sort_values('Mês_Ano')
+                        if len(tipo_data) > 1:
+                            crescimento = ((tipo_data['Quantidade'].iloc[-1] - tipo_data['Quantidade'].iloc[0]) / 
+                                         tipo_data['Quantidade'].iloc[0] * 100)
+                            
+                            if crescimento > 20:
+                                status = "📈 Crescimento Acelerado"
+                                cor = "danger"
+                            elif crescimento > 0:
+                                status = "↗️ Crescimento Moderado"
+                                cor = "warning"
+                            elif crescimento < -20:
+                                status = "📉 Redução Significativa"
+                                cor = "success"
+                            else:
+                                status = "➡️ Estável"
+                                cor = "info"
+                            
+                            tendencias.append({
+                                'Tipo': tipo,
+                                'Crescimento': f"{crescimento:.1f}%",
+                                'Status': status,
+                                'Tendência': cor
+                            })
+                    
+                    if tendencias:
+                        df_tendencias = pd.DataFrame(tendencias)
+                        st.dataframe(
+                            df_tendencias,
+                            use_container_width=True,
+                            column_config={
+                                "Tipo": st.column_config.TextColumn("Tipo de Erro"),
+                                "Crescimento": st.column_config.TextColumn("Variação"),
+                                "Status": st.column_config.TextColumn("Análise"),
+                                "Tendência": st.column_config.TextColumn("Tendência")
+                            }
+                        )
+            
+            elif tipo_analise_diag == "Impacto nos SREs":
+                st.markdown("### 👥 Impacto nos SREs")
+                
+                if 'SRE' in df_diag.columns and 'Revisões' in df_diag.columns:
+                    # Análise por SRE
+                    impacto_sre = df_diag.groupby('SRE').agg({
+                        'Tipo_Chamado': lambda x: x.value_counts().index[0] if len(x) > 0 else 'N/A',
+                        'Revisões': ['mean', 'sum'],
+                        'Chamado': 'count'
+                    }).round(2)
+                    
+                    impacto_sre.columns = ['Tipo_Mais_Comum', 'Média_Revisões', 'Total_Revisões', 'Qtd_Chamados']
+                    impacto_sre = impacto_sre.sort_values('Total_Revisões', ascending=False)
+                    
+                    col_impacto1, col_impacto2 = st.columns(2)
+                    
+                    with col_impacto1:
+                        # Gráfico de impacto
+                        fig_impacto = px.bar(
+                            impacto_sre.head(10),
+                            x=impacto_sre.head(10).index,
+                            y='Total_Revisões',
+                            title='Total de Revisões por SRE',
+                            color='Média_Revisões',
+                            color_continuous_scale='Reds',
+                            text='Total_Revisões'
+                        )
+                        
+                        fig_impacto.update_layout(
+                            height=400,
+                            xaxis_title="SRE",
+                            yaxis_title="Total de Revisões"
+                        )
+                        
+                        st.plotly_chart(fig_impacto, use_container_width=True)
+                    
+                    with col_impacto2:
+                        st.markdown("### 🎯 Foco de Melhoria")
+                        
+                        # Identificar SREs que precisam de atenção
+                        sre_atencao = impacto_sre[
+                            (impacto_sre['Média_Revisões'] > impacto_sre['Média_Revisões'].median()) &
+                            (impacto_sre['Qtd_Chamados'] > 5)
+                        ]
+                        
+                        if not sre_atencao.empty:
+                            for idx, row in sre_atencao.head(3).iterrows():
+                                st.markdown(f"""
+                                <div class="warning-card">
+                                    <strong>⚠️ {idx}</strong><br>
+                                    <small>Tipo mais comum: {row['Tipo_Mais_Comum']}</small><br>
+                                    <small>Média revisões: {row['Média_Revisões']}</small><br>
+                                    <small>Total revisões: {int(row['Total_Revisões'])}</small>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        
+                        # SREs com melhor performance
+                        sre_melhor = impacto_sre[
+                            (impacto_sre['Média_Revisões'] < impacto_sre['Média_Revisões'].quantile(0.25)) &
+                            (impacto_sre['Qtd_Chamados'] > 5)
+                        ]
+                        
+                        if not sre_melhor.empty:
+                            for idx, row in sre_melhor.head(3).iterrows():
+                                st.markdown(f"""
+                                <div class="performance-card">
+                                    <strong>✅ {idx}</strong><br>
+                                    <small>Tipo mais comum: {row['Tipo_Mais_Comum']}</small><br>
+                                    <small>Média revisões: {row['Média_Revisões']}</small><br>
+                                    <small>Total revisões: {int(row['Total_Revisões'])}</small>
+                                </div>
+                                """, unsafe_allow_html=True)
+            
+            elif tipo_analise_diag == "Recomendações":
+                st.markdown("### 💡 Recomendações Inteligentes")
+                
+                # Gerar recomendações baseadas nos dados
+                recomendacoes = []
+                
+                # 1. Análise de tipos frequentes
+                tipos_frequentes = df_diag['Tipo_Chamado'].value_counts().head(3)
+                for tipo, count in tipos_frequentes.items():
+                    if count > len(df_diag) * 0.1:  # Mais de 10% do total
+                        recomendacoes.append({
+                            'Prioridade': '🔴 ALTA',
+                            'Recomendação': f'Investigar causa raiz do tipo "{tipo}"',
+                            'Justificativa': f'Responsável por {count} ocorrências ({count/len(df_diag)*100:.1f}% do total)'
+                        })
+                
+                # 2. Análise temporal
+                if 'Criado' in df_diag.columns:
+                    df_diag['Dia_Semana'] = df_diag['Criado'].dt.day_name()
+                    dia_pico = df_diag['Dia_Semana'].value_counts().index[0]
+                    
+                    recomendacoes.append({
+                        'Prioridade': '🟡 MÉDIA',
+                        'Recomendação': f'Reforçar equipe às {dia_pico}s',
+                        'Justificativa': f'Dia com maior volume de chamados'
+                    })
+                
+                # 3. Análise de revisões
+                if 'Revisões' in df_diag.columns:
+                    media_revisoes = df_diag['Revisões'].mean()
+                    if media_revisoes > 2:
+                        recomendacoes.append({
+                            'Prioridade': '🔴 ALTA',
+                            'Recomendação': 'Implementar revisão de código mais rigorosa',
+                            'Justificativa': f'Média de {media_revisoes:.1f} revisões por chamado'
+                        })
+                
+                # 4. Análise de SRE
+                if 'SRE' in df_diag.columns:
+                    sre_performance = df_diag.groupby('SRE')['Revisões'].mean()
+                    if len(sre_performance) > 0:
+                        sre_maior_revisao = sre_performance.idxmax()
+                        maior_media = sre_performance.max()
+                        
+                        if maior_media > 3:
+                            recomendacoes.append({
+                                'Prioridade': '🟡 MÉDIA',
+                                'Recomendação': f'Capacitação específica para {sre_maior_revisao}',
+                                'Justificativa': f'Média de {maior_media:.1f} revisões por chamado'
+                            })
+                
+                # Exibir recomendações
+                if recomendacoes:
+                    df_recomendacoes = pd.DataFrame(recomendacoes)
+                    
+                    for idx, row in df_recomendacoes.iterrows():
+                        st.markdown(f"""
+                        <div class="{ 'warning-card' if 'ALTA' in row['Prioridade'] else 'info-card' if 'MÉDIA' in row['Prioridade'] else 'performance-card'}" 
+                                   style="margin-bottom: 15px; padding: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <strong style="font-size: 1.1rem;">{row['Prioridade']} - {row['Recomendação']}</strong><br>
+                                    <small style="color: #6c757d;">{row['Justificativa']}</small>
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Ações sugeridas
+                    st.markdown("### 🚀 Plano de Ação Sugerido")
+                    
+                    acoes = [
+                        "1. Priorizar investigação dos tipos de erro mais frequentes",
+                        "2. Implementar treinamento específico baseado nas análises",
+                        "3. Criar checklist de qualidade para reduzir revisões",
+                        "4. Estabelecer métricas de acompanhamento mensal",
+                        "5. Realizar reuniões de análise de causas raiz semanais"
+                    ]
+                    
+                    for acao in acoes:
+                        st.markdown(f"""
+                        <div style="padding: 10px; margin-bottom: 8px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #1e3799;">
+                            {acao}
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("Não foram identificadas recomendações específicas com os filtros atuais.")
+            
+            # Seção adicional: Timeline de eventos importantes
+            if 'Criado' in df_diag.columns and not df_diag.empty:
+                st.markdown("---")
+                st.markdown("### 📅 Timeline de Eventos Significativos")
+                
+                # Identificar datas com picos
+                df_diag['Data'] = df_diag['Criado'].dt.date
+                eventos_diarios = df_diag.groupby('Data').size().reset_index()
+                eventos_diarios.columns = ['Data', 'Quantidade']
+                eventos_diarios = eventos_diarios.sort_values('Quantidade', ascending=False)
+                
+                # Criar timeline com top 5 eventos
+                eventos_timeline = []
+                for idx, row in eventos_diarios.head(5).iterrows():
+                    eventos_timeline.append({
+                        'data': row['Data'].strftime('%d/%m/%Y'),
+                        'descricao': f"{int(row['Quantidade'])} ocorrências - Pico de atividade"
+                    })
+                
+                if eventos_timeline:
+                    st.markdown(criar_timeline_events(eventos_timeline), unsafe_allow_html=True)
     
     # ============================================
     # TOP 10 RESPONSÁVEIS
@@ -1365,7 +2172,7 @@ if st.session_state.df_original is not None:
         
         if 'Tipo_Chamado' in df.columns:
             # Agrupar por tipo de chamado
-            tipos_chamado = df['Tipo_Chamado'].value_counts().reset_index()
+            tipos_chamado = df['Tipo_Chamado'].value_counts().resetindex()
             tipos_chamado.columns = ['Tipo', 'Quantidade']
             
             # Ordenar por quantidade
