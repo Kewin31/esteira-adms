@@ -8,6 +8,7 @@ import os
 import time
 import hashlib
 import warnings
+import numpy as np  # ADICIONADO PARA CORRIGIR O ERRO
 from pytz import timezone
 warnings.filterwarnings('ignore')
 
@@ -477,7 +478,7 @@ with st.sidebar:
                 if responsavel_selecionado != 'Todos':
                     df = df[df['Responsável_Formatado'] == responsavel_selecionado]
             
-            # BUSCA POR CHAMADO
+            # BUSCA POR CHAMADO - MANTIDO
             busca_chamado = st.text_input(
                 "🔎 Buscar Chamado",
                 placeholder="Digite número do chamado...",
@@ -1211,7 +1212,7 @@ if st.session_state.df_original is not None:
         "📋 Relatórios Automáticos"
     ])
     
-    # ABA 1: SCORE DE QUALIDADE POR DESENVOLVEDOR
+    # ABA 1: SCORE DE QUALIDADE POR DESENVOLVEDOR - CORRIGIDA
     with tab_avancada1:
         st.markdown("### 📊 SCORE DE QUALIDADE POR DESENVOLVEDOR")
         
@@ -1238,8 +1239,21 @@ if st.session_state.df_original is not None:
             """)
         
         if 'Responsável_Formatado' in df.columns and 'Revisões' in df.columns:
+            # CORREÇÃO: Usar o nome do criador do chamado quando não há responsável
+            # Primeiro, garantir que temos dados válidos
+            df_score = df.copy()
+            
+            # Substituir "Não informado" pelo nome do SRE ou criador se disponível
+            if 'SRE' in df_score.columns:
+                # Para registros sem responsável, tentar usar o SRE
+                mask_sem_responsavel = df_score['Responsável_Formatado'] == 'Não informado'
+                df_score.loc[mask_sem_responsavel, 'Responsável_Formatado'] = df_score.loc[mask_sem_responsavel, 'SRE']
+            
+            # Se ainda houver "Não informado", usar um placeholder
+            df_score['Responsável_Formatado'] = df_score['Responsável_Formatado'].replace('Não informado', 'Desenvolvedor Não Identificado')
+            
             # Calcular estatísticas por desenvolvedor
-            dev_stats = df.groupby('Responsável_Formatado').agg({
+            dev_stats = df_score.groupby('Responsável_Formatado').agg({
                 'Chamado': 'count',  # Total de chamados
                 'Revisões': lambda x: (x == 0).sum()  # Chamados sem revisão
             }).reset_index()
@@ -1328,7 +1342,7 @@ if st.session_state.df_original is not None:
                 }
             )
             
-            # Detalhes do desenvolvedor selecionado
+            # Detalhes do desenvolvedor selecionado - REMOVIDA EVOLUÇÃO TEMPORAL
             st.markdown("#### 🔍 Análise Detalhada por Desenvolvedor")
             
             dev_selecionado = st.selectbox(
@@ -1339,7 +1353,7 @@ if st.session_state.df_original is not None:
             
             if dev_selecionado:
                 dev_data = dev_stats[dev_stats['Desenvolvedor'] == dev_selecionado].iloc[0]
-                dev_chamados = df[df['Responsável_Formatado'] == dev_selecionado]
+                dev_chamados = df_score[df_score['Responsável_Formatado'] == dev_selecionado]
                 
                 col_det1, col_det2, col_det3, col_det4 = st.columns(4)
                 
@@ -1356,34 +1370,26 @@ if st.session_state.df_original is not None:
                     taxa_sucesso = (dev_data['Chamados_Sem_Revisao'] / dev_data['Total_Chamados'] * 100)
                     st.metric("Taxa de Sucesso", f"{taxa_sucesso:.1f}%")
                 
-                # Revisões ao longo do tempo
-                if 'Criado' in dev_chamados.columns:
-                    st.markdown("##### 📊 Evolução Temporal")
-                    
-                    dev_chamados['Mês'] = dev_chamados['Criado'].dt.to_period('M').astype(str)
-                    evolucao_mensal = dev_chamados.groupby('Mês').agg({
-                        'Revisões': lambda x: (x == 0).sum(),  # Sem revisão
-                        'Chamado': 'count'  # Total
-                    }).reset_index()
-                    
-                    evolucao_mensal['Score_Mensal'] = (evolucao_mensal['Revisões'] / evolucao_mensal['Chamado'] * 100).round(1)
-                    
-                    fig_evol = px.line(
-                        evolucao_mensal,
-                        x='Mês',
-                        y='Score_Mensal',
-                        markers=True,
-                        title=f'Evolução do Score de {dev_selecionado}',
-                        labels={'Score_Mensal': 'Score Mensal (%)', 'Mês': 'Mês'}
-                    )
-                    
-                    fig_evol.update_layout(
-                        height=300,
-                        plot_bgcolor='white',
-                        showlegend=False
-                    )
-                    
-                    st.plotly_chart(fig_evol, use_container_width=True)
+                # Informações adicionais sobre o desenvolvedor
+                st.markdown("##### 📊 Informações Adicionais")
+                
+                col_info1, col_info2, col_info3 = st.columns(3)
+                
+                with col_info1:
+                    if 'Tipo_Chamado' in dev_chamados.columns:
+                        tipo_mais_comum = dev_chamados['Tipo_Chamado'].value_counts().head(1)
+                        if not tipo_mais_comum.empty:
+                            st.metric("Tipo Mais Comum", tipo_mais_comum.index[0])
+                
+                with col_info2:
+                    if 'Status' in dev_chamados.columns:
+                        status_sinc = len(dev_chamados[dev_chamados['Status'] == 'Sincronizado'])
+                        st.metric("Chamados Sincronizados", status_sinc)
+                
+                with col_info3:
+                    if 'SRE' in dev_chamados.columns and dev_chamados['SRE'].nunique() > 0:
+                        sre_mais_comum = dev_chamados['SRE'].value_counts().head(1)
+                        st.metric("SRE Mais Frequente", sre_mais_comum.index[0])
     
     # ABA 2: ANÁLISE DE SAZONALIDADE
     with tab_avancada2:
@@ -1618,7 +1624,7 @@ if st.session_state.df_original is not None:
                         with [col_trim1, col_trim2, col_trim3, col_trim4][i]:
                             st.metric(f"Trimestre {trim[-1]}", f"{int(trim_data.iloc[0]['Quantidade']):,}")
     
-    # ABA 3: ANÁLISE DE ERROS RECORRENTES
+    # ABA 3: ANÁLISE DE ERROS RECORRENTES - CORRIGIDA
     with tab_avancada3:
         st.markdown("### 🔧 ANÁLISE DE ERROS RECORRENTES")
         
@@ -1777,7 +1783,7 @@ if st.session_state.df_original is not None:
                 tipos_para_analise = st.multiselect(
                     "Selecione os tipos para análise temporal:",
                     options=df['Tipo_Chamado'].unique().tolist(),
-                    default=tipos_chamado.head(5)['Tipo'].tolist(),
+                    default=tipos_chamado.head(5)['Tipo'].tolist() if 'tipos_chamado' in locals() else [],
                     key="tipos_temporal"
                 )
                 
@@ -1811,7 +1817,7 @@ if st.session_state.df_original is not None:
                     
                     st.plotly_chart(fig_evol_tipos, use_container_width=True)
                     
-                    # Análise de tendência
+                    # Análise de tendência - CORRIGIDA com try-except
                     st.markdown("##### 📊 Análise de Tendência")
                     
                     # Calcular tendência para cada tipo
@@ -1819,21 +1825,29 @@ if st.session_state.df_original is not None:
                     for tipo in tipos_para_analise:
                         tipo_data = evol_tipos[evol_tipos['Tipo'] == tipo]
                         if len(tipo_data) > 1:
-                            # Regressão linear simples
-                            x = range(len(tipo_data))
-                            y = tipo_data['Quantidade'].values
-                            
-                            # Coeficiente angular (tendência)
-                            coef_angular = np.polyfit(x, y, 1)[0] if len(tipo_data) > 1 else 0
-                            
-                            tendencias.append({
-                                'Tipo': tipo,
-                                'Tendência': '📈 Aumentando' if coef_angular > 0.1 else 
-                                            '📉 Diminuindo' if coef_angular < -0.1 else 
-                                            '📊 Estável',
-                                'Variação (%)': ((tipo_data['Quantidade'].iloc[-1] / tipo_data['Quantidade'].iloc[0] - 1) * 100 
-                                                if tipo_data['Quantidade'].iloc[0] > 0 else 0)
-                            })
+                            try:
+                                # Regressão linear simples
+                                x = range(len(tipo_data))
+                                y = tipo_data['Quantidade'].values
+                                
+                                # Coeficiente angular (tendência)
+                                coef_angular = np.polyfit(x, y, 1)[0] if len(tipo_data) > 1 else 0
+                                
+                                tendencias.append({
+                                    'Tipo': tipo,
+                                    'Tendência': '📈 Aumentando' if coef_angular > 0.1 else 
+                                                '📉 Diminuindo' if coef_angular < -0.1 else 
+                                                '📊 Estável',
+                                    'Variação (%)': ((tipo_data['Quantidade'].iloc[-1] / tipo_data['Quantidade'].iloc[0] - 1) * 100 
+                                                    if tipo_data['Quantidade'].iloc[0] > 0 else 0)
+                                })
+                            except Exception as e:
+                                # Em caso de erro, adicionar informação básica
+                                tendencias.append({
+                                    'Tipo': tipo,
+                                    'Tendência': '📊 Dados insuficientes',
+                                    'Variação (%)': 0
+                                })
                     
                     if tendencias:
                         df_tendencias = pd.DataFrame(tendencias)
@@ -2022,7 +2036,7 @@ if st.session_state.df_original is not None:
                 - **Total de Revisões:** {revisoes_periodo:,}
                 
                 #### ✅ **Pontos Positivos:**
-                1. **Eficiência mantida** com taxa de sincronização de {(sinc_periodo/total_periodo*100):.1f}%
+                1. **Eficiência mantida** com taxa de sincronização de {(sinc_periodo/total_periodo*100) if total_periodo > 0 else 0:.1f}%
                 2. **Volume consistente** de demandas processadas
                 3. **Qualidade estável** com média de {(revisoes_periodo/total_periodo if total_periodo > 0 else 0):.1f} revisões por chamado
                 
@@ -2214,6 +2228,13 @@ if st.session_state.df_original is not None:
     st.markdown("---")
     st.markdown('<div class="section-title_exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
     
+    # FILTRO DE CHAMADO ESPECÍFICO - MANTIDO
+    filtro_chamado_principal = st.text_input(
+        "🔎 Buscar chamado específico:",
+        placeholder="Digite o número do chamado...",
+        key="filtro_chamado_principal"
+    )
+    
     if 'Criado' in df.columns:
         # Filtros para a tabela
         col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
@@ -2244,15 +2265,21 @@ if st.session_state.df_original is not None:
             )
         
         with col_filtro4:
-            # Filtro de busca por chamado específico
+            # Filtro de busca por chamado específico (adicional ao filtro principal)
             filtro_chamado_tabela = st.text_input(
-                "Filtrar por chamado:",
+                "Filtro adicional:",
                 placeholder="Ex: 12345",
                 key="input_filtro_chamado"
             )
         
         # Aplicar ordenação
         ultimas_demandas = df.copy()
+        
+        # Aplicar filtro principal de busca por chamado
+        if filtro_chamado_principal:
+            ultimas_demandas = ultimas_demandas[
+                ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_principal, na=False)
+            ]
         
         if ordenar_por == 'Data (Mais Recente)':
             ultimas_demandas = ultimas_demandas.sort_values('Criado', ascending=False)
@@ -2263,7 +2290,7 @@ if st.session_state.df_original is not None:
         elif ordenar_por == 'Revisões (Menor)':
             ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=True)
         
-        # Aplicar filtro de busca por chamado
+        # Aplicar filtro de busca por chamado adicional
         if filtro_chamado_tabela:
             ultimas_demandas = ultimas_demandas[
                 ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_tabela, na=False)
@@ -2319,6 +2346,10 @@ if st.session_state.df_original is not None:
                 use_container_width=True,
                 key="btn_exportar"
             )
+        else:
+            st.info("Nenhum resultado encontrado com os filtros aplicados.")
+    else:
+        st.info("A coluna 'Criado' não está disponível nos dados.")
 
 else:
     # TELA INICIAL
