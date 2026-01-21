@@ -59,182 +59,6 @@ def timestamp_para_brasilia(timestamp):
     dt_utc = datetime.fromtimestamp(timestamp, pytz.UTC)
     return dt_utc.astimezone(TIMEZONE_BRASILIA)
 
-# ============================================
-# CONFIGURAÇÃO DA PÁGINA
-# ============================================
-st.set_page_config(
-    page_title="Esteira ADMS - Dashboard",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# ============================================
-# CSS PERSONALIZADO
-# ============================================
-st.markdown("""
-<style>
-    /* Estilos gerais */
-    .main-header {
-        background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
-        padding: 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
-        color: white;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .metric-card-exec {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        padding: 1.2rem;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border: 1px solid #e9ecef;
-        margin-bottom: 1rem;
-        transition: transform 0.3s ease;
-    }
-    
-    .metric-card-exec:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-    }
-    
-    .metric-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #1e3799;
-        margin: 0;
-        line-height: 1;
-    }
-    
-    .metric-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-        margin: 0.5rem 0 0 0;
-        font-weight: 500;
-    }
-    
-    .metric-delta-positive {
-        color: #28a745;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-    
-    .metric-delta-negative {
-        color: #dc3545;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-    
-    .section-title-exec {
-        color: #1e3799;
-        border-bottom: 3px solid #1e3799;
-        padding-bottom: 0.5rem;
-        margin-bottom: 1.5rem;
-        font-size: 1.2rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
-    }
-    
-    .sidebar-section {
-        background: white;
-        padding: 1rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        border: 1px solid #dee2e6;
-    }
-    
-    /* Informações da base */
-    .info-base {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #1e3799;
-        margin-bottom: 1.5rem;
-    }
-    
-    /* Rodapé */
-    .footer-exec {
-        text-align: center;
-        margin-top: 3rem;
-        padding-top: 1.5rem;
-        border-top: 2px solid #e9ecef;
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-    
-    /* Botão de atualização */
-    .update-button {
-        background: linear-gradient(135deg, #28a745 0%, #218838 100%);
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 5px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    
-    .update-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-    }
-    
-    /* Status de carregamento */
-    .status-box {
-        padding: 0.5rem;
-        border-radius: 5px;
-        margin: 0.5rem 0;
-        font-size: 0.9rem;
-    }
-    
-    .status-success {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    
-    .status-warning {
-        background-color: #fff3cd;
-        color: #856404;
-        border: 1px solid #ffeaa7;
-    }
-    
-    .status-error {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-    
-    .status-info {
-        background-color: #d1ecf1;
-        color: #0c5460;
-        border: 1px solid #bee5eb;
-    }
-    
-    /* Relógio */
-    .relogio-brasilia {
-        background: linear-gradient(135deg, #1e3799 0%, #0c2461 100%);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-weight: bold;
-        text-align: center;
-        margin: 0.5rem 0;
-        font-family: monospace;
-        font-size: 1.1rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 def formatar_nome_responsavel(nome):
     """Formata nomes dos responsáveis"""
     if pd.isna(nome):
@@ -431,12 +255,188 @@ def limpar_sessao_dados():
     """Limpa todos os dados da sessão relacionados ao upload"""
     keys_to_clear = [
         'df_original', 'df_filtrado', 'arquivo_atual',
-        'ultima_modificacao', 'file_hash', 'uploaded_file_name'
+        'ultima_modificacao', 'file_hash', 'uploaded_file_name', 'hora_upload'
     ]
     
     for key in keys_to_clear:
         if key in st.session_state:
             del st.session_state[key]
+
+# ============================================
+# CONFIGURAÇÃO DA PÁGINA
+# ============================================
+st.set_page_config(
+    page_title="Esteira ADMS - Dashboard",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ============================================
+# CSS PERSONALIZADO
+# ============================================
+st.markdown("""
+<style>
+    /* Estilos gerais */
+    .main-header {
+        background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        color: white;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .metric-card-exec {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        padding: 1.2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e9ecef;
+        margin-bottom: 1rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .metric-card-exec:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1e3799;
+        margin: 0;
+        line-height: 1;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.5rem 0 0 0;
+        font-weight: 500;
+    }
+    
+    .metric-delta-positive {
+        color: #28a745;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .metric-delta-negative {
+        color: #dc3545;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .section-title-exec {
+        color: #1e3799;
+        border-bottom: 3px solid #1e3799;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .sidebar-section {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border: 1px solid #dee2e6;
+    }
+    
+    /* Informações da base */
+    .info-base {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #1e3799;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Rodapé */
+    .footer-exec {
+        text-align: center;
+        margin-top: 3rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid #e9ecef;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    /* Botão de atualização */
+    .update-button {
+        background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .update-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    /* Status de carregamento */
+    .status-box {
+        padding: 0.5rem;
+        border-radius: 5px;
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+    
+    .status-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .status-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .status-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+    
+    /* Relógio */
+    .relogio-brasilia {
+        background: linear-gradient(135deg, #1e3799 0%, #0c2461 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: bold;
+        text-align: center;
+        margin: 0.5rem 0;
+        font-family: monospace;
+        font-size: 1.1rem;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================
 # SIDEBAR - FILTROS E CONTROLES
@@ -853,10 +853,631 @@ if st.session_state.df_original is not None:
         </div>
         """, unsafe_allow_html=True)
     
-    # ... (o resto do código do dashboard permanece igual, apenas com ajustes nas datas) ...
+    # ============================================
+    # INDICADORES PRINCIPAIS SIMPLES
+    # ============================================
+    st.markdown("## 📈 INDICADORES PRINCIPAIS")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_atual = len(df)
+        st.markdown(criar_card_indicador_simples(
+            total_atual, 
+            "Total de Demandas", 
+            "📋"
+        ), unsafe_allow_html=True)
+    
+    with col2:
+        if 'Status' in df.columns:
+            sincronizados = len(df[df['Status'] == 'Sincronizado'])
+            st.markdown(criar_card_indicador_simples(
+                sincronizados,
+                "Sincronizados",
+                "✅"
+            ), unsafe_allow_html=True)
+    
+    with col3:
+        if 'Tipo_Chamado' in df.columns:
+            correcoes = len(df[df['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)])
+            st.markdown(criar_card_indicador_simples(
+                correcoes,
+                "Correções/Ajustes",
+                "🔧"
+            ), unsafe_allow_html=True)
+    
+    with col4:
+        if 'Revisões' in df.columns:
+            total_revisoes = int(df['Revisões'].sum())
+            st.markdown(criar_card_indicador_simples(
+                total_revisoes,
+                "Total de Revisões",
+                "📝"
+            ), unsafe_allow_html=True)
+    
+    # ============================================
+    # ABAS PARA DIFERENTES VISUALIZAÇÕES
+    # ============================================
+    st.markdown("---")
+    
+    tab1, tab2, tab3 = st.tabs(["📅 Evolução de Demandas", "📊 Análise de Revisões", "📈 Sincronizados por Dia"])
+    
+    with tab1:
+        # Cabeçalho com seletor de ano no lado direito
+        col_titulo, col_seletor = st.columns([3, 1])
+        
+        with col_titulo:
+            st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+        
+        with col_seletor:
+            if 'Ano' in df.columns:
+                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
+                if anos_disponiveis:
+                    ano_selecionado = st.selectbox(
+                        "Selecionar Ano:",
+                        options=anos_disponiveis,
+                        index=len(anos_disponiveis)-1,
+                        label_visibility="collapsed",
+                        key="ano_evolucao"
+                    )
+        
+        if 'Ano' in df.columns and 'Nome_Mês' in df.columns and anos_disponiveis:
+            # Filtrar dados para o ano selecionado
+            df_ano = df[df['Ano'] == ano_selecionado].copy()
+            
+            if not df_ano.empty:
+                # Ordem dos meses completos
+                ordem_meses_completa = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                                       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+                
+                ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                                         'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                
+                # Criar dataframe com todos os meses do ano
+                todos_meses = pd.DataFrame({
+                    'Mês_Num': range(1, 13),
+                    'Nome_Mês_Completo': ordem_meses_completa,
+                    'Nome_Mês': ordem_meses_abreviados
+                })
+                
+                # Agrupar por mês
+                demandas_por_mes = df_ano.groupby('Mês_Num').size().reset_index()
+                demandas_por_mes.columns = ['Mês_Num', 'Quantidade']
+                
+                # Juntar com todos os meses para garantir 12 meses
+                demandas_completas = pd.merge(todos_meses, demandas_por_mes, on='Mês_Num', how='left')
+                demandas_completas['Quantidade'] = demandas_completas['Quantidade'].fillna(0).astype(int)
+                
+                # Criar gráfico de linha
+                fig_mes = go.Figure()
+                
+                fig_mes.add_trace(go.Scatter(
+                    x=demandas_completas['Nome_Mês'],
+                    y=demandas_completas['Quantidade'],
+                    mode='lines+markers+text',
+                    name='Demandas',
+                    line=dict(color='#1e3799', width=3),
+                    marker=dict(size=10, color='#0c2461'),
+                    text=demandas_completas['Quantidade'],
+                    textposition='top center',
+                    textfont=dict(size=12, color='#1e3799')
+                ))
+                
+                fig_mes.update_layout(
+                    title=f"Demandas em {ano_selecionado}",
+                    xaxis_title="Mês",
+                    yaxis_title="Número de Demandas",
+                    plot_bgcolor='white',
+                    height=450,
+                    showlegend=False,
+                    margin=dict(t=50, b=50, l=50, r=50),
+                    xaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)',
+                        tickmode='array',
+                        tickvals=list(range(12)),
+                        ticktext=ordem_meses_abreviados
+                    ),
+                    yaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)',
+                        rangemode='tozero'
+                    )
+                )
+                
+                # Adicionar valor total
+                total_ano = int(demandas_completas['Quantidade'].sum())
+                fig_mes.add_annotation(
+                    x=0.5, y=0.95,
+                    xref="paper", yref="paper",
+                    text=f"Total no ano: {total_ano:,} demandas",
+                    showarrow=False,
+                    font=dict(size=12, color="#1e3799", weight="bold"),
+                    bgcolor="rgba(255,255,255,0.9)",
+                    bordercolor="#1e3799",
+                    borderwidth=1,
+                    borderpad=4
+                )
+                
+                st.plotly_chart(fig_mes, use_container_width=True)
+                
+                # Estatísticas mensais
+                col_stats1, col_stats2, col_stats3 = st.columns(3)
+                with col_stats1:
+                    mes_max = demandas_completas.loc[demandas_completas['Quantidade'].idxmax()]
+                    st.metric("📈 Mês com mais demandas", f"{mes_max['Nome_Mês_Completo']}: {int(mes_max['Quantidade']):,}")
+                
+                with col_stats2:
+                    mes_min = demandas_completas.loc[demandas_completas['Quantidade'].idxmin()]
+                    st.metric("📉 Mês com menos demandas", f"{mes_min['Nome_Mês_Completo']}: {int(mes_min['Quantidade']):,}")
+                
+                with col_stats3:
+                    media_mensal = int(demandas_completas['Quantidade'].mean())
+                    st.metric("📊 Média mensal", f"{media_mensal:,}")
+    
+    with tab2:
+        st.markdown('<div class="section-title-exec">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
+        
+        if 'Revisões' in df.columns and 'Responsável_Formatado' in df.columns:
+            # Filtrar apenas responsáveis com revisões
+            df_com_revisoes = df[df['Revisões'] > 0].copy()
+            
+            if not df_com_revisoes.empty:
+                # Agrupar por responsável
+                revisoes_por_responsavel = df_com_revisoes.groupby('Responsável_Formatado').agg({
+                    'Revisões': 'sum',
+                    'Chamado': 'count'
+                }).reset_index()
+                
+                revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
+                revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
+                
+                # Criar gráfico de barras
+                fig_revisoes = go.Figure()
+                
+                fig_revisoes.add_trace(go.Bar(
+                    x=revisoes_por_responsavel['Responsável'].head(15),  # Top 15
+                    y=revisoes_por_responsavel['Total_Revisões'].head(15),
+                    name='Total de Revisões',
+                    text=revisoes_por_responsavel['Total_Revisões'].head(15),
+                    textposition='outside',
+                    marker_color='#e74c3c',
+                    marker_line_color='#c0392b',
+                    marker_line_width=1.5,
+                    opacity=0.8
+                ))
+                
+                fig_revisoes.update_layout(
+                    title='Top 15 Responsáveis com Mais Revisões',
+                    xaxis_title='Responsável',
+                    yaxis_title='Total de Revisões',
+                    plot_bgcolor='white',
+                    height=500,
+                    showlegend=False,
+                    margin=dict(t=50, b=100, l=50, r=50),
+                    xaxis=dict(
+                        tickangle=45,
+                        gridcolor='rgba(0,0,0,0.05)'
+                    ),
+                    yaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)'
+                    )
+                )
+                
+                st.plotly_chart(fig_revisoes, use_container_width=True)
+                
+                # Gráfico de dispersão: Revisões vs Chamados
+                col_disp1, col_disp2 = st.columns(2)
+                
+                with col_disp1:
+                    fig_dispersao = px.scatter(
+                        revisoes_por_responsavel.head(20),
+                        x='Chamados_Com_Revisão',
+                        y='Total_Revisões',
+                        size='Total_Revisões',
+                        color='Total_Revisões',
+                        hover_name='Responsável',
+                        title='Relação: Chamados vs Revisões',
+                        labels={'Chamados_Com_Revisão': 'Chamados com Revisão', 'Total_Revisões': 'Total de Revisões'},
+                        color_continuous_scale='Reds'
+                    )
+                    
+                    fig_dispersao.update_layout(
+                        height=400,
+                        plot_bgcolor='white'
+                    )
+                    
+                    st.plotly_chart(fig_dispersao, use_container_width=True)
+                
+                with col_disp2:
+                    # Métricas principais
+                    st.markdown("### 📊 Estatísticas de Revisões")
+                    
+                    col_met1, col_met2 = st.columns(2)
+                    
+                    with col_met1:
+                        total_revisoes_geral = int(df_com_revisoes['Revisões'].sum())
+                        st.metric("Total de revisões", f"{total_revisoes_geral:,}")
+                    
+                    with col_met2:
+                        media_revisoes = df_com_revisoes['Revisões'].mean()
+                        st.metric("Média por chamado", f"{media_revisoes:.1f}")
+                    
+                    # Responsável com mais revisões
+                    if not revisoes_por_responsavel.empty:
+                        responsavel_top = revisoes_por_responsavel.iloc[0]
+                        st.markdown(f"""
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                            <h4 style="color: #dc3545; margin: 0 0 0.5rem 0;">⚠️ Maior número de revisões</h4>
+                            <p style="margin: 0;"><strong>{responsavel_top['Responsável']}</strong></p>
+                            <p style="margin: 0.3rem 0 0 0; color: #6c757d;">
+                            {responsavel_top['Total_Revisões']:,} revisões em {responsavel_top['Chamados_Com_Revisão']} chamados
+                            </p>
+                        </div>
+                        """, unsafe_allow_html=True)
+            else:
+                st.info("✅ Nenhuma revisão registrada na base de dados atual.")
+    
+    # NOVA ABA: Chamados Sincronizados por Dia
+    with tab3:
+        st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
+        
+        if 'Status' in df.columns and 'Criado' in df.columns:
+            # Filtrar apenas chamados sincronizados
+            df_sincronizados = df[df['Status'] == 'Sincronizado'].copy()
+            
+            if not df_sincronizados.empty:
+                # Extrair data sem hora (já está em Brasília)
+                df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
+                
+                # Agrupar por data
+                sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
+                sincronizados_por_dia.columns = ['Data', 'Quantidade']
+                
+                # Ordenar por data
+                sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
+                
+                # Criar gráfico de linha com área
+                fig_dia = go.Figure()
+                
+                fig_dia.add_trace(go.Scatter(
+                    x=sincronizados_por_dia['Data'],
+                    y=sincronizados_por_dia['Quantidade'],
+                    mode='lines+markers',
+                    name='Chamados Sincronizados',
+                    line=dict(color='#28a745', width=3),
+                    marker=dict(size=8, color='#218838'),
+                    fill='tozeroy',
+                    fillcolor='rgba(40, 167, 69, 0.2)'
+                ))
+                
+                # Adicionar média móvel de 7 dias
+                sincronizados_por_dia['Media_Movel'] = sincronizados_por_dia['Quantidade'].rolling(window=7, min_periods=1).mean()
+                
+                fig_dia.add_trace(go.Scatter(
+                    x=sincronizados_por_dia['Data'],
+                    y=sincronizados_por_dia['Media_Movel'],
+                    mode='lines',
+                    name='Média Móvel (7 dias)',
+                    line=dict(color='#dc3545', width=2, dash='dash')
+                ))
+                
+                fig_dia.update_layout(
+                    title='Evolução Diária de Chamados Sincronizados',
+                    xaxis_title='Data',
+                    yaxis_title='Número de Chamados Sincronizados',
+                    plot_bgcolor='white',
+                    height=500,
+                    showlegend=True,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    ),
+                    margin=dict(t=50, b=50, l=50, r=50),
+                    xaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)',
+                        showgrid=True
+                    ),
+                    yaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)',
+                        rangemode='tozero'
+                    )
+                )
+                
+                st.plotly_chart(fig_dia, use_container_width=True)
+                
+                # Estatísticas
+                col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+                
+                with col_stat1:
+                    total_sincronizados = sincronizados_por_dia['Quantidade'].sum()
+                    st.metric("Total Sincronizados", f"{total_sincronizados:,}")
+                
+                with col_stat2:
+                    media_diaria = sincronizados_por_dia['Quantidade'].mean()
+                    st.metric("Média Diária", f"{media_diaria:.1f}")
+                
+                with col_stat3:
+                    max_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmax()]
+                    st.metric("Dia com Mais", f"{max_dia['Data'].strftime('%d/%m')}: {int(max_dia['Quantidade'])}")
+                
+                with col_stat4:
+                    min_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmin()]
+                    st.metric("Dia com Menos", f"{min_dia['Data'].strftime('%d/%m')}: {int(min_dia['Quantidade'])}")
+                
+                # Gráfico de calor (calendário) - opcional
+                st.markdown("### 📅 Visualização por Calendário")
+                
+                # Preparar dados para heatmap
+                df_sincronizados['Ano'] = df_sincronizados['Criado'].dt.year
+                df_sincronizados['Mês'] = df_sincronizados['Criado'].dt.month
+                df_sincronizados['Dia_do_Mes'] = df_sincronizados['Criado'].dt.day
+                df_sincronizados['Dia_da_Semana'] = df_sincronizados['Criado'].dt.dayofweek
+                
+                # Agrupar por mês e dia
+                heatmap_data = df_sincronizados.groupby(['Ano', 'Mês', 'Dia_do_Mes']).size().reset_index()
+                heatmap_data.columns = ['Ano', 'Mês', 'Dia', 'Quantidade']
+                
+                # Criar pivot table para heatmap
+                pivot_data = heatmap_data.pivot_table(
+                    index='Dia',
+                    columns='Mês',
+                    values='Quantidade',
+                    aggfunc='sum',
+                    fill_value=0
+                )
+                
+                # Nomes dos meses
+                meses_nomes = {
+                    1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                    5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                    9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+                }
+                
+                # Renomear colunas
+                pivot_data = pivot_data.rename(columns=meses_nomes)
+                
+                # Criar heatmap
+                fig_heatmap = px.imshow(
+                    pivot_data,
+                    labels=dict(x="Mês", y="Dia do Mês", color="Chamados Sincronizados"),
+                    color_continuous_scale='Greens',
+                    title="Distribuição de Chamados Sincronizados por Dia e Mês"
+                )
+                
+                fig_heatmap.update_layout(
+                    height=400,
+                    margin=dict(t=50, b=50, l=50, r=50)
+                )
+                
+                st.plotly_chart(fig_heatmap, use_container_width=True)
+                
+            else:
+                st.info("ℹ️ Nenhum chamado sincronizado encontrado nos dados atuais.")
+        else:
+            st.warning("⚠️ Colunas necessárias (Status, Criado) não encontradas nos dados.")
+    
+    # ============================================
+    # TOP 10 RESPONSÁVEIS
+    # ============================================
+    st.markdown("---")
+    col_top, col_dist = st.columns([2, 1])
+    
+    with col_top:
+        st.markdown('<div class="section-title-exec">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
+        
+        if 'Responsável_Formatado' in df.columns:
+            top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
+            top_responsaveis.columns = ['Responsável', 'Demandas']
+            
+            fig_top = px.bar(
+                top_responsaveis,
+                x='Demandas',
+                y='Responsável',
+                orientation='h',
+                title='',
+                text='Demandas',
+                color='Demandas',
+                color_continuous_scale='Blues'
+            )
+            
+            fig_top.update_traces(
+                texttemplate='%{text}',
+                textposition='outside',
+                marker_line_color='#0c2461',
+                marker_line_width=1.5,
+                opacity=0.9
+            )
+            
+            fig_top.update_layout(
+                height=500,
+                plot_bgcolor='white',
+                showlegend=False,
+                yaxis={'categoryorder': 'total ascending'},
+                margin=dict(t=20, b=20, l=20, r=20),
+                xaxis_title="Número de Demandas",
+                yaxis_title=""
+            )
+            
+            st.plotly_chart(fig_top, use_container_width=True)
+    
+    with col_dist:
+        st.markdown('<div class="section-title-exec">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
+        
+        if 'Tipo_Chamado' in df.columns:
+            # Agrupar por tipo de chamado
+            tipos_chamado = df['Tipo_Chamado'].value_counts().reset_index()
+            tipos_chamado.columns = ['Tipo', 'Quantidade']
+            
+            # Ordenar por quantidade
+            tipos_chamado = tipos_chamado.sort_values('Quantidade', ascending=True)
+            
+            # Criar gráfico de barras horizontais
+            fig_tipos = px.bar(
+                tipos_chamado,
+                x='Quantidade',
+                y='Tipo',
+                orientation='h',
+                title='',
+                text='Quantidade',
+                color='Quantidade',
+                color_continuous_scale='Viridis'
+            )
+            
+            fig_tipos.update_traces(
+                texttemplate='%{text}',
+                textposition='outside',
+                marker_line_color='rgb(8,48,107)',
+                marker_line_width=1,
+                opacity=0.9
+            )
+            
+            fig_tipos.update_layout(
+                height=500,
+                plot_bgcolor='white',
+                showlegend=False,
+                yaxis={'categoryorder': 'total ascending'},
+                margin=dict(t=20, b=20, l=20, r=20),
+                xaxis_title="Quantidade",
+                yaxis_title=""
+            )
+            
+            st.plotly_chart(fig_tipos, use_container_width=True)
+    
+    # ============================================
+    # ÚLTIMAS DEMANDAS REGISTRADAS COM FILTROS
+    # ============================================
+    st.markdown("---")
+    st.markdown('<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
+    
+    if 'Criado' in df.columns:
+        # Filtros para a tabela
+        col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
+        
+        with col_filtro1:
+            qtd_demandas = st.slider(
+                "Número de demandas:",
+                min_value=5,
+                max_value=50,
+                value=15,
+                step=5,
+                key="slider_demandas"
+            )
+        
+        with col_filtro2:
+            ordenar_por = st.selectbox(
+                "Ordenar por:",
+                options=['Data (Mais Recente)', 'Data (Mais Antiga)', 'Revisões (Maior)', 'Revisões (Menor)'],
+                key="select_ordenar"
+            )
+        
+        with col_filtro3:
+            mostrar_colunas = st.multiselect(
+                "Colunas a mostrar:",
+                options=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Prioridade', 'Revisões', 'Empresa', 'Data'],
+                default=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Data'],
+                key="select_colunas"
+            )
+        
+        with col_filtro4:
+            # Filtro de busca por chamado específico
+            filtro_chamado_tabela = st.text_input(
+                "Filtrar por chamado:",
+                placeholder="Ex: 12345",
+                key="input_filtro_chamado"
+            )
+        
+        # Aplicar ordenação
+        ultimas_demandas = df.copy()
+        
+        if ordenar_por == 'Data (Mais Recente)':
+            ultimas_demandas = ultimas_demandas.sort_values('Criado', ascending=False)
+        elif ordenar_por == 'Data (Mais Antiga)':
+            ultimas_demandas = ultimas_demandas.sort_values('Criado', ascending=True)
+        elif ordenar_por == 'Revisões (Maior)':
+            ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=False)
+        elif ordenar_por == 'Revisões (Menor)':
+            ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=True)
+        
+        # Aplicar filtro de busca por chamado
+        if filtro_chamado_tabela:
+            ultimas_demandas = ultimas_demandas[
+                ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_tabela, na=False)
+            ]
+        
+        # Limitar quantidade
+        ultimas_demandas = ultimas_demandas.head(qtd_demandas)
+        
+        # Preparar dados para exibição
+        display_data = pd.DataFrame()
+        
+        if 'Chamado' in mostrar_colunas and 'Chamado' in ultimas_demandas.columns:
+            display_data['Chamado'] = ultimas_demandas['Chamado']
+        
+        if 'Tipo_Chamado' in mostrar_colunas and 'Tipo_Chamado' in ultimas_demandas.columns:
+            display_data['Tipo'] = ultimas_demandas['Tipo_Chamado']
+        
+        if 'Responsável' in mostrar_colunas and 'Responsável_Formatado' in ultimas_demandas.columns:
+            display_data['Responsável'] = ultimas_demandas['Responsável_Formatado']
+        
+        if 'Status' in mostrar_colunas and 'Status' in ultimas_demandas.columns:
+            display_data['Status'] = ultimas_demandas['Status']
+        
+        if 'Prioridade' in mostrar_colunas and 'Prioridade' in ultimas_demandas.columns:
+            display_data['Prioridade'] = ultimas_demandas['Prioridade']
+        
+        if 'Revisões' in mostrar_colunas and 'Revisões' in ultimas_demandas.columns:
+            display_data['Revisões'] = ultimas_demandas['Revisões']
+        
+        if 'Empresa' in mostrar_colunas and 'Empresa' in ultimas_demandas.columns:
+            display_data['Empresa'] = ultimas_demandas['Empresa']
+        
+        if 'Data' in mostrar_colunas and 'Criado' in ultimas_demandas.columns:
+            display_data['Data Criação'] = ultimas_demandas['Criado'].dt.strftime('%d/%m/%Y %H:%M')
+        
+        if not display_data.empty:
+            st.dataframe(
+                display_data,
+                use_container_width=True,
+                height=400
+            )
+            
+            # Botão de exportação
+            csv = display_data.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 Exportar esta tabela",
+                data=csv,
+                file_name=f"ultimas_demandas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="btn_exportar"
+            )
 
-# RESTANTE DO CÓDIGO DO DASHBOARD PERMANECE IGUAL...
-# (mantenha todo o código das abas, gráficos, etc. que já estava funcionando)
+else:
+    # TELA INICIAL
+    st.markdown("""
+    <div style="text-align: center; padding: 4rem; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
+        <h3 style="color: #495057;">📊 Esteira ADMS Dashboard</h3>
+        <p style="color: #6c757d; margin-bottom: 2rem;">
+            Sistema de análise e monitoramento de chamados - Setor SRE
+        </p>
+        <div style="margin-top: 2rem; padding: 2rem; background: white; border-radius: 8px; display: inline-block;">
+            <h4 style="color: #1e3799;">📋 Para começar:</h4>
+            <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
+            <p>2. <strong>Se você já fez upload antes</strong>, clique em "📤 Carregar Novo Arquivo"</p>
+            <p>3. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
+            <p>4. <strong>Dica</strong>: Para forçar novo carregamento, mude o nome do arquivo</p>
+        </div>
+        
+        <div style="margin-top: 2rem; color: #6c757d; font-size: 0.9rem;">
+            <p>⚠️ <strong>Problema com upload repetido?</strong></p>
+            <p>1. Clique em "🗑️ Limpar Tudo" na barra lateral</p>
+            <p>2. Ou use "📤 Carregar Novo Arquivo"</p>
+            <p>3. Ou mude o nome do arquivo CSV antes de fazer upload</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ============================================
 # RODAPÉ
