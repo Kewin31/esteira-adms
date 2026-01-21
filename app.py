@@ -8,6 +8,7 @@ import os
 import time
 import hashlib
 import warnings
+from pytz import timezone  # Adicionado para timezone
 warnings.filterwarnings('ignore')
 
 # ============================================
@@ -35,7 +36,7 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS PERSONALIZADO
+# CSS PERSONALIZADO ATUALIZADO
 # ============================================
 st.markdown("""
 <style>
@@ -136,47 +137,31 @@ st.markdown("""
         font-size: 0.9rem;
     }
     
-    /* Botão de atualização */
-    .update-button {
-        background: linear-gradient(135deg, #28a745 0%, #218838 100%);
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 5px;
+    /* Status de SRE */
+    .sre-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f0f8ff 100%);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #1e3799;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .sre-rank {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e3799;
+        margin-right: 0.5rem;
+    }
+    
+    .sre-name {
         font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
+        color: #495057;
     }
     
-    .update-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-    }
-    
-    /* Status de carregamento */
-    .status-box {
-        padding: 0.5rem;
-        border-radius: 5px;
-        margin: 0.5rem 0;
-        font-size: 0.9rem;
-    }
-    
-    .status-success {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    
-    .status-warning {
-        background-color: #fff3cd;
-        color: #856404;
-        border: 1px solid #ffeaa7;
-    }
-    
-    .status-error {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
+    .sre-stats {
+        color: #6c757d;
+        font-size: 0.85rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -376,15 +361,24 @@ def limpar_sessao_dados():
     """Limpa todos os dados da sessão relacionados ao upload"""
     keys_to_clear = [
         'df_original', 'df_filtrado', 'arquivo_atual',
-        'ultima_modificacao', 'file_hash', 'uploaded_file_name'
+        'ultima_modificacao', 'file_hash', 'uploaded_file_name',
+        'ultima_atualizacao'  # Adicionado para tracking de tempo
     ]
     
     for key in keys_to_clear:
         if key in st.session_state:
             del st.session_state[key]
 
+def get_horario_brasilia():
+    """Retorna o horário atual de Brasília"""
+    try:
+        tz = timezone('America/Sao_Paulo')
+        return datetime.now(tz).strftime('%d/%m/%Y %H:%M:%S')
+    except:
+        return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
 # ============================================
-# SIDEBAR - FILTROS E CONTROLES
+# SIDEBAR - FILTROS E CONTROLES (REORGANIZADO)
 # ============================================
 with st.sidebar:
     # Logo e título
@@ -404,89 +398,7 @@ with st.sidebar:
         st.session_state.arquivo_atual = None
         st.session_state.file_hash = None
         st.session_state.uploaded_file_name = None
-    
-    # UPLOAD DE ARQUIVO - NOVA VERSÃO
-    with st.container():
-        st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-        st.markdown("**📤 Importar Dados**")
-        
-        # Mostrar status atual
-        if st.session_state.arquivo_atual:
-            st.markdown(f"""
-            <div class="status-box status-success">
-                <strong>📄 Arquivo atual:</strong><br>
-                {st.session_state.arquivo_atual}<br>
-                <small>Registros: {len(st.session_state.df_original) if st.session_state.df_original is not None else 0}</small>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        uploaded_file = st.file_uploader(
-            "Selecione um arquivo CSV",
-            type=['csv'],
-            key="file_uploader",
-            help="Faça upload de um novo arquivo CSV para substituir os dados atuais"
-        )
-        
-        # Se um arquivo foi enviado
-        if uploaded_file is not None:
-            # Verificar se é um arquivo diferente do atual
-            current_hash = calcular_hash_arquivo(uploaded_file.getvalue())
-            
-            if ('file_hash' not in st.session_state or 
-                current_hash != st.session_state.file_hash or
-                uploaded_file.name != st.session_state.uploaded_file_name):
-                
-                with st.spinner('Processando novo arquivo...'):
-                    # Salvar temporariamente
-                    temp_path = f"temp_{uploaded_file.name}"
-                    with open(temp_path, 'wb') as f:
-                        f.write(uploaded_file.getbuffer())
-                    
-                    # Carregar dados
-                    df_novo, status, hash_conteudo = carregar_dados(caminho_arquivo=temp_path)
-                    os.remove(temp_path)
-                    
-                    if df_novo is not None:
-                        # Atualizar session state
-                        st.session_state.df_original = df_novo
-                        st.session_state.df_filtrado = df_novo.copy()
-                        st.session_state.arquivo_atual = uploaded_file.name
-                        st.session_state.file_hash = hash_conteudo
-                        st.session_state.uploaded_file_name = uploaded_file.name
-                        
-                        # Limpar filtros
-                        if 'filtros_aplicados' in st.session_state:
-                            del st.session_state.filtros_aplicados
-                        
-                        st.success(f"✅ {len(df_novo):,} registros carregados!")
-                        
-                        # Forçar recarregamento da página
-                        st.rerun()
-                    else:
-                        st.error(f"❌ {status}")
-            else:
-                st.info("ℹ️ Este arquivo já está carregado.")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # CARREGAMENTO AUTOMÁTICO DO ARQUIVO LOCAL
-    if st.session_state.df_original is None:
-        caminho_encontrado = encontrar_arquivo_dados()
-        
-        if caminho_encontrado:
-            with st.spinner('Carregando dados locais...'):
-                df_local, status, hash_conteudo = carregar_dados(caminho_arquivo=caminho_encontrado)
-                if df_local is not None:
-                    st.session_state.df_original = df_local
-                    st.session_state.df_filtrado = df_local.copy()
-                    st.session_state.arquivo_atual = caminho_encontrado
-                    st.session_state.file_hash = hash_conteudo
-                    # Registrar data da última modificação
-                    if os.path.exists(caminho_encontrado):
-                        st.session_state.ultima_modificacao = os.path.getmtime(caminho_encontrado)
-                    st.rerun()
-                else:
-                    st.error(f"❌ {status}")
+        st.session_state.ultima_atualizacao = None
     
     # FILTROS APENAS SE HOUVER DADOS
     if st.session_state.df_original is not None:
@@ -508,6 +420,19 @@ with st.sidebar:
                     )
                     if ano_selecionado != 'Todos os Anos':
                         df = df[df['Ano'] == ano_selecionado]
+            
+            # FILTRO POR MÊS
+            if 'Mês' in df.columns:
+                meses_disponiveis = sorted(df['Mês'].dropna().unique().astype(int))
+                if meses_disponiveis:
+                    meses_opcoes = ['Todos os Meses'] + [f"{m:02d}" for m in meses_disponiveis]
+                    mes_selecionado = st.selectbox(
+                        "📆 Mês",
+                        options=meses_opcoes,
+                        key="filtro_mes"
+                    )
+                    if mes_selecionado != 'Todos os Meses':
+                        df = df[df['Mês'] == int(mes_selecionado)]
             
             # FILTRO POR RESPONSÁVEL
             if 'Responsável_Formatado' in df.columns:
@@ -562,22 +487,33 @@ with st.sidebar:
                 if empresa_selecionada != 'Todas':
                     df = df[df['Empresa'] == empresa_selecionada]
             
+            # FILTRO POR SRE
+            if 'SRE' in df.columns:
+                sres = ['Todos'] + sorted(df['SRE'].dropna().unique())
+                sre_selecionado = st.selectbox(
+                    "🔧 SRE Responsável",
+                    options=sres,
+                    key="filtro_sre"
+                )
+                if sre_selecionado != 'Todos':
+                    df = df[df['SRE'] == sre_selecionado]
+            
             # Atualizar dados filtrados
             st.session_state.df_filtrado = df
             
             st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
             st.markdown('</div>', unsafe_allow_html=True)
     
-    # CONTROLES DE ATUALIZAÇÃO (SEMPRE VISÍVEL SE HOUVER DADOS)
-    if st.session_state.df_original is not None:
-        with st.container():
-            st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-            st.markdown("**🔄 Controles de Atualização**")
-            
-            # Verificar se há atualização disponível
+    # CONTROLES DE ATUALIZAÇÃO (SEMPRE VISÍVEL)
+    with st.container():
+        st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+        st.markdown("**🔄 Controles de Atualização**")
+        
+        # Verificar se há dados carregados
+        if st.session_state.df_original is not None:
             arquivo_atual = st.session_state.arquivo_atual
             
-            if arquivo_atual and os.path.exists(arquivo_atual) if isinstance(arquivo_atual, str) else False:
+            if arquivo_atual and isinstance(arquivo_atual, str) and os.path.exists(arquivo_atual):
                 # Informações do arquivo
                 tamanho_kb = os.path.getsize(arquivo_atual) / 1024
                 ultima_mod = datetime.fromtimestamp(os.path.getmtime(arquivo_atual))
@@ -585,7 +521,7 @@ with st.sidebar:
                 st.markdown(f"""
                 <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
                     <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
-                    <p style="margin: 0; font-size: 0.9rem; color: #495057;">{arquivo_atual}</p>
+                    <p style="margin: 0; font-size: 0.9rem; color: #495057;">{os.path.basename(arquivo_atual)}</p>
                     <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #6c757d;">
                     📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
                     </p>
@@ -594,13 +530,13 @@ with st.sidebar:
                 
                 # Verificar se o arquivo foi modificado
                 if verificar_atualizacao_arquivo():
-                    st.warning("⚠️ O arquivo local foi modificado! Clique em 'Recarregar do Arquivo Local'.")
+                    st.warning("⚠️ O arquivo local foi modificado!")
             
             # Botões de ação
             col_btn1, col_btn2 = st.columns(2)
             
             with col_btn1:
-                if st.button("🔄 Recarregar do Arquivo Local", 
+                if st.button("🔄 Recarregar Local", 
                            use_container_width=True,
                            type="primary",
                            help="Recarrega os dados do arquivo local",
@@ -622,6 +558,7 @@ with st.sidebar:
                                     st.session_state.df_filtrado = df_atualizado.copy()
                                     st.session_state.arquivo_atual = caminho_atual
                                     st.session_state.file_hash = hash_conteudo
+                                    st.session_state.ultima_atualizacao = get_horario_brasilia()
                                     
                                     # Atualizar timestamp da última modificação
                                     st.session_state.ultima_modificacao = os.path.getmtime(caminho_atual)
@@ -653,62 +590,92 @@ with st.sidebar:
                     time.sleep(1)
                     st.rerun()
             
-            # Botão para forçar novo upload
             st.markdown("---")
-            if st.button("📤 Carregar Novo Arquivo",
-                       use_container_width=True,
-                       type="primary",
-                       help="Limpa os dados atuais e permite fazer upload de um novo arquivo",
-                       key="btn_novo_upload"):
-                
-                # Limpar apenas os dados, mantendo a interface
-                limpar_sessao_dados()
-                st.success("✅ Pronto para carregar novo arquivo!")
-                st.rerun()
-            
-            # Configuração do caminho do arquivo
-            with st.expander("⚙️ Configurar Caminho do Arquivo"):
-                st.info("Configure o caminho do arquivo CSV para recarregamento automático")
-                
-                novo_caminho = st.text_input(
-                    "Caminho do arquivo CSV:",
-                    value=CAMINHO_ARQUIVO_PRINCIPAL,
-                    help="Exemplo: data/esteira_demandas.csv",
-                    key="input_caminho"
-                )
-                
-                if st.button("Testar Caminho", use_container_width=True, key="btn_testar_caminho"):
-                    if os.path.exists(novo_caminho):
-                        st.success(f"✅ Arquivo encontrado: {novo_caminho}")
-                        tamanho = os.path.getsize(novo_caminho) / 1024
-                        st.info(f"Tamanho: {tamanho:.1f} KB")
-                    else:
-                        st.error(f"❌ Arquivo não encontrado: {novo_caminho}")
-            
-            st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        # Mensagem quando não há dados
-        st.info("📂 Aguardando dados...")
         
-        with st.container():
-            st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-            st.markdown("**💡 Dicas de Uso**")
+        # UPLOAD DE ARQUIVO (MOVIDO PARA O FINAL)
+        st.markdown("**📤 Importar Dados**")
+        
+        # Mostrar status atual
+        if st.session_state.df_original is not None:
+            ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
+            st.markdown(f"""
+            <div class="status-box status-success">
+                <strong>📊 Status atual:</strong><br>
+                <small>Registros: {len(st.session_state.df_original):,}</small><br>
+                <small>Atualizado: {ultima_atualizacao}</small>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        uploaded_file = st.file_uploader(
+            "Selecione um arquivo CSV",
+            type=['csv'],
+            key="file_uploader",
+            help="Faça upload de um novo arquivo CSV para substituir os dados atuais",
+            label_visibility="collapsed"
+        )
+        
+        # Se um arquivo foi enviado
+        if uploaded_file is not None:
+            # Verificar se é um arquivo diferente do atual
+            current_hash = calcular_hash_arquivo(uploaded_file.getvalue())
             
-            st.markdown("""
-            1. **Faça upload** de um arquivo CSV usando o botão acima
-            2. **Ou coloque um arquivo** com um destes nomes:
-               - `esteira_demandas.csv`
-               - `data/esteira_demandas.csv`
-               - `dados/esteira_demandas.csv`
-            
-            3. **Para atualizar**: 
-               - Suba um novo arquivo com nome diferente
-               - Ou clique em "🗑️ Limpar Tudo" e depois faça upload
-               - Ou use "📤 Carregar Novo Arquivo"
-            
-            4. **Dica**: Mude o nome do arquivo para forçar recarregamento
-            """)
-            st.markdown('</div>', unsafe_allow_html=True)
+            if ('file_hash' not in st.session_state or 
+                current_hash != st.session_state.file_hash or
+                uploaded_file.name != st.session_state.uploaded_file_name):
+                
+                with st.spinner('Processando novo arquivo...'):
+                    # Salvar temporariamente
+                    temp_path = f"temp_{uploaded_file.name}"
+                    with open(temp_path, 'wb') as f:
+                        f.write(uploaded_file.getbuffer())
+                    
+                    # Carregar dados
+                    df_novo, status, hash_conteudo = carregar_dados(caminho_arquivo=temp_path)
+                    os.remove(temp_path)
+                    
+                    if df_novo is not None:
+                        # Atualizar session state
+                        st.session_state.df_original = df_novo
+                        st.session_state.df_filtrado = df_novo.copy()
+                        st.session_state.arquivo_atual = uploaded_file.name
+                        st.session_state.file_hash = hash_conteudo
+                        st.session_state.uploaded_file_name = uploaded_file.name
+                        st.session_state.ultima_atualizacao = get_horario_brasilia()
+                        
+                        # Limpar filtros
+                        if 'filtros_aplicados' in st.session_state:
+                            del st.session_state.filtros_aplicados
+                        
+                        st.success(f"✅ {len(df_novo):,} registros carregados!")
+                        
+                        # Forçar recarregamento da página
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {status}")
+            else:
+                st.info("ℹ️ Este arquivo já está carregado.")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # CARREGAMENTO AUTOMÁTICO DO ARQUIVO LOCAL
+    if st.session_state.df_original is None:
+        caminho_encontrado = encontrar_arquivo_dados()
+        
+        if caminho_encontrado:
+            with st.spinner('Carregando dados locais...'):
+                df_local, status, hash_conteudo = carregar_dados(caminho_arquivo=caminho_encontrado)
+                if df_local is not None:
+                    st.session_state.df_original = df_local
+                    st.session_state.df_filtrado = df_local.copy()
+                    st.session_state.arquivo_atual = caminho_encontrado
+                    st.session_state.file_hash = hash_conteudo
+                    st.session_state.ultima_atualizacao = get_horario_brasilia()
+                    # Registrar data da última modificação
+                    if os.path.exists(caminho_encontrado):
+                        st.session_state.ultima_modificacao = os.path.getmtime(caminho_encontrado)
+                    st.rerun()
+                else:
+                    st.error(f"❌ {status}")
 
 # ============================================
 # CONTEÚDO PRINCIPAL
@@ -732,7 +699,7 @@ st.markdown("""
             Última atualização: {}
             </p>
             <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.85rem;">
-            v5.2 | Sistema de Monitoramento
+            v5.3 | Sistema de Performance SRE
             </p>
         </div>
     </div>
@@ -746,7 +713,7 @@ if st.session_state.df_original is not None:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
     
     # ============================================
-    # INFORMAÇÕES DA BASE DE DADOS
+    # INFORMAÇÕES DA BASE DE DADOS (SIMPLIFICADO)
     # ============================================
     st.markdown("## 📊 Informações da Base de Dados")
     
@@ -754,21 +721,12 @@ if st.session_state.df_original is not None:
         data_min = df['Criado'].min()
         data_max = df['Criado'].max()
         
-        # Mostrar informações do arquivo carregado
-        arquivo_info = ""
-        if st.session_state.arquivo_atual:
-            if isinstance(st.session_state.arquivo_atual, str):
-                nome_arquivo = os.path.basename(st.session_state.arquivo_atual)
-                arquivo_info = f" | 📄 {nome_arquivo}"
-        
         st.markdown(f"""
         <div class="info-base">
-            <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}</p>
+            <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
             <p style="margin: 0.3rem 0 0 0; color: #6c757d;">
             Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
-            Total de registros: {len(df):,} | 
-            Responsáveis únicos: {df['Responsável_Formatado'].nunique() if 'Responsável_Formatado' in df.columns else 0}
-            {arquivo_info}
+            Total de registros: {len(df):,}
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -820,7 +778,13 @@ if st.session_state.df_original is not None:
     # ============================================
     st.markdown("---")
     
-    tab1, tab2, tab3 = st.tabs(["📅 Evolução de Demandas", "📊 Análise de Revisões", "📈 Sincronizados por Dia"])
+    # NOVA ABA: PERFORMANCE DOS SREs
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📅 Evolução de Demandas", 
+        "📊 Análise de Revisões", 
+        "📈 Sincronizados por Dia",
+        "🏆 Performance dos SREs"
+    ])
     
     with tab1:
         # Cabeçalho com seletor de ano no lado direito
@@ -847,16 +811,12 @@ if st.session_state.df_original is not None:
             
             if not df_ano.empty:
                 # Ordem dos meses completos
-                ordem_meses_completa = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
-                                       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-                
                 ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
                                          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                 
                 # Criar dataframe com todos os meses do ano
                 todos_meses = pd.DataFrame({
                     'Mês_Num': range(1, 13),
-                    'Nome_Mês_Completo': ordem_meses_completa,
                     'Nome_Mês': ordem_meses_abreviados
                 })
                 
@@ -923,11 +883,11 @@ if st.session_state.df_original is not None:
                 col_stats1, col_stats2, col_stats3 = st.columns(3)
                 with col_stats1:
                     mes_max = demandas_completas.loc[demandas_completas['Quantidade'].idxmax()]
-                    st.metric("📈 Mês com mais demandas", f"{mes_max['Nome_Mês_Completo']}: {int(mes_max['Quantidade']):,}")
+                    st.metric("📈 Mês com mais demandas", f"{mes_max['Nome_Mês']}: {int(mes_max['Quantidade']):,}")
                 
                 with col_stats2:
                     mes_min = demandas_completas.loc[demandas_completas['Quantidade'].idxmin()]
-                    st.metric("📉 Mês com menos demandas", f"{mes_min['Nome_Mês_Completo']}: {int(mes_min['Quantidade']):,}")
+                    st.metric("📉 Mês com menos demandas", f"{mes_min['Nome_Mês']}: {int(mes_min['Quantidade']):,}")
                 
                 with col_stats3:
                     media_mensal = int(demandas_completas['Quantidade'].mean())
@@ -954,7 +914,7 @@ if st.session_state.df_original is not None:
                 fig_revisoes = go.Figure()
                 
                 fig_revisoes.add_trace(go.Bar(
-                    x=revisoes_por_responsavel['Responsável'].head(15),  # Top 15
+                    x=revisoes_por_responsavel['Responsável'].head(15),
                     y=revisoes_por_responsavel['Total_Revisões'].head(15),
                     name='Total de Revisões',
                     text=revisoes_por_responsavel['Total_Revisões'].head(15),
@@ -983,60 +943,7 @@ if st.session_state.df_original is not None:
                 )
                 
                 st.plotly_chart(fig_revisoes, use_container_width=True)
-                
-                # Gráfico de dispersão: Revisões vs Chamados
-                col_disp1, col_disp2 = st.columns(2)
-                
-                with col_disp1:
-                    fig_dispersao = px.scatter(
-                        revisoes_por_responsavel.head(20),
-                        x='Chamados_Com_Revisão',
-                        y='Total_Revisões',
-                        size='Total_Revisões',
-                        color='Total_Revisões',
-                        hover_name='Responsável',
-                        title='Relação: Chamados vs Revisões',
-                        labels={'Chamados_Com_Revisão': 'Chamados com Revisão', 'Total_Revisões': 'Total de Revisões'},
-                        color_continuous_scale='Reds'
-                    )
-                    
-                    fig_dispersao.update_layout(
-                        height=400,
-                        plot_bgcolor='white'
-                    )
-                    
-                    st.plotly_chart(fig_dispersao, use_container_width=True)
-                
-                with col_disp2:
-                    # Métricas principais
-                    st.markdown("### 📊 Estatísticas de Revisões")
-                    
-                    col_met1, col_met2 = st.columns(2)
-                    
-                    with col_met1:
-                        total_revisoes_geral = int(df_com_revisoes['Revisões'].sum())
-                        st.metric("Total de revisões", f"{total_revisoes_geral:,}")
-                    
-                    with col_met2:
-                        media_revisoes = df_com_revisoes['Revisões'].mean()
-                        st.metric("Média por chamado", f"{media_revisoes:.1f}")
-                    
-                    # Responsável com mais revisões
-                    if not revisoes_por_responsavel.empty:
-                        responsavel_top = revisoes_por_responsavel.iloc[0]
-                        st.markdown(f"""
-                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                            <h4 style="color: #dc3545; margin: 0 0 0.5rem 0;">⚠️ Maior número de revisões</h4>
-                            <p style="margin: 0;"><strong>{responsavel_top['Responsável']}</strong></p>
-                            <p style="margin: 0.3rem 0 0 0; color: #6c757d;">
-                            {responsavel_top['Total_Revisões']:,} revisões em {responsavel_top['Chamados_Com_Revisão']} chamados
-                            </p>
-                        </div>
-                        """, unsafe_allow_html=True)
-            else:
-                st.info("✅ Nenhuma revisão registrada na base de dados atual.")
     
-    # NOVA ABA: Chamados Sincronizados por Dia
     with tab3:
         st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
         
@@ -1106,77 +1013,305 @@ if st.session_state.df_original is not None:
                 )
                 
                 st.plotly_chart(fig_dia, use_container_width=True)
+    
+    # NOVA ABA: PERFORMANCE DOS SREs
+    with tab4:
+        st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
+        
+        if 'SRE' in df.columns and 'Status' in df.columns:
+            # Filtros específicos para esta aba
+            col_filtro1, col_filtro2 = st.columns(2)
+            
+            with col_filtro1:
+                # Filtrar por ano
+                if 'Ano' in df.columns:
+                    anos_sre = sorted(df['Ano'].dropna().unique().astype(int))
+                    ano_sre = st.selectbox(
+                        "📅 Filtrar por Ano:",
+                        options=['Todos'] + list(anos_sre),
+                        key="filtro_ano_sre"
+                    )
+            
+            with col_filtro2:
+                # Filtrar por mês
+                if 'Mês' in df.columns:
+                    meses_sre = sorted(df['Mês'].dropna().unique().astype(int))
+                    mes_sre = st.selectbox(
+                        "📆 Filtrar por Mês:",
+                        options=['Todos'] + [f"{m:02d}" for m in meses_sre],
+                        key="filtro_mes_sre"
+                    )
+            
+            # Aplicar filtros
+            df_sre = df.copy()
+            
+            if 'Ano' in df_sre.columns and ano_sre != 'Todos':
+                df_sre = df_sre[df_sre['Ano'] == int(ano_sre)]
+            
+            if 'Mês' in df_sre.columns and mes_sre != 'Todos':
+                df_sre = df_sre[df_sre['Mês'] == int(mes_sre)]
+            
+            # Filtrar apenas chamados sincronizados para análise SRE
+            df_sincronizados = df_sre[df_sre['Status'] == 'Sincronizado'].copy()
+            
+            if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
+                # 1. Ranking dos SREs que mais sincronizaram
+                st.markdown("### 🥇 Ranking de Sincronizações por SRE")
                 
-                # Estatísticas
-                col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+                sincronizacoes_por_sre = df_sincronizados['SRE'].value_counts().reset_index()
+                sincronizacoes_por_sre.columns = ['SRE', 'Sincronizações']
+                sincronizacoes_por_sre = sincronizacoes_por_sre.sort_values('Sincronizações', ascending=False)
                 
-                with col_stat1:
-                    total_sincronizados = sincronizados_por_dia['Quantidade'].sum()
-                    st.metric("Total Sincronizados", f"{total_sincronizados:,}")
-                
-                with col_stat2:
-                    media_diaria = sincronizados_por_dia['Quantidade'].mean()
-                    st.metric("Média Diária", f"{media_diaria:.1f}")
-                
-                with col_stat3:
-                    max_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmax()]
-                    st.metric("Dia com Mais", f"{max_dia['Data'].strftime('%d/%m')}: {int(max_dia['Quantidade'])}")
-                
-                with col_stat4:
-                    min_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmin()]
-                    st.metric("Dia com Menos", f"{min_dia['Data'].strftime('%d/%m')}: {int(min_dia['Quantidade'])}")
-                
-                # Gráfico de calor (calendário) - opcional
-                st.markdown("### 📅 Visualização por Calendário")
-                
-                # Preparar dados para heatmap
-                df_sincronizados['Ano'] = df_sincronizados['Criado'].dt.year
-                df_sincronizados['Mês'] = df_sincronizados['Criado'].dt.month
-                df_sincronizados['Dia_do_Mes'] = df_sincronizados['Criado'].dt.day
-                df_sincronizados['Dia_da_Semana'] = df_sincronizados['Criado'].dt.dayofweek
-                
-                # Agrupar por mês e dia
-                heatmap_data = df_sincronizados.groupby(['Ano', 'Mês', 'Dia_do_Mes']).size().reset_index()
-                heatmap_data.columns = ['Ano', 'Mês', 'Dia', 'Quantidade']
-                
-                # Criar pivot table para heatmap
-                pivot_data = heatmap_data.pivot_table(
-                    index='Dia',
-                    columns='Mês',
-                    values='Quantidade',
-                    aggfunc='sum',
-                    fill_value=0
+                # Criar gráfico de barras
+                fig_sinc_sre = px.bar(
+                    sincronizacoes_por_sre.head(10),
+                    x='SRE',
+                    y='Sincronizações',
+                    title=f"Top 10 SREs com Mais Sincronizações{' - ' + ano_sre if ano_sre != 'Todos' else ''}{'/' + mes_sre if mes_sre != 'Todos' else ''}",
+                    text='Sincronizações',
+                    color='Sincronizações',
+                    color_continuous_scale='Greens'
                 )
                 
-                # Nomes dos meses
-                meses_nomes = {
-                    1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
-                    5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
-                    9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
-                }
-                
-                # Renomear colunas
-                pivot_data = pivot_data.rename(columns=meses_nomes)
-                
-                # Criar heatmap
-                fig_heatmap = px.imshow(
-                    pivot_data,
-                    labels=dict(x="Mês", y="Dia do Mês", color="Chamados Sincronizados"),
-                    color_continuous_scale='Greens',
-                    title="Distribuição de Chamados Sincronizados por Dia e Mês"
+                fig_sinc_sre.update_traces(
+                    texttemplate='%{text}',
+                    textposition='outside',
+                    marker_line_color='#218838',
+                    marker_line_width=1.5
                 )
                 
-                fig_heatmap.update_layout(
+                fig_sinc_sre.update_layout(
                     height=400,
+                    plot_bgcolor='white',
+                    xaxis_title="SRE",
+                    yaxis_title="Número de Sincronizações",
                     margin=dict(t=50, b=50, l=50, r=50)
                 )
                 
-                st.plotly_chart(fig_heatmap, use_container_width=True)
+                st.plotly_chart(fig_sinc_sre, use_container_width=True)
                 
+                # 2. SREs que mais fizeram correções/ajustes
+                st.markdown("### 🔧 SREs com Mais Correções/Ajustes")
+                
+                if 'Tipo_Chamado' in df_sre.columns:
+                    df_correcoes = df_sre[df_sre['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)]
+                    
+                    if not df_correcoes.empty and 'SRE' in df_correcoes.columns:
+                        correcoes_por_sre = df_correcoes['SRE'].value_counts().reset_index()
+                        correcoes_por_sre.columns = ['SRE', 'Correções/Ajustes']
+                        correcoes_por_sre = correcoes_por_sre.sort_values('Correções/Ajustes', ascending=False)
+                        
+                        # Criar gráfico de barras
+                        fig_corr_sre = px.bar(
+                            correcoes_por_sre.head(10),
+                            x='SRE',
+                            y='Correções/Ajustes',
+                            title=f"Top 10 SREs com Mais Correções/Ajustes{' - ' + ano_sre if ano_sre != 'Todos' else ''}{'/' + mes_sre if mes_sre != 'Todos' else ''}",
+                            text='Correções/Ajustes',
+                            color='Correções/Ajustes',
+                            color_continuous_scale='Oranges'
+                        )
+                        
+                        fig_corr_sre.update_traces(
+                            texttemplate='%{text}',
+                            textposition='outside',
+                            marker_line_color='#e67e22',
+                            marker_line_width=1.5
+                        )
+                        
+                        fig_corr_sre.update_layout(
+                            height=400,
+                            plot_bgcolor='white',
+                            xaxis_title="SRE",
+                            yaxis_title="Número de Correções/Ajustes",
+                            margin=dict(t=50, b=50, l=50, r=50)
+                        )
+                        
+                        st.plotly_chart(fig_corr_sre, use_container_width=True)
+                
+                # 3. Dashboard comparativo dos SREs
+                st.markdown("### 📊 Dashboard Comparativo dos SREs")
+                
+                col_comp1, col_comp2 = st.columns(2)
+                
+                with col_comp1:
+                    # Tabela de performance
+                    performance_sre = pd.DataFrame()
+                    
+                    # Sincronizações
+                    performance_sre['SRE'] = sincronizacoes_por_sre['SRE']
+                    performance_sre['Sincronizações'] = sincronizacoes_por_sre['Sincronizações']
+                    
+                    # Correções (se disponível)
+                    if 'correcoes_por_sre' in locals():
+                        performance_sre = pd.merge(
+                            performance_sre, 
+                            correcoes_por_sre, 
+                            on='SRE', 
+                            how='left'
+                        )
+                        performance_sre['Correções/Ajustes'] = performance_sre['Correções/Ajustes'].fillna(0)
+                    
+                    # Revisões por SRE
+                    if 'Revisões' in df_sincronizados.columns:
+                        revisoes_por_sre = df_sincronizados.groupby('SRE')['Revisões'].sum().reset_index()
+                        revisoes_por_sre.columns = ['SRE', 'Revisões']
+                        performance_sre = pd.merge(
+                            performance_sre, 
+                            revisoes_por_sre, 
+                            on='SRE', 
+                            how='left'
+                        )
+                        performance_sre['Revisões'] = performance_sre['Revisões'].fillna(0)
+                    
+                    # Calcular eficiência (sincronizações/revisões)
+                    if 'Revisões' in performance_sre.columns:
+                        performance_sre['Eficiência'] = performance_sre.apply(
+                            lambda x: round(x['Sincronizações'] / x['Revisões'], 2) if x['Revisões'] > 0 else x['Sincronizações'],
+                            axis=1
+                        )
+                    
+                    performance_sre = performance_sre.sort_values('Sincronizações', ascending=False)
+                    
+                    st.dataframe(
+                        performance_sre.head(15),
+                        use_container_width=True,
+                        height=400,
+                        column_config={
+                            "SRE": "SRE",
+                            "Sincronizações": st.column_config.NumberColumn(
+                                "Sincronizações",
+                                help="Número de chamados sincronizados",
+                                format="%d"
+                            ),
+                            "Correções/Ajustes": st.column_config.NumberColumn(
+                                "Correções",
+                                help="Número de correções/ajustes",
+                                format="%d"
+                            ),
+                            "Revisões": st.column_config.NumberColumn(
+                                "Revisões",
+                                help="Total de revisões",
+                                format="%d"
+                            ),
+                            "Eficiência": st.column_config.NumberColumn(
+                                "Eficiência",
+                                help="Sincronizações por revisão (maior é melhor)",
+                                format="%.2f"
+                            )
+                        }
+                    )
+                
+                with col_comp2:
+                    # Gráfico de radar para SREs top
+                    if len(performance_sre) >= 3:
+                        st.markdown("#### 📈 Comparativo dos Top 3 SREs")
+                        
+                        top3_sres = performance_sre.head(3)
+                        
+                        # Normalizar dados para radar chart
+                        metrics = ['Sincronizações', 'Correções/Ajustes'] if 'Correções/Ajustes' in top3_sres.columns else ['Sincronizações']
+                        
+                        fig_radar = go.Figure()
+                        
+                        for idx, row in top3_sres.iterrows():
+                            values = []
+                            for metric in metrics:
+                                max_val = performance_sre[metric].max()
+                                if max_val > 0:
+                                    values.append(row[metric] / max_val * 100)
+                                else:
+                                    values.append(0)
+                            
+                            # Fechar o radar (repetir primeiro valor)
+                            values.append(values[0])
+                            metrics_radar = metrics + [metrics[0]]
+                            
+                            fig_radar.add_trace(go.Scatterpolar(
+                                r=values,
+                                theta=metrics_radar,
+                                name=row['SRE'],
+                                fill='toself',
+                                line=dict(width=2)
+                            ))
+                        
+                        fig_radar.update_layout(
+                            polar=dict(
+                                radialaxis=dict(
+                                    visible=True,
+                                    range=[0, 100]
+                                )
+                            ),
+                            showlegend=True,
+                            height=400,
+                            margin=dict(t=50, b=50, l=50, r=50)
+                        )
+                        
+                        st.plotly_chart(fig_radar, use_container_width=True)
+                    
+                    # Métricas gerais
+                    st.markdown("#### 📊 Métricas Gerais")
+                    
+                    total_sres = len(sincronizacoes_por_sre)
+                    media_sinc = sincronizacoes_por_sre['Sincronizações'].mean()
+                    
+                    col_met1, col_met2 = st.columns(2)
+                    with col_met1:
+                        st.metric("Total de SREs", f"{total_sres}")
+                    
+                    with col_met2:
+                        st.metric("Média por SRE", f"{media_sinc:.1f}")
+                    
+                    if 'Correções/Ajustes' in performance_sre.columns:
+                        total_correcoes = performance_sre['Correções/Ajustes'].sum()
+                        st.metric("Total de Correções", f"{int(total_correcoes)}")
+                
+                # 4. Evolução mensal do SRE top
+                st.markdown("### 📈 Evolução Mensal do SRE Líder")
+                
+                if not sincronizacoes_por_sre.empty:
+                    sre_lider = sincronizacoes_por_sre.iloc[0]['SRE']
+                    
+                    df_sre_lider = df_sincronizados[df_sincronizados['SRE'] == sre_lider].copy()
+                    
+                    if 'Mês_Num' in df_sre_lider.columns and 'Ano' in df_sre_lider.columns:
+                        # Agrupar por mês/ano
+                        evolucao_sre = df_sre_lider.groupby(['Ano', 'Mês_Num']).size().reset_index()
+                        evolucao_sre.columns = ['Ano', 'Mês', 'Sincronizações']
+                        evolucao_sre = evolucao_sre.sort_values(['Ano', 'Mês'])
+                        
+                        # Criar rótulo de mês/ano
+                        evolucao_sre['Mês_Ano'] = evolucao_sre.apply(
+                            lambda x: f"{x['Mês']:02d}/{x['Ano']}", axis=1
+                        )
+                        
+                        fig_evol_sre = go.Figure()
+                        
+                        fig_evol_sre.add_trace(go.Bar(
+                            x=evolucao_sre['Mês_Ano'],
+                            y=evolucao_sre['Sincronizações'],
+                            name=sre_lider,
+                            marker_color='#1e3799',
+                            text=evolucao_sre['Sincronizações'],
+                            textposition='auto'
+                        ))
+                        
+                        fig_evol_sre.update_layout(
+                            title=f"Evolução Mensal de {sre_lider}",
+                            xaxis_title="Mês/Ano",
+                            yaxis_title="Sincronizações",
+                            plot_bgcolor='white',
+                            height=400,
+                            showlegend=False,
+                            margin=dict(t=50, b=50, l=50, r=50),
+                            xaxis=dict(tickangle=45)
+                        )
+                        
+                        st.plotly_chart(fig_evol_sre, use_container_width=True)
             else:
-                st.info("ℹ️ Nenhum chamado sincronizado encontrado nos dados atuais.")
+                st.info("ℹ️ Nenhum dado de sincronização disponível para análise dos SREs.")
         else:
-            st.warning("⚠️ Colunas necessárias (Status, Criado) não encontradas nos dados.")
+            st.warning("⚠️ Coluna 'SRE' não encontrada nos dados.")
     
     # ============================================
     # TOP 10 RESPONSÁVEIS
@@ -1269,7 +1404,7 @@ if st.session_state.df_original is not None:
     # ÚLTIMAS DEMANDAS REGISTRADAS COM FILTROS
     # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title_exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
     
     if 'Criado' in df.columns:
         # Filtros para a tabela
@@ -1295,7 +1430,7 @@ if st.session_state.df_original is not None:
         with col_filtro3:
             mostrar_colunas = st.multiselect(
                 "Colunas a mostrar:",
-                options=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Prioridade', 'Revisões', 'Empresa', 'Data'],
+                options=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Prioridade', 'Revisões', 'Empresa', 'SRE', 'Data'],
                 default=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Data'],
                 key="select_colunas"
             )
@@ -1353,6 +1488,9 @@ if st.session_state.df_original is not None:
         if 'Empresa' in mostrar_colunas and 'Empresa' in ultimas_demandas.columns:
             display_data['Empresa'] = ultimas_demandas['Empresa']
         
+        if 'SRE' in mostrar_colunas and 'SRE' in ultimas_demandas.columns:
+            display_data['SRE'] = ultimas_demandas['SRE']
+        
         if 'Data' in mostrar_colunas and 'Criado' in ultimas_demandas.columns:
             display_data['Data Criação'] = ultimas_demandas['Criado'].dt.strftime('%d/%m/%Y %H:%M')
         
@@ -1385,26 +1523,21 @@ else:
         <div style="margin-top: 2rem; padding: 2rem; background: white; border-radius: 8px; display: inline-block;">
             <h4 style="color: #1e3799;">📋 Para começar:</h4>
             <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
-            <p>2. <strong>Se você já fez upload antes</strong>, clique em "📤 Carregar Novo Arquivo"</p>
+            <p>2. <strong>Use a seção "Importar Dados"</strong> no final da barra lateral</p>
             <p>3. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
-            <p>4. <strong>Dica</strong>: Para forçar novo carregamento, mude o nome do arquivo</p>
-        </div>
-        
-        <div style="margin-top: 2rem; color: #6c757d; font-size: 0.9rem;">
-            <p>⚠️ <strong>Problema com upload repetido?</strong></p>
-            <p>1. Clique em "🗑️ Limpar Tudo" na barra lateral</p>
-            <p>2. Ou use "📤 Carregar Novo Arquivo"</p>
-            <p>3. Ou mude o nome do arquivo CSV antes de fazer upload</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 # ============================================
-# RODAPÉ COMPLETO
+# RODAPÉ COM HORÁRIO DE ATUALIZAÇÃO
 # ============================================
 st.markdown("---")
 
-st.markdown("""
+# Obter horário da última atualização
+ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
+
+st.markdown(f"""
 <div class="footer-exec">
     <div style="margin-bottom: 1rem;">
         <p style="margin: 0; color: #495057; font-weight: 600;">
@@ -1419,7 +1552,7 @@ st.markdown("""
         © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
         </p>
         <p style="margin: 0.2rem 0 0 0; color: #adb5bd; font-size: 0.75rem;">
-        Versão 5.2 | Sistema com detecção de mudanças | Uploads múltiplos habilitados
+        Versão 5.3 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
         </p>
     </div>
 </div>
