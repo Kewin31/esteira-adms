@@ -699,7 +699,7 @@ st.markdown("""
             Última atualização: {}
             </p>
             <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.85rem;">
-            v5.4 | Sistema de Performance SRE
+            v5.5 | Sistema de Performance SRE
             </p>
         </div>
     </div>
@@ -765,15 +765,16 @@ if st.session_state.df_original is not None:
             ), unsafe_allow_html=True)
     
     # ============================================
-    # ABAS PARA DIFERENTES VISUALIZAÇÕES (APENAS 3)
+    # ABAS PARA DIFERENTES VISUALIZAÇÕES (4 ABAS)
     # ============================================
     st.markdown("---")
     
-    # Definir apenas 3 abas
-    tab1, tab2, tab3 = st.tabs([
+    # Definir 4 abas incluindo "Sincronizados por Dia"
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📅 Evolução de Demandas", 
         "📊 Análise de Revisões", 
-        "🏆 Performance dos SREs"  # Terceira aba agora é Performance dos SREs
+        "📈 Sincronizados por Dia",
+        "🏆 Performance dos SREs"
     ])
     
     with tab1:
@@ -934,8 +935,78 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_revisoes, use_container_width=True)
     
-    # ABA 3: PERFORMANCE DOS SREs
     with tab3:
+        st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
+        
+        if 'Status' in df.columns and 'Criado' in df.columns:
+            # Filtrar apenas chamados sincronizados
+            df_sincronizados = df[df['Status'] == 'Sincronizado'].copy()
+            
+            if not df_sincronizados.empty:
+                # Extrair data sem hora
+                df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
+                
+                # Agrupar por data
+                sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
+                sincronizados_por_dia.columns = ['Data', 'Quantidade']
+                
+                # Ordenar por data
+                sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
+                
+                # Criar gráfico de linha com área
+                fig_dia = go.Figure()
+                
+                fig_dia.add_trace(go.Scatter(
+                    x=sincronizados_por_dia['Data'],
+                    y=sincronizados_por_dia['Quantidade'],
+                    mode='lines+markers',
+                    name='Chamados Sincronizados',
+                    line=dict(color='#28a745', width=3),
+                    marker=dict(size=8, color='#218838'),
+                    fill='tozeroy',
+                    fillcolor='rgba(40, 167, 69, 0.2)'
+                ))
+                
+                # Adicionar média móvel de 7 dias
+                sincronizados_por_dia['Media_Movel'] = sincronizados_por_dia['Quantidade'].rolling(window=7, min_periods=1).mean()
+                
+                fig_dia.add_trace(go.Scatter(
+                    x=sincronizados_por_dia['Data'],
+                    y=sincronizados_por_dia['Media_Movel'],
+                    mode='lines',
+                    name='Média Móvel (7 dias)',
+                    line=dict(color='#dc3545', width=2, dash='dash')
+                ))
+                
+                fig_dia.update_layout(
+                    title='Evolução Diária de Chamados Sincronizados',
+                    xaxis_title='Data',
+                    yaxis_title='Número de Chamados Sincronizados',
+                    plot_bgcolor='white',
+                    height=500,
+                    showlegend=True,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    ),
+                    margin=dict(t=50, b=50, l=50, r=50),
+                    xaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)',
+                        showgrid=True
+                    ),
+                    yaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)',
+                        rangemode='tozero'
+                    )
+                )
+                
+                st.plotly_chart(fig_dia, use_container_width=True)
+    
+    # ABA 4: PERFORMANCE DOS SREs
+    with tab4:
         st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
         
         if 'SRE' in df.columns and 'Status' in df.columns:
@@ -1612,7 +1683,7 @@ st.markdown(f"""
         © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
         </p>
         <p style="margin: 0.2rem 0 0 0; color: #adb5bd; font-size: 0.75rem;">
-        Versão 5.4 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
+        Versão 5.5 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
         </p>
     </div>
 </div>
