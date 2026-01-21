@@ -1,3 +1,5 @@
+Depois sem fuso
+
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -7,7 +9,6 @@ import io
 import os
 import time
 import hashlib
-import pytz  # Adicionado para lidar com fusos horários
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -16,10 +17,6 @@ warnings.filterwarnings('ignore')
 # ============================================
 # CONFIGURE AQUI O CAMINHO DO SEU ARQUIVO
 CAMINHO_ARQUIVO_PRINCIPAL = "esteira_demandas.csv"  # ← ALTERE AQUI!
-
-# Configurar fuso horário de Brasília
-TIMEZONE_BRASILIA = pytz.timezone('America/Sao_Paulo')
-
 # Possíveis caminhos alternativos
 CAMINHOS_ALTERNATIVOS = [
     "data/esteira_demandas.csv",
@@ -28,239 +25,6 @@ CAMINHOS_ALTERNATIVOS = [
     "base_dados.csv",
     "dados.csv"
 ]
-
-# ============================================
-# FUNÇÕES AUXILIARES - FUSO HORÁRIO
-# ============================================
-def agora_brasilia():
-    """Retorna a data/hora atual no fuso de Brasília"""
-    return datetime.now(TIMEZONE_BRASILIA)
-
-def formatar_data_brasilia(dt):
-    """Formata datetime para string no formato brasileiro"""
-    if dt.tzinfo is None:
-        dt = TIMEZONE_BRASILIA.localize(dt)
-    else:
-        dt = dt.astimezone(TIMEZONE_BRASILIA)
-    
-    return dt.strftime('%d/%m/%Y %H:%M')
-
-def formatar_data_curta_brasilia(dt):
-    """Formata datetime para string curta no formato brasileiro"""
-    if dt.tzinfo is None:
-        dt = TIMEZONE_BRASILIA.localize(dt)
-    else:
-        dt = dt.astimezone(TIMEZONE_BRASILIA)
-    
-    return dt.strftime('%d/%m')
-
-def timestamp_para_brasilia(timestamp):
-    """Converte timestamp UNIX para datetime de Brasília"""
-    dt_utc = datetime.fromtimestamp(timestamp, pytz.UTC)
-    return dt_utc.astimezone(TIMEZONE_BRASILIA)
-
-def formatar_nome_responsavel(nome):
-    """Formata nomes dos responsáveis"""
-    if pd.isna(nome):
-        return "Não informado"
-    
-    nome_str = str(nome).strip()
-    
-    # Se for e-mail, extrair nome
-    if '@' in nome_str:
-        partes = nome_str.split('@')[0]
-        # Remover números e separadores
-        for separador in ['.', '_', '-']:
-            if separador in partes:
-                partes = partes.replace(separador, ' ')
-        
-        # Capitalizar e formatar
-        palavras = [p.capitalize() for p in partes.split() if not p.isdigit()]
-        nome_formatado = ' '.join(palavras)
-        
-        # Corrigir conectivos
-        correcoes = {
-            ' Da ': ' da ',
-            ' De ': ' de ',
-            ' Do ': ' do ',
-            ' Das ': ' das ',
-            ' Dos ': ' dos ',
-            ' E ': ' e ',
-        }
-        
-        for errado, correto in correcoes.items():
-            nome_formatado = nome_formatado.replace(errado, correto)
-        
-        return nome_formatado
-    
-    # Se já for nome, apenas formatar
-    return nome_str.title()
-
-def criar_card_indicador_simples(valor, label, icone="📊"):
-    """Cria card de indicador SIMPLES - sem delta"""
-    # Verificar se o valor é numérico para formatar com vírgula
-    if isinstance(valor, (int, float)):
-        valor_formatado = f"{valor:,}"
-    else:
-        valor_formatado = str(valor)
-    
-    return f'''
-    <div class="metric-card-exec">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-            <span style="font-size: 1.5rem;">{icone}</span>
-            <div style="flex-grow: 1;">
-                <div class="metric-value">{valor_formatado}</div>
-                <div class="metric-label">{label}</div>
-            </div>
-        </div>
-    </div>
-    '''
-
-@st.cache_data
-def carregar_dados(uploaded_file=None, caminho_arquivo=None):
-    """Carrega e processa os dados"""
-    try:
-        if uploaded_file:
-            # Ler conteúdo como bytes para hash
-            conteudo_bytes = uploaded_file.getvalue()
-            conteudo = conteudo_bytes.decode('utf-8-sig')
-        elif caminho_arquivo and os.path.exists(caminho_arquivo):
-            with open(caminho_arquivo, 'r', encoding='utf-8-sig') as f:
-                conteudo = f.read()
-            conteudo_bytes = conteudo.encode('utf-8')
-        else:
-            return None, "Nenhum arquivo fornecido", None
-        
-        lines = conteudo.split('\n')
-        
-        # Encontrar cabeçalho
-        header_line = None
-        for i, line in enumerate(lines):
-            if line.startswith('"Chamado","Tipo Chamado"'):
-                header_line = i
-                break
-        
-        if header_line is None:
-            for i, line in enumerate(lines):
-                if '"Chamado"' in line and '"Tipo Chamado"' in line:
-                    header_line = i
-                    break
-        
-        if header_line is None:
-            return None, "Formato de arquivo inválido", None
-        
-        # Ler dados
-        data_str = '\n'.join(lines[header_line:])
-        df = pd.read_csv(io.StringIO(data_str), quotechar='"')
-        
-        # Renomear colunas
-        col_mapping = {
-            'Chamado': 'Chamado',
-            'Tipo Chamado': 'Tipo_Chamado',
-            'Responsável': 'Responsável',
-            'Status': 'Status',
-            'Criado': 'Criado',
-            'Modificado': 'Modificado',
-            'Modificado por': 'Modificado_por',
-            'Prioridade': 'Prioridade',
-            'Sincronização': 'Sincronização',
-            'SRE': 'SRE',
-            'Empresa': 'Empresa',
-            'Revisões': 'Revisões'
-        }
-        
-        df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
-        
-        # Formatar nomes dos responsáveis
-        if 'Responsável' in df.columns:
-            df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
-        
-        # Converter datas - ATENÇÃO: converter para fuso de Brasília
-        date_columns = ['Criado', 'Modificado']
-        for col in date_columns:
-            if col in df.columns:
-                # Converter para datetime
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-                # Converter para fuso de Brasília
-                if df[col].dt.tz is None:
-                    # Se não tiver fuso, assumir UTC e converter para Brasília
-                    df[col] = df[col].dt.tz_localize('UTC').dt.tz_convert(TIMEZONE_BRASILIA)
-                else:
-                    # Se já tiver fuso, converter para Brasília
-                    df[col] = df[col].dt.tz_convert(TIMEZONE_BRASILIA)
-        
-        # Extrair informações temporais no fuso de Brasília
-        if 'Criado' in df.columns:
-            df['Ano'] = df['Criado'].dt.year
-            df['Mês'] = df['Criado'].dt.month
-            df['Mês_Num'] = df['Criado'].dt.month
-            df['Dia'] = df['Criado'].dt.day
-            df['Hora'] = df['Criado'].dt.hour
-            df['Mês_Ano'] = df['Criado'].dt.strftime('%b/%Y')
-            df['Nome_Mês'] = df['Criado'].dt.month.map({
-                1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
-                5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
-                9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
-            })
-            df['Nome_Mês_Completo'] = df['Criado'].dt.month.map({
-                1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
-                5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
-                9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
-            })
-            df['Ano_Mês'] = df['Criado'].dt.strftime('%Y-%m')
-        
-        # Converter revisões
-        if 'Revisões' in df.columns:
-            df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
-        
-        # Calcular hash do conteúdo
-        hash_conteudo = hashlib.md5(conteudo_bytes).hexdigest()
-        
-        return df, "✅ Dados carregados com sucesso", hash_conteudo
-    
-    except Exception as e:
-        return None, f"Erro: {str(e)}", None
-
-def encontrar_arquivo_dados():
-    """Tenta encontrar o arquivo de dados em vários caminhos possíveis"""
-    # Tentar primeiro o caminho principal
-    if os.path.exists(CAMINHO_ARQUIVO_PRINCIPAL):
-        return CAMINHO_ARQUIVO_PRINCIPAL
-    
-    # Tentar caminhos alternativos
-    for caminho in CAMINHOS_ALTERNATIVOS:
-        if os.path.exists(caminho):
-            return caminho
-    
-    return None
-
-def verificar_atualizacao_arquivo():
-    """Verifica se o arquivo foi modificado desde a última carga"""
-    caminho_arquivo = encontrar_arquivo_dados()
-    
-    if caminho_arquivo and os.path.exists(caminho_arquivo):
-        if 'ultima_modificacao' not in st.session_state:
-            st.session_state.ultima_modificacao = os.path.getmtime(caminho_arquivo)
-            return False
-        
-        modificacao_atual = os.path.getmtime(caminho_arquivo)
-        
-        if modificacao_atual > st.session_state.ultima_modificacao:
-            st.session_state.ultima_modificacao = modificacao_atual
-            return True
-    
-    return False
-
-def limpar_sessao_dados():
-    """Limpa todos os dados da sessão relacionados ao upload"""
-    keys_to_clear = [
-        'df_original', 'df_filtrado', 'arquivo_atual',
-        'ultima_modificacao', 'file_hash', 'uploaded_file_name', 'hora_upload'
-    ]
-    
-    for key in keys_to_clear:
-        if key in st.session_state:
-            del st.session_state[key]
 
 # ============================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -416,27 +180,210 @@ st.markdown("""
         color: #721c24;
         border: 1px solid #f5c6cb;
     }
-    
-    .status-info {
-        background-color: #d1ecf1;
-        color: #0c5460;
-        border: 1px solid #bee5eb;
-    }
-    
-    /* Relógio */
-    .relogio-brasilia {
-        background: linear-gradient(135deg, #1e3799 0%, #0c2461 100%);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-weight: bold;
-        text-align: center;
-        margin: 0.5rem 0;
-        font-family: monospace;
-        font-size: 1.1rem;
-    }
 </style>
 """, unsafe_allow_html=True)
+
+# ============================================
+# FUNÇÕES AUXILIARES
+# ============================================
+def formatar_nome_responsavel(nome):
+    """Formata nomes dos responsáveis"""
+    if pd.isna(nome):
+        return "Não informado"
+    
+    nome_str = str(nome).strip()
+    
+    # Se for e-mail, extrair nome
+    if '@' in nome_str:
+        partes = nome_str.split('@')[0]
+        # Remover números e separadores
+        for separador in ['.', '_', '-']:
+            if separador in partes:
+                partes = partes.replace(separador, ' ')
+        
+        # Capitalizar e formatar
+        palavras = [p.capitalize() for p in partes.split() if not p.isdigit()]
+        nome_formatado = ' '.join(palavras)
+        
+        # Corrigir conectivos
+        correcoes = {
+            ' Da ': ' da ',
+            ' De ': ' de ',
+            ' Do ': ' do ',
+            ' Das ': ' das ',
+            ' Dos ': ' dos ',
+            ' E ': ' e ',
+        }
+        
+        for errado, correto in correcoes.items():
+            nome_formatado = nome_formatado.replace(errado, correto)
+        
+        return nome_formatado
+    
+    # Se já for nome, apenas formatar
+    return nome_str.title()
+
+def criar_card_indicador_simples(valor, label, icone="📊"):
+    """Cria card de indicador SIMPLES - sem delta"""
+    # Verificar se o valor é numérico para formatar com vírgula
+    if isinstance(valor, (int, float)):
+        valor_formatado = f"{valor:,}"
+    else:
+        valor_formatado = str(valor)
+    
+    return f'''
+    <div class="metric-card-exec">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+            <span style="font-size: 1.5rem;">{icone}</span>
+            <div style="flex-grow: 1;">
+                <div class="metric-value">{valor_formatado}</div>
+                <div class="metric-label">{label}</div>
+            </div>
+        </div>
+    </div>
+    '''
+
+def calcular_hash_arquivo(conteudo):
+    """Calcula hash do conteúdo do arquivo para detectar mudanças"""
+    return hashlib.md5(conteudo).hexdigest()
+
+@st.cache_data
+def carregar_dados(uploaded_file=None, caminho_arquivo=None):
+    """Carrega e processa os dados"""
+    try:
+        if uploaded_file:
+            # Ler conteúdo como bytes para hash
+            conteudo_bytes = uploaded_file.getvalue()
+            conteudo = conteudo_bytes.decode('utf-8-sig')
+        elif caminho_arquivo and os.path.exists(caminho_arquivo):
+            with open(caminho_arquivo, 'r', encoding='utf-8-sig') as f:
+                conteudo = f.read()
+            conteudo_bytes = conteudo.encode('utf-8')
+        else:
+            return None, "Nenhum arquivo fornecido", None
+        
+        lines = conteudo.split('\n')
+        
+        # Encontrar cabeçalho
+        header_line = None
+        for i, line in enumerate(lines):
+            if line.startswith('"Chamado","Tipo Chamado"'):
+                header_line = i
+                break
+        
+        if header_line is None:
+            for i, line in enumerate(lines):
+                if '"Chamado"' in line and '"Tipo Chamado"' in line:
+                    header_line = i
+                    break
+        
+        if header_line is None:
+            return None, "Formato de arquivo inválido", None
+        
+        # Ler dados
+        data_str = '\n'.join(lines[header_line:])
+        df = pd.read_csv(io.StringIO(data_str), quotechar='"')
+        
+        # Renomear colunas
+        col_mapping = {
+            'Chamado': 'Chamado',
+            'Tipo Chamado': 'Tipo_Chamado',
+            'Responsável': 'Responsável',
+            'Status': 'Status',
+            'Criado': 'Criado',
+            'Modificado': 'Modificado',
+            'Modificado por': 'Modificado_por',
+            'Prioridade': 'Prioridade',
+            'Sincronização': 'Sincronização',
+            'SRE': 'SRE',
+            'Empresa': 'Empresa',
+            'Revisões': 'Revisões'
+        }
+        
+        df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
+        
+        # Formatar nomes dos responsáveis
+        if 'Responsável' in df.columns:
+            df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
+        
+        # Converter datas
+        date_columns = ['Criado', 'Modificado']
+        for col in date_columns:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+        
+        # Extrair informações temporais
+        if 'Criado' in df.columns:
+            df['Ano'] = df['Criado'].dt.year
+            df['Mês'] = df['Criado'].dt.month
+            df['Mês_Num'] = df['Criado'].dt.month
+            df['Dia'] = df['Criado'].dt.day
+            df['Hora'] = df['Criado'].dt.hour
+            df['Mês_Ano'] = df['Criado'].dt.strftime('%b/%Y')
+            df['Nome_Mês'] = df['Criado'].dt.month.map({
+                1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+            })
+            df['Nome_Mês_Completo'] = df['Criado'].dt.month.map({
+                1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+            })
+            df['Ano_Mês'] = df['Criado'].dt.strftime('%Y-%m')
+        
+        # Converter revisões
+        if 'Revisões' in df.columns:
+            df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
+        
+        # Calcular hash do conteúdo
+        hash_conteudo = calcular_hash_arquivo(conteudo_bytes)
+        
+        return df, "✅ Dados carregados com sucesso", hash_conteudo
+    
+    except Exception as e:
+        return None, f"Erro: {str(e)}", None
+
+def encontrar_arquivo_dados():
+    """Tenta encontrar o arquivo de dados em vários caminhos possíveis"""
+    # Tentar primeiro o caminho principal
+    if os.path.exists(CAMINHO_ARQUIVO_PRINCIPAL):
+        return CAMINHO_ARQUIVO_PRINCIPAL
+    
+    # Tentar caminhos alternativos
+    for caminho in CAMINHOS_ALTERNATIVOS:
+        if os.path.exists(caminho):
+            return caminho
+    
+    return None
+
+def verificar_atualizacao_arquivo():
+    """Verifica se o arquivo foi modificado desde a última carga"""
+    caminho_arquivo = encontrar_arquivo_dados()
+    
+    if caminho_arquivo and os.path.exists(caminho_arquivo):
+        if 'ultima_modificacao' not in st.session_state:
+            st.session_state.ultima_modificacao = os.path.getmtime(caminho_arquivo)
+            return False
+        
+        modificacao_atual = os.path.getmtime(caminho_arquivo)
+        
+        if modificacao_atual > st.session_state.ultima_modificacao:
+            st.session_state.ultima_modificacao = modificacao_atual
+            return True
+    
+    return False
+
+def limpar_sessao_dados():
+    """Limpa todos os dados da sessão relacionados ao upload"""
+    keys_to_clear = [
+        'df_original', 'df_filtrado', 'arquivo_atual',
+        'ultima_modificacao', 'file_hash', 'uploaded_file_name'
+    ]
+    
+    for key in keys_to_clear:
+        if key in st.session_state:
+            del st.session_state[key]
 
 # ============================================
 # SIDEBAR - FILTROS E CONTROLES
@@ -450,16 +397,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # RELÓGIO BRASÍLIA
-    hora_atual_brasilia = agora_brasilia()
-    st.markdown(f"""
-    <div class="relogio-brasilia">
-        <div>⏰ HORÁRIO BRASÍLIA</div>
-        <div>{hora_atual_brasilia.strftime('%d/%m/%Y')}</div>
-        <div style="font-size: 1.3rem;">{hora_atual_brasilia.strftime('%H:%M:%S')}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
     st.markdown("---")
     
     # Inicializar session state
@@ -470,7 +407,7 @@ with st.sidebar:
         st.session_state.file_hash = None
         st.session_state.uploaded_file_name = None
     
-    # UPLOAD DE ARQUIVO
+    # UPLOAD DE ARQUIVO - NOVA VERSÃO
     with st.container():
         st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
         st.markdown("**📤 Importar Dados**")
@@ -495,16 +432,13 @@ with st.sidebar:
         # Se um arquivo foi enviado
         if uploaded_file is not None:
             # Verificar se é um arquivo diferente do atual
-            current_hash = hashlib.md5(uploaded_file.getvalue()).hexdigest()
+            current_hash = calcular_hash_arquivo(uploaded_file.getvalue())
             
             if ('file_hash' not in st.session_state or 
                 current_hash != st.session_state.file_hash or
                 uploaded_file.name != st.session_state.uploaded_file_name):
                 
                 with st.spinner('Processando novo arquivo...'):
-                    # Registrar hora do upload (Brasília)
-                    hora_upload = agora_brasilia()
-                    
                     # Salvar temporariamente
                     temp_path = f"temp_{uploaded_file.name}"
                     with open(temp_path, 'wb') as f:
@@ -521,14 +455,12 @@ with st.sidebar:
                         st.session_state.arquivo_atual = uploaded_file.name
                         st.session_state.file_hash = hash_conteudo
                         st.session_state.uploaded_file_name = uploaded_file.name
-                        st.session_state.hora_upload = hora_upload
                         
                         # Limpar filtros
                         if 'filtros_aplicados' in st.session_state:
                             del st.session_state.filtros_aplicados
                         
                         st.success(f"✅ {len(df_novo):,} registros carregados!")
-                        st.info(f"📅 Upload realizado: {formatar_data_brasilia(hora_upload)}")
                         
                         # Forçar recarregamento da página
                         st.rerun()
@@ -551,7 +483,6 @@ with st.sidebar:
                     st.session_state.df_filtrado = df_local.copy()
                     st.session_state.arquivo_atual = caminho_encontrado
                     st.session_state.file_hash = hash_conteudo
-                    st.session_state.hora_upload = agora_brasilia()
                     # Registrar data da última modificação
                     if os.path.exists(caminho_encontrado):
                         st.session_state.ultima_modificacao = os.path.getmtime(caminho_encontrado)
@@ -639,7 +570,7 @@ with st.sidebar:
             st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
             st.markdown('</div>', unsafe_allow_html=True)
     
-    # CONTROLES DE ATUALIZAÇÃO
+    # CONTROLES DE ATUALIZAÇÃO (SEMPRE VISÍVEL SE HOUVER DADOS)
     if st.session_state.df_original is not None:
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
@@ -651,22 +582,17 @@ with st.sidebar:
             if arquivo_atual and os.path.exists(arquivo_atual) if isinstance(arquivo_atual, str) else False:
                 # Informações do arquivo
                 tamanho_kb = os.path.getsize(arquivo_atual) / 1024
-                ultima_mod = timestamp_para_brasilia(os.path.getmtime(arquivo_atual))
+                ultima_mod = datetime.fromtimestamp(os.path.getmtime(arquivo_atual))
                 
                 st.markdown(f"""
                 <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
                     <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
                     <p style="margin: 0; font-size: 0.9rem; color: #495057;">{arquivo_atual}</p>
                     <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #6c757d;">
-                    📏 {tamanho_kb:.1f} KB<br>
-                    📅 Última modificação: {formatar_data_brasilia(ultima_mod)}
+                    📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
-                
-                # Mostrar hora do último upload
-                if 'hora_upload' in st.session_state:
-                    st.info(f"🕐 Último upload: {formatar_data_brasilia(st.session_state.hora_upload)}")
                 
                 # Verificar se o arquivo foi modificado
                 if verificar_atualizacao_arquivo():
@@ -698,13 +624,11 @@ with st.sidebar:
                                     st.session_state.df_filtrado = df_atualizado.copy()
                                     st.session_state.arquivo_atual = caminho_atual
                                     st.session_state.file_hash = hash_conteudo
-                                    st.session_state.hora_upload = agora_brasilia()
                                     
                                     # Atualizar timestamp da última modificação
                                     st.session_state.ultima_modificacao = os.path.getmtime(caminho_atual)
                                     
                                     st.success(f"✅ Dados atualizados! {len(df_atualizado):,} registros")
-                                    st.info(f"🕐 Recarregado em: {formatar_data_brasilia(agora_brasilia())}")
                                     time.sleep(1)
                                     st.rerun()
                                 else:
@@ -759,9 +683,7 @@ with st.sidebar:
                     if os.path.exists(novo_caminho):
                         st.success(f"✅ Arquivo encontrado: {novo_caminho}")
                         tamanho = os.path.getsize(novo_caminho) / 1024
-                        ultima_mod = timestamp_para_brasilia(os.path.getmtime(novo_caminho))
                         st.info(f"Tamanho: {tamanho:.1f} KB")
-                        st.info(f"Última modificação: {formatar_data_brasilia(ultima_mod)}")
                     else:
                         st.error(f"❌ Arquivo não encontrado: {novo_caminho}")
             
@@ -776,11 +698,17 @@ with st.sidebar:
             
             st.markdown("""
             1. **Faça upload** de um arquivo CSV usando o botão acima
-            2. **Horário mostrado**: Brasília (GMT-3)
+            2. **Ou coloque um arquivo** com um destes nomes:
+               - `esteira_demandas.csv`
+               - `data/esteira_demandas.csv`
+               - `dados/esteira_demandas.csv`
+            
             3. **Para atualizar**: 
                - Suba um novo arquivo com nome diferente
                - Ou clique em "🗑️ Limpar Tudo" e depois faça upload
                - Ou use "📤 Carregar Novo Arquivo"
+            
+            4. **Dica**: Mude o nome do arquivo para forçar recarregamento
             """)
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -788,9 +716,8 @@ with st.sidebar:
 # CONTEÚDO PRINCIPAL
 # ============================================
 
-# HEADER COM HORÁRIO ATUALIZADO
-hora_atual_header = agora_brasilia()
-st.markdown(f"""
+# HEADER
+st.markdown("""
 <div class="main-header">
     <div style="display: flex; align-items: center; justify-content: space-between;">
         <div>
@@ -799,20 +726,20 @@ st.markdown(f"""
             Sistema de Análise de Chamados | SRE
             </p>
             <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.9rem;">
-            EMS | EMR | ESS | Horário: Brasília
+            EMS | EMR | ESS
             </p>
         </div>
         <div style="text-align: right;">
             <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 0.9rem;">
-            Última atualização: {hora_atual_header.strftime('%d/%m/%Y %H:%M')}
+            Última atualização: {}
             </p>
             <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.85rem;">
-            v5.3 | Sistema com fuso horário de Brasília
+            v5.2 | Sistema de Monitoramento
             </p>
         </div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""".format(datetime.now().strftime('%d/%m/%Y %H:%M')), unsafe_allow_html=True)
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
@@ -821,7 +748,7 @@ if st.session_state.df_original is not None:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
     
     # ============================================
-    # INFORMAÇÕES DA BASE DE DADOS COM HORÁRIO
+    # INFORMAÇÕES DA BASE DE DADOS
     # ============================================
     st.markdown("## 📊 Informações da Base de Dados")
     
@@ -831,24 +758,19 @@ if st.session_state.df_original is not None:
         
         # Mostrar informações do arquivo carregado
         arquivo_info = ""
-        hora_upload_info = ""
-        
         if st.session_state.arquivo_atual:
             if isinstance(st.session_state.arquivo_atual, str):
                 nome_arquivo = os.path.basename(st.session_state.arquivo_atual)
                 arquivo_info = f" | 📄 {nome_arquivo}"
         
-        if 'hora_upload' in st.session_state:
-            hora_upload_info = f" | 🕐 Upload: {formatar_data_brasilia(st.session_state.hora_upload)}"
-        
         st.markdown(f"""
         <div class="info-base">
-            <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {hora_atual_header.strftime('%d/%m/%Y às %H:%M')} (Brasília)</p>
+            <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}</p>
             <p style="margin: 0.3rem 0 0 0; color: #6c757d;">
-            Período coberto: {formatar_data_brasilia(data_min)} a {formatar_data_brasilia(data_max)} | 
+            Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
             Total de registros: {len(df):,} | 
             Responsáveis únicos: {df['Responsável_Formatado'].nunique() if 'Responsável_Formatado' in df.columns else 0}
-            {arquivo_info}{hora_upload_info}
+            {arquivo_info}
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -1125,7 +1047,7 @@ if st.session_state.df_original is not None:
             df_sincronizados = df[df['Status'] == 'Sincronizado'].copy()
             
             if not df_sincronizados.empty:
-                # Extrair data sem hora (já está em Brasília)
+                # Extrair data sem hora
                 df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
                 
                 # Agrupar por data
@@ -1349,7 +1271,7 @@ if st.session_state.df_original is not None:
     # ÚLTIMAS DEMANDAS REGISTRADAS COM FILTROS
     # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title_exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
     
     if 'Criado' in df.columns:
         # Filtros para a tabela
@@ -1480,7 +1402,7 @@ else:
     """, unsafe_allow_html=True)
 
 # ============================================
-# RODAPÉ
+# RODAPÉ COMPLETO
 # ============================================
 st.markdown("---")
 
@@ -1499,7 +1421,7 @@ st.markdown("""
         © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
         </p>
         <p style="margin: 0.2rem 0 0 0; color: #adb5bd; font-size: 0.75rem;">
-        Versão 5.3 | Fuso horário: Brasília (America/Sao_Paulo)
+        Versão 5.2 | Sistema com detecção de mudanças | Uploads múltiplos habilitados
         </p>
     </div>
 </div>
