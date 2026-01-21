@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import io
 import os
+import time
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -119,8 +120,39 @@ st.markdown("""
         color: #6c757d;
         font-size: 0.9rem;
     }
+    
+    /* Botão de atualização */
+    .update-button {
+        background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .update-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# ============================================
+# VARIÁVEIS GLOBAIS DE CONFIGURAÇÃO
+# ============================================
+# CONFIGURE AQUI O CAMINHO DO SEU ARQUIVO
+CAMINHO_ARQUIVO_PRINCIPAL = "esteira_demandas.csv"  # ← ALTERE AQUI!
+# Possíveis caminhos alternativos
+CAMINHOS_ALTERNATIVOS = [
+    "data/esteira_demandas.csv",
+    "dados/esteira_demandas.csv",
+    "database/esteira_demandas.csv",
+    "base_dados.csv",
+    "dados.csv"
+]
 
 # ============================================
 # FUNÇÕES AUXILIARES
@@ -273,8 +305,38 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
     except Exception as e:
         return None, f"Erro: {str(e)}"
 
+def encontrar_arquivo_dados():
+    """Tenta encontrar o arquivo de dados em vários caminhos possíveis"""
+    # Tentar primeiro o caminho principal
+    if os.path.exists(CAMINHO_ARQUIVO_PRINCIPAL):
+        return CAMINHO_ARQUIVO_PRINCIPAL
+    
+    # Tentar caminhos alternativos
+    for caminho in CAMINHOS_ALTERNATIVOS:
+        if os.path.exists(caminho):
+            return caminho
+    
+    return None
+
+def verificar_atualizacao_arquivo():
+    """Verifica se o arquivo foi modificado desde a última carga"""
+    caminho_arquivo = encontrar_arquivo_dados()
+    
+    if caminho_arquivo and os.path.exists(caminho_arquivo):
+        if 'ultima_modificacao' not in st.session_state:
+            st.session_state.ultima_modificacao = os.path.getmtime(caminho_arquivo)
+            return False
+        
+        modificacao_atual = os.path.getmtime(caminho_arquivo)
+        
+        if modificacao_atual > st.session_state.ultima_modificacao:
+            st.session_state.ultima_modificacao = modificacao_atual
+            return True
+    
+    return False
+
 # ============================================
-# SIDEBAR - FILTROS
+# SIDEBAR - FILTROS E CONTROLES
 # ============================================
 with st.sidebar:
     # Logo e título
@@ -291,6 +353,8 @@ with st.sidebar:
     if 'df_original' not in st.session_state:
         st.session_state.df_original = None
         st.session_state.df_filtrado = None
+    if 'arquivo_atual' not in st.session_state:
+        st.session_state.arquivo_atual = None
     
     # UPLOAD DE ARQUIVO
     with st.container():
@@ -316,23 +380,30 @@ with st.sidebar:
                 if df_novo is not None:
                     st.session_state.df_original = df_novo
                     st.session_state.df_filtrado = df_novo.copy()
+                    st.session_state.arquivo_atual = uploaded_file.name
                     st.success("✅ Dados carregados!")
                     st.rerun()
                 else:
                     st.error(f"❌ {status}")
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # CARREGAR ARQUIVO LOCAL AUTOMATICAMENTE
+    # CARREGAMENTO AUTOMÁTICO DO ARQUIVO LOCAL
     if st.session_state.df_original is None:
-        caminhos = ['data/esteira_demandas.csv', 'esteira_demandas.csv', 'dados.csv']
-        for caminho in caminhos:
-            if os.path.exists(caminho):
-                df_local, status = carregar_dados(caminho_arquivo=caminho)
+        caminho_encontrado = encontrar_arquivo_dados()
+        
+        if caminho_encontrado:
+            with st.spinner('Carregando dados locais...'):
+                df_local, status = carregar_dados(caminho_arquivo=caminho_encontrado)
                 if df_local is not None:
                     st.session_state.df_original = df_local
                     st.session_state.df_filtrado = df_local.copy()
+                    st.session_state.arquivo_atual = caminho_encontrado
+                    # Registrar data da última modificação
+                    if os.path.exists(caminho_encontrado):
+                        st.session_state.ultima_modificacao = os.path.getmtime(caminho_encontrado)
                     st.rerun()
-                break
+                else:
+                    st.error(f"❌ {status}")
     
     # FILTROS APENAS SE HOUVER DADOS
     if st.session_state.df_original is not None:
@@ -342,7 +413,7 @@ with st.sidebar:
             
             df = st.session_state.df_original.copy()
             
-            # FILTRO POR ANO (NOVO)
+            # FILTRO POR ANO
             if 'Ano' in df.columns:
                 anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
                 if anos_disponiveis:
@@ -407,33 +478,133 @@ with st.sidebar:
             
             st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
             st.markdown('</div>', unsafe_allow_html=True)
-        
-        # BOTÕES DE AÇÃO
+    
+    # CONTROLES DE ATUALIZAÇÃO (SEMPRE VISÍVEL SE HOUVER DADOS)
+    if st.session_state.df_original is not None:
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-            st.markdown("**⚡ Ações Rápidas**")
+            st.markdown("**🔄 Controles de Atualização**")
             
+            # Verificar se há atualização disponível
+            arquivo_atual = st.session_state.arquivo_atual or encontrar_arquivo_dados()
+            
+            if arquivo_atual and os.path.exists(arquivo_atual):
+                # Informações do arquivo
+                tamanho_kb = os.path.getsize(arquivo_atual) / 1024
+                ultima_mod = datetime.fromtimestamp(os.path.getmtime(arquivo_atual))
+                
+                st.markdown(f"""
+                <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
+                    <p style="margin: 0; font-size: 0.9rem; color: #495057;">{arquivo_atual}</p>
+                    <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #6c757d;">
+                    📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Verificar se o arquivo foi modificado
+                if verificar_atualizacao_arquivo():
+                    st.warning("⚠️ O arquivo foi modificado! Clique em 'Recarregar Dados' para atualizar.")
+            
+            # Botões de ação
             col_btn1, col_btn2 = st.columns(2)
+            
             with col_btn1:
-                if st.button("🔄 Limpar Filtros", use_container_width=True):
-                    st.session_state.df_filtrado = st.session_state.df_original.copy()
-                    st.rerun()
+                if st.button("🔄 Recarregar Dados", 
+                           use_container_width=True,
+                           type="primary",
+                           help="Recarrega os dados do arquivo local"):
+                    
+                    caminho_atual = encontrar_arquivo_dados()
+                    
+                    if caminho_atual and os.path.exists(caminho_atual):
+                        with st.spinner('Recarregando dados...'):
+                            try:
+                                # Limpar cache desta função
+                                carregar_dados.clear()
+                                
+                                # Recarregar dados
+                                df_atualizado, status = carregar_dados(caminho_arquivo=caminho_atual)
+                                
+                                if df_atualizado is not None:
+                                    st.session_state.df_original = df_atualizado
+                                    st.session_state.df_filtrado = df_atualizado.copy()
+                                    st.session_state.arquivo_atual = caminho_atual
+                                    
+                                    # Atualizar timestamp da última modificação
+                                    st.session_state.ultima_modificacao = os.path.getmtime(caminho_atual)
+                                    
+                                    st.success(f"✅ Dados atualizados! {len(df_atualizado):,} registros")
+                                    st.balloons()
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ Erro ao recarregar: {status}")
+                            except Exception as e:
+                                st.error(f"❌ Erro: {str(e)}")
+                    else:
+                        st.error("❌ Arquivo não encontrado. Verifique o caminho.")
             
             with col_btn2:
-                if st.button("🗑️ Limpar Cache", use_container_width=True, type="secondary"):
+                if st.button("🗑️ Limpar Tudo", 
+                           use_container_width=True,
+                           type="secondary",
+                           help="Limpa todos os dados e cache"):
+                    
                     st.cache_data.clear()
                     st.session_state.clear()
-                    st.success("Cache limpo!")
+                    st.success("✅ Cache e dados limpos!")
+                    time.sleep(1)
                     st.rerun()
+            
+            # Configuração do caminho do arquivo
+            with st.expander("⚙️ Configurar Caminho do Arquivo"):
+                st.info("Configure o caminho do arquivo CSV para recarregamento automático")
+                
+                novo_caminho = st.text_input(
+                    "Caminho do arquivo CSV:",
+                    value=CAMINHO_ARQUIVO_PRINCIPAL,
+                    help="Exemplo: data/esteira_demandas.csv"
+                )
+                
+                if st.button("Salvar Configuração", use_container_width=True):
+                    global CAMINHO_ARQUIVO_PRINCIPAL
+                    CAMINHO_ARQUIVO_PRINCIPAL = novo_caminho
+                    st.success("✅ Configuração salva!")
+                    
+                    # Verificar se o arquivo existe
+                    if os.path.exists(novo_caminho):
+                        st.info(f"✅ Arquivo encontrado: {novo_caminho}")
+                    else:
+                        st.warning(f"⚠️ Arquivo não encontrado no caminho: {novo_caminho}")
+            
             st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.info("📂 Aguardando upload de dados...")
+        # Mensagem quando não há dados
+        st.info("📂 Aguardando dados...")
+        
+        with st.container():
+            st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+            st.markdown("**💡 Dicas de Uso**")
+            
+            st.markdown("""
+            1. **Faça upload** de um arquivo CSV usando o botão acima
+            2. Ou **coloque um arquivo** com um destes nomes:
+               - `esteira_demandas.csv`
+               - `data/esteira_demandas.csv`
+               - `dados/esteira_demandas.csv`
+            
+            3. Após carregar, use os **filtros** para análises específicas
+            4. Atualize o arquivo local e clique em **🔄 Recarregar Dados**
+            """)
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================
 # CONTEÚDO PRINCIPAL
 # ============================================
 
-# HEADER ATUALIZADO
+# HEADER
 st.markdown("""
 <div class="main-header">
     <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -446,9 +617,17 @@ st.markdown("""
             EMS | EMR | ESS
             </p>
         </div>
+        <div style="text-align: right;">
+            <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 0.9rem;">
+            Última atualização: {}
+            </p>
+            <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.85rem;">
+            v5.1 | Sistema de Monitoramento
+            </p>
+        </div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""".format(datetime.now().strftime('%d/%m/%Y %H:%M')), unsafe_allow_html=True)
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
@@ -465,7 +644,12 @@ if st.session_state.df_original is not None:
         data_min = df['Criado'].min()
         data_max = df['Criado'].max()
         
-        # Apenas uma linha informativa
+        # Mostrar informações do arquivo carregado
+        arquivo_info = ""
+        if st.session_state.arquivo_atual:
+            if isinstance(st.session_state.arquivo_atual, str):
+                arquivo_info = f" | Arquivo: {st.session_state.arquivo_atual}"
+        
         st.markdown(f"""
         <div class="info-base">
             <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}</p>
@@ -473,6 +657,7 @@ if st.session_state.df_original is not None:
             Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
             Total de registros: {len(df):,} | 
             Responsáveis únicos: {df['Responsável_Formatado'].nunique() if 'Responsável_Formatado' in df.columns else 0}
+            {arquivo_info}
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -524,7 +709,6 @@ if st.session_state.df_original is not None:
     # ============================================
     st.markdown("---")
     
-    # ATUALIZADO: Adicionada nova aba para chamados sincronizados por dia
     tab1, tab2, tab3 = st.tabs(["📅 Evolução de Demandas", "📊 Análise de Revisões", "📈 Sincronizados por Dia"])
     
     with tab1:
@@ -1085,8 +1269,16 @@ else:
         <div style="margin-top: 2rem; padding: 2rem; background: white; border-radius: 8px; display: inline-block;">
             <h4 style="color: #1e3799;">📋 Para começar:</h4>
             <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
-            <p>2. <strong>Aplique os filtros</strong> para análise específica</p>
-            <p>3. <strong>Visualize os indicadores</strong> e métricas de desempenho</p>
+            <p>2. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
+            <p>3. <strong>Após atualizar o arquivo</strong>, clique em "🔄 Recarregar Dados" na barra lateral</p>
+            <p>4. <strong>Use os filtros</strong> para análises específicas</p>
+        </div>
+        
+        <div style="margin-top: 2rem; color: #6c757d; font-size: 0.9rem;">
+            <p>📁 Nomes de arquivo reconhecidos automaticamente:</p>
+            <p style="font-family: monospace; background: #e9ecef; padding: 0.5rem; border-radius: 5px; display: inline-block;">
+            esteira_demandas.csv | data/esteira_demandas.csv | dados/esteira_demandas.csv
+            </p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1111,7 +1303,7 @@ st.markdown("""
         © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
         </p>
         <p style="margin: 0.2rem 0 0 0; color: #adb5bd; font-size: 0.75rem;">
-        Versão 5.0 | SRE Monitoring Platform
+        Versão 5.1 | SRE Monitoring Platform | Recarregamento Automático
         </p>
     </div>
 </div>
