@@ -10,6 +10,20 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ============================================
+# VARIÁVEIS GLOBAIS DE CONFIGURAÇÃO
+# ============================================
+# CONFIGURE AQUI O CAMINHO DO SEU ARQUIVO
+CAMINHO_ARQUIVO_PRINCIPAL = "esteira_demandas.csv"  # ← ALTERE AQUI!
+# Possíveis caminhos alternativos
+CAMINHOS_ALTERNATIVOS = [
+    "data/esteira_demandas.csv",
+    "dados/esteira_demandas.csv",
+    "database/esteira_demandas.csv",
+    "base_dados.csv",
+    "dados.csv"
+]
+
+# ============================================
 # CONFIGURAÇÃO DA PÁGINA
 # ============================================
 st.set_page_config(
@@ -139,20 +153,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-# ============================================
-# VARIÁVEIS GLOBAIS DE CONFIGURAÇÃO
-# ============================================
-# CONFIGURE AQUI O CAMINHO DO SEU ARQUIVO
-CAMINHO_ARQUIVO_PRINCIPAL = "esteira_demandas.csv"  # ← ALTERE AQUI!
-# Possíveis caminhos alternativos
-CAMINHOS_ALTERNATIVOS = [
-    "data/esteira_demandas.csv",
-    "dados/esteira_demandas.csv",
-    "database/esteira_demandas.csv",
-    "base_dados.csv",
-    "dados.csv"
-]
 
 # ============================================
 # FUNÇÕES AUXILIARES
@@ -569,9 +569,9 @@ with st.sidebar:
                 )
                 
                 if st.button("Salvar Configuração", use_container_width=True):
-                    global CAMINHO_ARQUIVO_PRINCIPAL
-                    CAMINHO_ARQUIVO_PRINCIPAL = novo_caminho
-                    st.success("✅ Configuração salva!")
+                    # Usar session state para armazenar o caminho configurado
+                    st.session_state.caminho_configurado = novo_caminho
+                    st.success("✅ Configuração salva! Reinicie o app para aplicar.")
                     
                     # Verificar se o arquivo existe
                     if os.path.exists(novo_caminho):
