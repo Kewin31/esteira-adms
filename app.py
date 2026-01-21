@@ -8,7 +8,7 @@ import os
 import time
 import hashlib
 import warnings
-from pytz import timezone  # Adicionado para timezone
+from pytz import timezone
 warnings.filterwarnings('ignore')
 
 # ============================================
@@ -419,13 +419,13 @@ with st.sidebar:
                         key="filtro_ano"
                     )
                     if ano_selecionado != 'Todos os Anos':
-                        df = df[df['Ano'] == ano_selecionado]
+                        df = df[df['Ano'] == int(ano_selecionado)]
             
             # FILTRO POR MÊS
             if 'Mês' in df.columns:
                 meses_disponiveis = sorted(df['Mês'].dropna().unique().astype(int))
                 if meses_disponiveis:
-                    meses_opcoes = ['Todos os Meses'] + [f"{m:02d}" for m in meses_disponiveis]
+                    meses_opcoes = ['Todos os Meses'] + [str(m) for m in meses_disponiveis]
                     mes_selecionado = st.selectbox(
                         "📆 Mês",
                         options=meses_opcoes,
@@ -699,7 +699,7 @@ st.markdown("""
             Última atualização: {}
             </p>
             <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.85rem;">
-            v5.3 | Sistema de Performance SRE
+            v5.4 | Sistema de Performance SRE
             </p>
         </div>
     </div>
@@ -732,11 +732,11 @@ if st.session_state.df_original is not None:
         """, unsafe_allow_html=True)
     
     # ============================================
-    # INDICADORES PRINCIPAIS SIMPLES
+    # INDICADORES PRINCIPAIS SIMPLES (APENAS 3)
     # ============================================
     st.markdown("## 📈 INDICADORES PRINCIPAIS")
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         total_atual = len(df)
@@ -756,15 +756,6 @@ if st.session_state.df_original is not None:
             ), unsafe_allow_html=True)
     
     with col3:
-        if 'Tipo_Chamado' in df.columns:
-            correcoes = len(df[df['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)])
-            st.markdown(criar_card_indicador_simples(
-                correcoes,
-                "Correções/Ajustes",
-                "🔧"
-            ), unsafe_allow_html=True)
-    
-    with col4:
         if 'Revisões' in df.columns:
             total_revisoes = int(df['Revisões'].sum())
             st.markdown(criar_card_indicador_simples(
@@ -810,7 +801,7 @@ if st.session_state.df_original is not None:
             df_ano = df[df['Ano'] == ano_selecionado].copy()
             
             if not df_ano.empty:
-                # Ordem dos meses completos
+                # Ordem dos meses abreviados
                 ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
                                          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                 
@@ -1026,9 +1017,10 @@ if st.session_state.df_original is not None:
                 # Filtrar por ano
                 if 'Ano' in df.columns:
                     anos_sre = sorted(df['Ano'].dropna().unique().astype(int))
+                    anos_opcoes_sre = ['Todos'] + list(anos_sre)
                     ano_sre = st.selectbox(
                         "📅 Filtrar por Ano:",
-                        options=['Todos'] + list(anos_sre),
+                        options=anos_opcoes_sre,
                         key="filtro_ano_sre"
                     )
             
@@ -1036,9 +1028,10 @@ if st.session_state.df_original is not None:
                 # Filtrar por mês
                 if 'Mês' in df.columns:
                     meses_sre = sorted(df['Mês'].dropna().unique().astype(int))
+                    meses_opcoes_sre = ['Todos'] + [str(m) for m in meses_sre]
                     mes_sre = st.selectbox(
                         "📆 Filtrar por Mês:",
-                        options=['Todos'] + [f"{m:02d}" for m in meses_sre],
+                        options=meses_opcoes_sre,
                         key="filtro_mes_sre"
                     )
             
@@ -1062,12 +1055,19 @@ if st.session_state.df_original is not None:
                 sincronizacoes_por_sre.columns = ['SRE', 'Sincronizações']
                 sincronizacoes_por_sre = sincronizacoes_por_sre.sort_values('Sincronizações', ascending=False)
                 
+                # Criar título dinâmico
+                titulo_sinc = "Top 10 SREs com Mais Sincronizações"
+                if ano_sre != 'Todos':
+                    titulo_sinc += f" - {ano_sre}"
+                if mes_sre != 'Todos':
+                    titulo_sinc += f"/{mes_sre}"
+                
                 # Criar gráfico de barras
                 fig_sinc_sre = px.bar(
                     sincronizacoes_por_sre.head(10),
                     x='SRE',
                     y='Sincronizações',
-                    title=f"Top 10 SREs com Mais Sincronizações{' - ' + ano_sre if ano_sre != 'Todos' else ''}{'/' + mes_sre if mes_sre != 'Todos' else ''}",
+                    title=titulo_sinc,
                     text='Sincronizações',
                     color='Sincronizações',
                     color_continuous_scale='Greens'
@@ -1090,46 +1090,7 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_sinc_sre, use_container_width=True)
                 
-                # 2. SREs que mais fizeram correções/ajustes
-                st.markdown("### 🔧 SREs com Mais Correções/Ajustes")
-                
-                if 'Tipo_Chamado' in df_sre.columns:
-                    df_correcoes = df_sre[df_sre['Tipo_Chamado'].str.contains('Correção|Ajuste', case=False, na=False)]
-                    
-                    if not df_correcoes.empty and 'SRE' in df_correcoes.columns:
-                        correcoes_por_sre = df_correcoes['SRE'].value_counts().reset_index()
-                        correcoes_por_sre.columns = ['SRE', 'Correções/Ajustes']
-                        correcoes_por_sre = correcoes_por_sre.sort_values('Correções/Ajustes', ascending=False)
-                        
-                        # Criar gráfico de barras
-                        fig_corr_sre = px.bar(
-                            correcoes_por_sre.head(10),
-                            x='SRE',
-                            y='Correções/Ajustes',
-                            title=f"Top 10 SREs com Mais Correções/Ajustes{' - ' + ano_sre if ano_sre != 'Todos' else ''}{'/' + mes_sre if mes_sre != 'Todos' else ''}",
-                            text='Correções/Ajustes',
-                            color='Correções/Ajustes',
-                            color_continuous_scale='Oranges'
-                        )
-                        
-                        fig_corr_sre.update_traces(
-                            texttemplate='%{text}',
-                            textposition='outside',
-                            marker_line_color='#e67e22',
-                            marker_line_width=1.5
-                        )
-                        
-                        fig_corr_sre.update_layout(
-                            height=400,
-                            plot_bgcolor='white',
-                            xaxis_title="SRE",
-                            yaxis_title="Número de Correções/Ajustes",
-                            margin=dict(t=50, b=50, l=50, r=50)
-                        )
-                        
-                        st.plotly_chart(fig_corr_sre, use_container_width=True)
-                
-                # 3. Dashboard comparativo dos SREs
+                # 2. Dashboard comparativo dos SREs
                 st.markdown("### 📊 Dashboard Comparativo dos SREs")
                 
                 col_comp1, col_comp2 = st.columns(2)
@@ -1141,16 +1102,6 @@ if st.session_state.df_original is not None:
                     # Sincronizações
                     performance_sre['SRE'] = sincronizacoes_por_sre['SRE']
                     performance_sre['Sincronizações'] = sincronizacoes_por_sre['Sincronizações']
-                    
-                    # Correções (se disponível)
-                    if 'correcoes_por_sre' in locals():
-                        performance_sre = pd.merge(
-                            performance_sre, 
-                            correcoes_por_sre, 
-                            on='SRE', 
-                            how='left'
-                        )
-                        performance_sre['Correções/Ajustes'] = performance_sre['Correções/Ajustes'].fillna(0)
                     
                     # Revisões por SRE
                     if 'Revisões' in df_sincronizados.columns:
@@ -1164,90 +1115,93 @@ if st.session_state.df_original is not None:
                         )
                         performance_sre['Revisões'] = performance_sre['Revisões'].fillna(0)
                     
-                    # Calcular eficiência (sincronizações/revisões)
+                    # Calcular eficiência em porcentagem
                     if 'Revisões' in performance_sre.columns:
                         performance_sre['Eficiência'] = performance_sre.apply(
-                            lambda x: round(x['Sincronizações'] / x['Revisões'], 2) if x['Revisões'] > 0 else x['Sincronizações'],
+                            lambda x: (x['Sincronizações'] / (x['Revisões'] + x['Sincronizações']) * 100) 
+                            if (x['Revisões'] + x['Sincronizações']) > 0 else 100,
                             axis=1
                         )
+                        performance_sre['Eficiência'] = performance_sre['Eficiência'].round(2)
                     
                     performance_sre = performance_sre.sort_values('Sincronizações', ascending=False)
                     
+                    # Criar DataFrame para exibição com tooltips
+                    display_performance = performance_sre.head(15).copy()
+                    
                     st.dataframe(
-                        performance_sre.head(15),
+                        display_performance,
                         use_container_width=True,
                         height=400,
                         column_config={
-                            "SRE": "SRE",
+                            "SRE": st.column_config.TextColumn(
+                                "SRE",
+                                width="medium"
+                            ),
                             "Sincronizações": st.column_config.NumberColumn(
                                 "Sincronizações",
-                                help="Número de chamados sincronizados",
-                                format="%d"
-                            ),
-                            "Correções/Ajustes": st.column_config.NumberColumn(
-                                "Correções",
-                                help="Número de correções/ajustes",
+                                help="Número de chamados sincronizados pelo SRE",
                                 format="%d"
                             ),
                             "Revisões": st.column_config.NumberColumn(
                                 "Revisões",
-                                help="Total de revisões",
+                                help="Total de revisões feitas pelo SRE",
                                 format="%d"
                             ),
                             "Eficiência": st.column_config.NumberColumn(
-                                "Eficiência",
-                                help="Sincronizações por revisão (maior é melhor)",
-                                format="%.2f"
+                                "Eficiência (%)",
+                                help="Cálculo: (Sincronizações / (Sincronizações + Revisões)) × 100%\\nQuanto maior, melhor a eficiência do SRE",
+                                format="%.2f%%",
+                                width="small"
                             )
                         }
                     )
                 
                 with col_comp2:
-                    # Gráfico de radar para SREs top
-                    if len(performance_sre) >= 3:
-                        st.markdown("#### 📈 Comparativo dos Top 3 SREs")
+                    # Gráfico de eficiência
+                    if len(performance_sre) > 0:
+                        st.markdown("#### 📈 Eficiência dos SREs (Top 10)")
                         
-                        top3_sres = performance_sre.head(3)
+                        top10_eficiencia = performance_sre.head(10).copy()
                         
-                        # Normalizar dados para radar chart
-                        metrics = ['Sincronizações', 'Correções/Ajustes'] if 'Correções/Ajustes' in top3_sres.columns else ['Sincronizações']
+                        fig_eficiencia = go.Figure()
                         
-                        fig_radar = go.Figure()
+                        fig_eficiencia.add_trace(go.Bar(
+                            x=top10_eficiencia['SRE'],
+                            y=top10_eficiencia['Eficiência'],
+                            name='Eficiência',
+                            text=[f"{v:.1f}%" for v in top10_eficiencia['Eficiência']],
+                            textposition='outside',
+                            marker_color='#1e3799',
+                            marker_line_color='#0c2461',
+                            marker_line_width=1.5,
+                            opacity=0.8,
+                            hovertemplate="<b>%{x}</b><br>Eficiência: %{y:.2f}%<br>Sincronizações: %{customdata[0]}<br>Revisões: %{customdata[1]}<extra></extra>",
+                            customdata=top10_eficiencia[['Sincronizações', 'Revisões']].values
+                        ))
                         
-                        for idx, row in top3_sres.iterrows():
-                            values = []
-                            for metric in metrics:
-                                max_val = performance_sre[metric].max()
-                                if max_val > 0:
-                                    values.append(row[metric] / max_val * 100)
-                                else:
-                                    values.append(0)
-                            
-                            # Fechar o radar (repetir primeiro valor)
-                            values.append(values[0])
-                            metrics_radar = metrics + [metrics[0]]
-                            
-                            fig_radar.add_trace(go.Scatterpolar(
-                                r=values,
-                                theta=metrics_radar,
-                                name=row['SRE'],
-                                fill='toself',
-                                line=dict(width=2)
-                            ))
-                        
-                        fig_radar.update_layout(
-                            polar=dict(
-                                radialaxis=dict(
-                                    visible=True,
-                                    range=[0, 100]
-                                )
-                            ),
-                            showlegend=True,
-                            height=400,
-                            margin=dict(t=50, b=50, l=50, r=50)
+                        # Adicionar linha de média
+                        media_eficiencia = top10_eficiencia['Eficiência'].mean()
+                        fig_eficiencia.add_hline(
+                            y=media_eficiencia,
+                            line_dash="dash",
+                            line_color="red",
+                            annotation_text=f"Média: {media_eficiencia:.1f}%",
+                            annotation_position="top right"
                         )
                         
-                        st.plotly_chart(fig_radar, use_container_width=True)
+                        fig_eficiencia.update_layout(
+                            title="Eficiência dos SREs (Top 10)",
+                            xaxis_title="SRE",
+                            yaxis_title="Eficiência (%)",
+                            plot_bgcolor='white',
+                            height=400,
+                            showlegend=False,
+                            margin=dict(t=50, b=50, l=50, r=50),
+                            yaxis=dict(range=[0, 100])
+                        )
+                        
+                        st.plotly_chart(fig_eficiencia, use_container_width=True)
                     
                     # Métricas gerais
                     st.markdown("#### 📊 Métricas Gerais")
@@ -1260,54 +1214,132 @@ if st.session_state.df_original is not None:
                         st.metric("Total de SREs", f"{total_sres}")
                     
                     with col_met2:
-                        st.metric("Média por SRE", f"{media_sinc:.1f}")
+                        st.metric("Média de Sincronizações", f"{media_sinc:.1f}")
                     
-                    if 'Correções/Ajustes' in performance_sre.columns:
-                        total_correcoes = performance_sre['Correções/Ajustes'].sum()
-                        st.metric("Total de Correções", f"{int(total_correcoes)}")
+                    if 'Revisões' in performance_sre.columns:
+                        total_revisoes_sre = performance_sre['Revisões'].sum()
+                        st.metric("Total de Revisões (SREs)", f"{int(total_revisoes_sre)}")
                 
-                # 4. Evolução mensal do SRE top
-                st.markdown("### 📈 Evolução Mensal do SRE Líder")
+                # 3. Evolução temporal do SRE líder
+                st.markdown("### 📈 Evolução Temporal do SRE Líder")
                 
                 if not sincronizacoes_por_sre.empty:
                     sre_lider = sincronizacoes_por_sre.iloc[0]['SRE']
                     
-                    df_sre_lider = df_sincronizados[df_sincronizados['SRE'] == sre_lider].copy()
+                    # Filtros para a evolução temporal
+                    col_evol1, col_evol2, col_evol3 = st.columns(3)
                     
-                    if 'Mês_Num' in df_sre_lider.columns and 'Ano' in df_sre_lider.columns:
-                        # Agrupar por mês/ano
-                        evolucao_sre = df_sre_lider.groupby(['Ano', 'Mês_Num']).size().reset_index()
-                        evolucao_sre.columns = ['Ano', 'Mês', 'Sincronizações']
-                        evolucao_sre = evolucao_sre.sort_values(['Ano', 'Mês'])
-                        
-                        # Criar rótulo de mês/ano
-                        evolucao_sre['Mês_Ano'] = evolucao_sre.apply(
-                            lambda x: f"{x['Mês']:02d}/{x['Ano']}", axis=1
+                    with col_evol1:
+                        # Seletor de período
+                        periodo_selecionado = st.selectbox(
+                            "Período:",
+                            options=['Diário', 'Mensal', 'Anual'],
+                            key="periodo_evolucao"
                         )
+                    
+                    with col_evol2:
+                        # Seletor de ano para filtro
+                        if 'Ano' in df_sincronizados.columns:
+                            anos_lider = sorted(df_sincronizados['Ano'].dropna().unique().astype(int))
+                            ano_lider = st.selectbox(
+                                "Ano:",
+                                options=['Todos'] + list(anos_lider),
+                                key="ano_lider"
+                            )
+                    
+                    with col_evol3:
+                        # Seletor de SRE (pode escolher outro além do líder)
+                        sres_disponiveis = sorted(df_sincronizados['SRE'].dropna().unique())
+                        sre_selecionado = st.selectbox(
+                            "Selecionar SRE:",
+                            options=[sre_lider] + [s for s in sres_disponiveis if s != sre_lider],
+                            key="sre_selecionado"
+                        )
+                    
+                    # Filtrar dados para o SRE selecionado
+                    df_sre_selecionado = df_sincronizados[df_sincronizados['SRE'] == sre_selecionado].copy()
+                    
+                    if 'Ano' in df_sre_selecionado.columns and ano_lider != 'Todos':
+                        df_sre_selecionado = df_sre_selecionado[df_sre_selecionado['Ano'] == int(ano_lider)]
+                    
+                    if not df_sre_selecionado.empty:
+                        if periodo_selecionado == 'Diário':
+                            # Agrupar por dia
+                            df_sre_selecionado['Data'] = df_sre_selecionado['Criado'].dt.date
+                            evolucao_sre = df_sre_selecionado.groupby('Data').size().reset_index()
+                            evolucao_sre.columns = ['Data', 'Sincronizações']
+                            evolucao_sre = evolucao_sre.sort_values('Data')
+                            eixo_x = 'Data'
+                            titulo_evol = f"Evolução Diária de {sre_selecionado}"
                         
+                        elif periodo_selecionado == 'Mensal':
+                            # Agrupar por mês/ano
+                            df_sre_selecionado['Ano_Mês'] = df_sre_selecionado['Criado'].dt.strftime('%Y-%m')
+                            evolucao_sre = df_sre_selecionado.groupby('Ano_Mês').size().reset_index()
+                            evolucao_sre.columns = ['Ano_Mês', 'Sincronizações']
+                            evolucao_sre = evolucao_sre.sort_values('Ano_Mês')
+                            eixo_x = 'Ano_Mês'
+                            titulo_evol = f"Evolução Mensal de {sre_selecionado}"
+                        
+                        else:  # Anual
+                            # Agrupar por ano
+                            evolucao_sre = df_sre_selecionado.groupby('Ano').size().reset_index()
+                            evolucao_sre.columns = ['Ano', 'Sincronizações']
+                            evolucao_sre = evolucao_sre.sort_values('Ano')
+                            eixo_x = 'Ano'
+                            titulo_evol = f"Evolução Anual de {sre_selecionado}"
+                        
+                        # Criar gráfico de linha
                         fig_evol_sre = go.Figure()
                         
-                        fig_evol_sre.add_trace(go.Bar(
-                            x=evolucao_sre['Mês_Ano'],
+                        fig_evol_sre.add_trace(go.Scatter(
+                            x=evolucao_sre[eixo_x],
                             y=evolucao_sre['Sincronizações'],
-                            name=sre_lider,
-                            marker_color='#1e3799',
+                            mode='lines+markers',
+                            name=sre_selecionado,
+                            line=dict(color='#1e3799', width=3),
+                            marker=dict(size=10, color='#0c2461'),
+                            fill='tozeroy',
+                            fillcolor='rgba(30, 55, 153, 0.2)',
                             text=evolucao_sre['Sincronizações'],
-                            textposition='auto'
+                            hovertemplate="<b>%{x}</b><br>Sincronizações: %{y}<extra></extra>"
                         ))
                         
                         fig_evol_sre.update_layout(
-                            title=f"Evolução Mensal de {sre_lider}",
-                            xaxis_title="Mês/Ano",
-                            yaxis_title="Sincronizações",
+                            title=titulo_evol,
+                            xaxis_title="Período",
+                            yaxis_title="Número de Sincronizações",
                             plot_bgcolor='white',
                             height=400,
                             showlegend=False,
                             margin=dict(t=50, b=50, l=50, r=50),
-                            xaxis=dict(tickangle=45)
+                            xaxis=dict(
+                                gridcolor='rgba(0,0,0,0.05)',
+                                showgrid=True
+                            ),
+                            yaxis=dict(
+                                gridcolor='rgba(0,0,0,0.05)',
+                                rangemode='tozero'
+                            )
                         )
                         
                         st.plotly_chart(fig_evol_sre, use_container_width=True)
+                        
+                        # Estatísticas da evolução
+                        col_stat1, col_stat2, col_stat3 = st.columns(3)
+                        
+                        with col_stat1:
+                            total_periodo = evolucao_sre['Sincronizações'].sum()
+                            st.metric("Total no período", f"{total_periodo}")
+                        
+                        with col_stat2:
+                            media_periodo = evolucao_sre['Sincronizações'].mean()
+                            st.metric("Média por período", f"{media_periodo:.1f}")
+                        
+                        with col_stat3:
+                            max_periodo = evolucao_sre['Sincronizações'].max()
+                            periodo_max = evolucao_sre.loc[evolucao_sre['Sincronizações'].idxmax(), eixo_x]
+                            st.metric("Melhor período", f"{periodo_max}: {max_periodo}")
             else:
                 st.info("ℹ️ Nenhum dado de sincronização disponível para análise dos SREs.")
         else:
@@ -1404,7 +1436,7 @@ if st.session_state.df_original is not None:
     # ÚLTIMAS DEMANDAS REGISTRADAS COM FILTROS
     # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title_exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
     
     if 'Criado' in df.columns:
         # Filtros para a tabela
@@ -1552,7 +1584,7 @@ st.markdown(f"""
         © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
         </p>
         <p style="margin: 0.2rem 0 0 0; color: #adb5bd; font-size: 0.75rem;">
-        Versão 5.3 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
+        Versão 5.4 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
         </p>
     </div>
 </div>
