@@ -421,21 +421,6 @@ def get_horario_brasilia():
     except:
         return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
-def criar_timeline_events(events):
-    """Cria uma timeline de eventos"""
-    timeline_html = '<div style="position: relative; padding-left: 20px; border-left: 2px solid #1e3799; margin: 20px 0;">'
-    for event in events:
-        timeline_html += f'''
-        <div style="position: relative; margin-bottom: 15px; padding-left: 15px;">
-            <div style="position: absolute; left: -28px; top: 0; width: 16px; height: 16px; 
-                       border-radius: 50%; background: #1e3799; border: 3px solid white; box-shadow: 0 0 0 2px #1e3799;"></div>
-            <div style="font-weight: 600; color: #1e3799;">{event['data']}</div>
-            <div style="color: #495057;">{event['descricao']}</div>
-        </div>
-        '''
-    timeline_html += '</div>'
-    return timeline_html
-
 # ============================================
 # SIDEBAR - FILTROS E CONTROLES (REORGANIZADO)
 # ============================================
@@ -1352,59 +1337,87 @@ if st.session_state.df_original is not None:
                 # Mostrar top 10
                 st.markdown(f"### 🏆 Top 10 Desenvolvedores ({ordenar_por})")
                 
-                # Gráfico de radar para top 3
-                if len(df_dev_metrics) >= 3:
-                    col_viz1, col_viz2 = st.columns([2, 1])
+                # Gráfico de barras horizontais para Score de Qualidade
+                if ordenar_por == "Score de Qualidade":
+                    top10_score = df_dev_metrics.head(10)
                     
-                    with col_viz1:
-                        top3 = df_dev_metrics.head(3)
-                        
-                        categories = ['Score Qualidade', 'Eficiência', 'Produtividade', 'Total Chamados']
-                        
-                        fig_radar = go.Figure()
-                        
-                        for idx, row in top3.iterrows():
-                            values = [
-                                row['Score Qualidade'],
-                                row['Eficiência'],
-                                min(row['Produtividade'] * 10, 100),  # Normalizar produtividade
-                                min(row['Total Chamados'] * 2, 100)    # Normalizar total
-                            ]
-                            
-                            fig_radar.add_trace(go.Scatterpolar(
-                                r=values,
-                                theta=categories,
-                                fill='toself',
-                                name=row['Desenvolvedor'][:20] + ("..." if len(row['Desenvolvedor']) > 20 else "")
-                            ))
-                        
-                        fig_radar.update_layout(
-                            polar=dict(
-                                radialaxis=dict(
-                                    visible=True,
-                                    range=[0, 100]
-                                )),
-                            showlegend=True,
-                            title="Comparação Radar - Top 3 Desenvolvedores",
-                            height=400
-                        )
-                        
-                        st.plotly_chart(fig_radar, use_container_width=True)
+                    fig_score = px.bar(
+                        top10_score,
+                        y='Desenvolvedor',
+                        x='Score Qualidade',
+                        orientation='h',
+                        title='Top 10 - Score de Qualidade',
+                        text='Score Qualidade',
+                        color='Score Qualidade',
+                        color_continuous_scale='RdYlGn',
+                        range_color=[0, 100]
+                    )
                     
-                    with col_viz2:
-                        st.markdown("### 📊 Estatísticas Gerais")
-                        avg_score = df_dev_metrics['Score Qualidade'].mean()
-                        avg_eff = df_dev_metrics['Eficiência'].mean()
-                        avg_prod = df_dev_metrics['Produtividade'].mean()
-                        
-                        st.metric("Média Score", f"{avg_score:.1f}%")
-                        st.metric("Média Eficiência", f"{avg_eff:.1f}%")
-                        st.metric("Média Produtividade", f"{avg_prod:.1f}/mês")
-                        
-                        # Distribuição por classificação
-                        dist_class = df_dev_metrics['Classificação'].value_counts()
-                        for classe, count in dist_class.items():
-                            st.markdown(f"{classe}: {count} devs")
+                    fig_score.update_traces(
+                        texttemplate='%{text:.1f}%',
+                        textposition='outside',
+                        marker_line_color='black',
+                        marker_line_width=0.5
+                    )
+                    
+                    fig_score.update_layout(
+                        height=500,
+                        plot_bgcolor='white',
+                        yaxis={'categoryorder': 'total ascending'},
+                        xaxis_title="Score de Qualidade (%)",
+                        yaxis_title="Desenvolvedor",
+                        xaxis_range=[0, 100]
+                    )
+                    
+                    st.plotly_chart(fig_score, use_container_width=True)
+                    
+                else:
+                    # Para outras ordenações, usar gráfico de barras
+                    top10_other = df_dev_metrics.head(10)
+                    
+                    if ordenar_por == "Total de Chamados":
+                        col_ordenada = 'Total Chamados'
+                        color_scale = 'Blues'
+                        titulo = 'Top 10 - Total de Chamados'
+                    elif ordenar_por == "Eficiência":
+                        col_ordenada = 'Eficiência'
+                        color_scale = 'Greens'
+                        titulo = 'Top 10 - Eficiência'
+                    else:  # Produtividade
+                        col_ordenada = 'Produtividade'
+                        color_scale = 'Purples'
+                        titulo = 'Top 10 - Produtividade'
+                    
+                    fig_other = px.bar(
+                        top10_other,
+                        x='Desenvolvedor',
+                        y=col_ordenada,
+                        title=titulo,
+                        text=col_ordenada,
+                        color=col_ordenada,
+                        color_continuous_scale=color_scale
+                    )
+                    
+                    if ordenar_por in ["Score de Qualidade", "Eficiência"]:
+                        fig_other.update_traces(texttemplate='%{text:.1f}%')
+                    else:
+                        fig_other.update_traces(texttemplate='%{text:.1f}')
+                    
+                    fig_other.update_traces(
+                        textposition='outside',
+                        marker_line_color='black',
+                        marker_line_width=0.5
+                    )
+                    
+                    fig_other.update_layout(
+                        height=500,
+                        plot_bgcolor='white',
+                        xaxis_title="Desenvolvedor",
+                        yaxis_title=ordenar_por,
+                        xaxis_tickangle=45
+                    )
+                    
+                    st.plotly_chart(fig_other, use_container_width=True)
                 
                 # Tabela completa
                 st.markdown("### 📋 Performance Detalhada")
@@ -1423,33 +1436,6 @@ if st.session_state.df_original is not None:
                         "Classificação": st.column_config.TextColumn("Classif.")
                     }
                 )
-                
-                # Heatmap de performance
-                st.markdown("### 🔥 Heatmap de Performance")
-                
-                # Preparar dados para heatmap
-                heatmap_data = df_dev_metrics.head(15).copy()
-                heatmap_data['Performance Index'] = (
-                    heatmap_data['Score Qualidade'] * 0.4 +
-                    heatmap_data['Eficiência'] * 0.3 +
-                    heatmap_data['Produtividade'] * 10 * 0.3  # Peso maior para produtividade
-                )
-                
-                fig_heat = px.imshow(
-                    heatmap_data[['Score Qualidade', 'Eficiência', 'Produtividade']].T,
-                    labels=dict(x="Desenvolvedor", y="Métrica", color="Valor"),
-                    x=heatmap_data['Desenvolvedor'],
-                    y=['Score Qualidade', 'Eficiência', 'Produtividade'],
-                    color_continuous_scale='RdYlGn',
-                    aspect="auto"
-                )
-                
-                fig_heat.update_layout(
-                    height=300,
-                    title="Mapa de Calor de Performance"
-                )
-                
-                st.plotly_chart(fig_heat, use_container_width=True)
             else:
                 st.info("Nenhum desenvolvedor encontrado com os critérios selecionados.")
     
@@ -2101,28 +2087,6 @@ if st.session_state.df_original is not None:
                         """, unsafe_allow_html=True)
                 else:
                     st.info("Não foram identificadas recomendações específicas com os filtros atuais.")
-            
-            # Seção adicional: Timeline de eventos importantes
-            if 'Criado' in df_diag.columns and not df_diag.empty:
-                st.markdown("---")
-                st.markdown("### 📅 Timeline de Eventos Significativos")
-                
-                # Identificar datas com picos
-                df_diag['Data'] = df_diag['Criado'].dt.date
-                eventos_diarios = df_diag.groupby('Data').size().reset_index()
-                eventos_diarios.columns = ['Data', 'Quantidade']
-                eventos_diarios = eventos_diarios.sort_values('Quantidade', ascending=False)
-                
-                # Criar timeline com top 5 eventos
-                eventos_timeline = []
-                for idx, row in eventos_diarios.head(5).iterrows():
-                    eventos_timeline.append({
-                        'data': row['Data'].strftime('%d/%m/%Y'),
-                        'descricao': f"{int(row['Quantidade'])} ocorrências - Pico de atividade"
-                    })
-                
-                if eventos_timeline:
-                    st.markdown(criar_timeline_events(eventos_timeline), unsafe_allow_html=True)
     
     # ============================================
     # TOP 10 RESPONSÁVEIS
@@ -2172,7 +2136,7 @@ if st.session_state.df_original is not None:
         
         if 'Tipo_Chamado' in df.columns:
             # Agrupar por tipo de chamado
-            tipos_chamado = df['Tipo_Chamado'].value_counts().resetindex()
+            tipos_chamado = df['Tipo_Chamado'].value_counts().reset_index()
             tipos_chamado.columns = ['Tipo', 'Quantidade']
             
             # Ordenar por quantidade
@@ -2245,10 +2209,12 @@ if st.session_state.df_original is not None:
             )
         
         with col_filtro3:
+            # Mantendo todas as colunas originais
             mostrar_colunas = st.multiselect(
                 "Colunas a mostrar:",
-                options=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Prioridade', 'Revisões', 'Empresa', 'SRE', 'Data'],
-                default=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Data'],
+                options=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Prioridade', 
+                        'Revisões', 'Empresa', 'SRE', 'Data', 'Responsável_Formatado'],
+                default=['Chamado', 'Tipo_Chamado', 'Responsável_Formatado', 'Status', 'Data'],
                 key="select_colunas"
             )
         
@@ -2296,8 +2262,11 @@ if st.session_state.df_original is not None:
         if 'Tipo_Chamado' in mostrar_colunas and 'Tipo_Chamado' in ultimas_demandas.columns:
             display_data['Tipo'] = ultimas_demandas['Tipo_Chamado']
         
-        if 'Responsável' in mostrar_colunas and 'Responsável_Formatado' in ultimas_demandas.columns:
-            display_data['Responsável'] = ultimas_demandas['Responsável_Formatado']
+        if 'Responsável' in mostrar_colunas and 'Responsável' in ultimas_demandas.columns:
+            display_data['Responsável'] = ultimas_demandas['Responsável']
+        
+        if 'Responsável_Formatado' in mostrar_colunas and 'Responsável_Formatado' in ultimas_demandas.columns:
+            display_data['Responsável Formatado'] = ultimas_demandas['Responsável_Formatado']
         
         if 'Status' in mostrar_colunas and 'Status' in ultimas_demandas.columns:
             display_data['Status'] = ultimas_demandas['Status']
