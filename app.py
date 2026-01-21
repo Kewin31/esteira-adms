@@ -739,50 +739,69 @@ if st.session_state.df_original is not None:
                 demanda_dia.columns = ['Dia_Semana', 'Quantidade']
                 demanda_dia['Dia_PT'] = dias_portugues
                 
-                fig_dias = px.bar(
-                    demanda_dia,
-                    x='Dia_PT',
-                    y='Quantidade',
-                    title='Demanda por Dia da Semana',
-                    color='Quantidade',
-                    color_continuous_scale='Blues'
-                )
-                st.plotly_chart(fig_dias, use_container_width=True)
+                if not demanda_dia.empty:
+                    fig_dias = px.bar(
+                        demanda_dia,
+                        x='Dia_PT',
+                        y='Quantidade',
+                        title='Demanda por Dia da Semana',
+                        color='Quantidade',
+                        color_continuous_scale='Blues'
+                    )
+                    st.plotly_chart(fig_dias, use_container_width=True)
+                else:
+                    st.info("Sem dados suficientes para análise por dia da semana.")
             
             with col_saz2:
                 demanda_hora = df_temp['Hora'].value_counts().sort_index().reset_index()
                 demanda_hora.columns = ['Hora', 'Quantidade']
                 
-                fig_horas = px.line(
-                    demanda_hora,
-                    x='Hora',
-                    y='Quantidade',
-                    title='Demanda por Hora do Dia',
-                    markers=True
-                )
-                fig_horas.update_traces(line=dict(width=3))
-                st.plotly_chart(fig_horas, use_container_width=True)
+                if not demanda_hora.empty:
+                    fig_horas = px.line(
+                        demanda_hora,
+                        x='Hora',
+                        y='Quantidade',
+                        title='Demanda por Hora do Dia',
+                        markers=True
+                    )
+                    fig_horas.update_traces(line=dict(width=3))
+                    st.plotly_chart(fig_horas, use_container_width=True)
+                else:
+                    st.info("Sem dados suficientes para análise por hora.")
             
             st.markdown("#### 🗓️ Heatmap: Hora vs Dia da Semana")
             
-            pivot_data = df_temp.pivot_table(
-                index='Dia_Semana',
-                columns='Hora',
-                values='Chamado',
-                aggfunc='count',
-                fill_value=0
-            )
-            
-            pivot_data = pivot_data.reindex(dias_semana)
-            
-            fig_heatmap = px.imshow(
-                pivot_data,
-                labels=dict(x="Hora do Dia", y="Dia da Semana", color="Chamados"),
-                x=[f"{h}:00" for h in range(24)],
-                y=dias_portugues,
-                color_continuous_scale='Viridis'
-            )
-            st.plotly_chart(fig_heatmap, use_container_width=True)
+            try:
+                pivot_data = df_temp.pivot_table(
+                    index='Dia_Semana',
+                    columns='Hora',
+                    values='Chamado',
+                    aggfunc='count',
+                    fill_value=0
+                )
+                
+                if not pivot_data.empty:
+                    pivot_data = pivot_data.reindex(dias_semana)
+                    
+                    # Verificar se temos dados suficientes
+                    if pivot_data.shape[0] > 0 and pivot_data.shape[1] > 0:
+                        fig_heatmap = px.imshow(
+                            pivot_data,
+                            labels=dict(x="Hora do Dia", y="Dia da Semana", color="Chamados"),
+                            x=[f"{h}:00" for h in pivot_data.columns],
+                            y=[dias_portugues[dias_semana.index(d)] if d in dias_semana else d 
+                               for d in pivot_data.index],
+                            color_continuous_scale='Viridis'
+                        )
+                        st.plotly_chart(fig_heatmap, use_container_width=True)
+                    else:
+                        st.info("Dados insuficientes para gerar o heatmap.")
+                else:
+                    st.info("Não há dados suficientes para criar a matriz de calor.")
+                    
+            except Exception as e:
+                st.warning(f"Não foi possível gerar o heatmap: {str(e)}")
+                st.info("Isso pode ocorrer quando não há dados suficientes para criar a matriz de horas vs dias.")
     
     with tab_extra3:
         st.markdown("### 👥 ANÁLISE DE COLABORAÇÃO")
@@ -834,20 +853,26 @@ if st.session_state.df_original is not None:
             df_top = df[df['Responsável_Formatado'].isin(top_devs) & df['SRE'].isin(top_sres)]
             
             if not df_top.empty:
-                matriz_colab = df_top.pivot_table(
-                    index='Responsável_Formatado',
-                    columns='SRE',
-                    values='Chamado',
-                    aggfunc='count',
-                    fill_value=0
-                )
-                
-                fig_matriz = px.imshow(
-                    matriz_colab,
-                    labels=dict(x="SRE", y="Desenvolvedor", color="Colaborações"),
-                    color_continuous_scale='Blues'
-                )
-                st.plotly_chart(fig_matriz, use_container_width=True)
+                try:
+                    matriz_colab = df_top.pivot_table(
+                        index='Responsável_Formatado',
+                        columns='SRE',
+                        values='Chamado',
+                        aggfunc='count',
+                        fill_value=0
+                    )
+                    
+                    if not matriz_colab.empty:
+                        fig_matriz = px.imshow(
+                            matriz_colab,
+                            labels=dict(x="SRE", y="Desenvolvedor", color="Colaborações"),
+                            color_continuous_scale='Blues'
+                        )
+                        st.plotly_chart(fig_matriz, use_container_width=True)
+                    else:
+                        st.info("Dados insuficientes para gerar a matriz de colaboração.")
+                except Exception as e:
+                    st.warning(f"Não foi possível gerar a matriz: {str(e)}")
     
     with tab_extra4:
         st.markdown("### 🔧 ANÁLISE DE ERROS RECORRENTES")
@@ -867,14 +892,17 @@ if st.session_state.df_original is not None:
                 tipos_erro = df['Tipo_Chamado'].value_counts().reset_index()
                 tipos_erro.columns = ['Tipo', 'Frequência']
                 
-                fig_tipos = px.pie(
-                    tipos_erro.head(10),
-                    values='Frequência',
-                    names='Tipo',
-                    title='Top 10 Tipos de Chamados',
-                    hole=0.4
-                )
-                st.plotly_chart(fig_tipos, use_container_width=True)
+                if not tipos_erro.empty:
+                    fig_tipos = px.pie(
+                        tipos_erro.head(10),
+                        values='Frequência',
+                        names='Tipo',
+                        title='Top 10 Tipos de Chamados',
+                        hole=0.4
+                    )
+                    st.plotly_chart(fig_tipos, use_container_width=True)
+                else:
+                    st.info("Sem dados de tipos de chamados.")
             
             with col_erro2:
                 if 'Criado' in df.columns:
@@ -885,15 +913,18 @@ if st.session_state.df_original is not None:
                     top_tipos = df['Tipo_Chamado'].value_counts().head(5).index.tolist()
                     evol_top = evol_tipos[evol_tipos['Tipo'].isin(top_tipos)]
                     
-                    fig_evol = px.line(
-                        evol_top,
-                        x='Mês_Ano',
-                        y='Quantidade',
-                        color='Tipo',
-                        title='Evolução dos Tipos Mais Frequentes',
-                        markers=True
-                    )
-                    st.plotly_chart(fig_evol, use_container_width=True)
+                    if not evol_top.empty:
+                        fig_evol = px.line(
+                            evol_top,
+                            x='Mês_Ano',
+                            y='Quantidade',
+                            color='Tipo',
+                            title='Evolução dos Tipos Mais Frequentes',
+                            markers=True
+                        )
+                        st.plotly_chart(fig_evol, use_container_width=True)
+                    else:
+                        st.info("Sem dados suficientes para análise temporal.")
             
             if 'Revisões' in df.columns:
                 st.markdown("#### 📈 Análise de Complexidade por Tipo")
@@ -905,16 +936,19 @@ if st.session_state.df_original is not None:
                 complexidade_tipo.columns = ['Tipo', 'Média_Revisões', 'Total_Revisões', 'Quantidade']
                 complexidade_tipo = complexidade_tipo.sort_values('Média_Revisões', ascending=False)
                 
-                fig_complex = px.scatter(
-                    complexidade_tipo.head(15),
-                    x='Quantidade',
-                    y='Média_Revisões',
-                    size='Total_Revisões',
-                    color='Média_Revisões',
-                    hover_name='Tipo',
-                    title='Complexidade vs Frequência'
-                )
-                st.plotly_chart(fig_complex, use_container_width=True)
+                if not complexidade_tipo.empty:
+                    fig_complex = px.scatter(
+                        complexidade_tipo.head(15),
+                        x='Quantidade',
+                        y='Média_Revisões',
+                        size='Total_Revisões',
+                        color='Média_Revisões',
+                        hover_name='Tipo',
+                        title='Complexidade vs Frequência'
+                    )
+                    st.plotly_chart(fig_complex, use_container_width=True)
+                else:
+                    st.info("Sem dados para análise de complexidade.")
     
     with tab_extra5:
         st.markdown("### ⚡ PREVISÃO DE CARGA DE TRABALHO POR SRE")
@@ -978,15 +1012,18 @@ if st.session_state.df_original is not None:
             top_sres_carga = carga_semanal.groupby('SRE')['Carga'].sum().nlargest(5).index.tolist()
             carga_top = carga_semanal[carga_semanal['SRE'].isin(top_sres_carga)]
             
-            fig_tendencia = px.line(
-                carga_top,
-                x='Semana',
-                y='Carga',
-                color='SRE',
-                title='Evolução da Carga Semanal - Top 5 SREs',
-                markers=True
-            )
-            st.plotly_chart(fig_tendencia, use_container_width=True)
+            if not carga_top.empty:
+                fig_tendencia = px.line(
+                    carga_top,
+                    x='Semana',
+                    y='Carga',
+                    color='SRE',
+                    title='Evolução da Carga Semanal - Top 5 SREs',
+                    markers=True
+                )
+                st.plotly_chart(fig_tendencia, use_container_width=True)
+            else:
+                st.info("Sem dados suficientes para análise de tendência.")
     
     with tab_extra6:
         st.markdown("### ⏱️ DASHBOARD INTERATIVO DE LINHA DO TEMPO")
@@ -1039,33 +1076,36 @@ if st.session_state.df_original is not None:
             df_timeline = df_timeline.head(100)
             
             if viz_type == "Timeline (Gantt)":
-                df_timeline['Data_Inicio'] = df_timeline['Criado'].dt.date
-                df_timeline['Data_Fim'] = df_timeline['Criado'].dt.date + timedelta(days=1)
-                df_timeline['Descricao'] = df_timeline.apply(
-                    lambda x: f"Chamado {x['Chamado']} - {x['Status']}", axis=1
-                )
-                
-                if grupo_por == "SRE" and 'SRE' in df_timeline.columns:
-                    df_timeline['Grupo'] = df_timeline['SRE']
-                elif grupo_por == "Desenvolvedor" and 'Responsável_Formatado' in df_timeline.columns:
-                    df_timeline['Grupo'] = df_timeline['Responsável_Formatado']
-                elif grupo_por == "Tipo de Chamado" and 'Tipo_Chamado' in df_timeline.columns:
-                    df_timeline['Grupo'] = df_timeline['Tipo_Chamado']
-                elif grupo_por == "Status":
-                    df_timeline['Grupo'] = df_timeline['Status']
+                if not df_timeline.empty:
+                    df_timeline['Data_Inicio'] = df_timeline['Criado'].dt.date
+                    df_timeline['Data_Fim'] = df_timeline['Criado'].dt.date + timedelta(days=1)
+                    df_timeline['Descricao'] = df_timeline.apply(
+                        lambda x: f"Chamado {x['Chamado']} - {x['Status']}", axis=1
+                    )
+                    
+                    if grupo_por == "SRE" and 'SRE' in df_timeline.columns:
+                        df_timeline['Grupo'] = df_timeline['SRE']
+                    elif grupo_por == "Desenvolvedor" and 'Responsável_Formatado' in df_timeline.columns:
+                        df_timeline['Grupo'] = df_timeline['Responsável_Formatado']
+                    elif grupo_por == "Tipo de Chamado" and 'Tipo_Chamado' in df_timeline.columns:
+                        df_timeline['Grupo'] = df_timeline['Tipo_Chamado']
+                    elif grupo_por == "Status":
+                        df_timeline['Grupo'] = df_timeline['Status']
+                    else:
+                        df_timeline['Grupo'] = "Todos"
+                    
+                    fig_gantt = px.timeline(
+                        df_timeline.head(50),
+                        x_start="Data_Inicio",
+                        x_end="Data_Fim",
+                        y="Grupo",
+                        color="Status",
+                        hover_name="Descricao",
+                        title=f"Timeline - Agrupado por {grupo_por}"
+                    )
+                    st.plotly_chart(fig_gantt, use_container_width=True)
                 else:
-                    df_timeline['Grupo'] = "Todos"
-                
-                fig_gantt = px.timeline(
-                    df_timeline.head(50),
-                    x_start="Data_Inicio",
-                    x_end="Data_Fim",
-                    y="Grupo",
-                    color="Status",
-                    hover_name="Descricao",
-                    title=f"Timeline - Agrupado por {grupo_por}"
-                )
-                st.plotly_chart(fig_gantt, use_container_width=True)
+                    st.info("Sem dados para o período selecionado.")
             
             col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
             
@@ -1264,6 +1304,8 @@ if st.session_state.df_original is not None:
                 with col_stats3:
                     media_mensal = int(demandas_completas['Quantidade'].mean())
                     st.metric("📊 Média mensal", f"{media_mensal:,}")
+            else:
+                st.info(f"Não há dados para o ano {ano_selecionado}.")
     
     with tab2:
         st.markdown('<div class="section-title-exec">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
@@ -1304,6 +1346,8 @@ if st.session_state.df_original is not None:
                 )
                 
                 st.plotly_chart(fig_revisoes, use_container_width=True)
+            else:
+                st.info("Não há dados de revisões.")
     
     with tab3:
         st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
@@ -1351,6 +1395,8 @@ if st.session_state.df_original is not None:
                 )
                 
                 st.plotly_chart(fig_dia, use_container_width=True)
+            else:
+                st.info("Não há chamados sincronizados.")
     
     with tab4:
         st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
@@ -1473,6 +1519,8 @@ if st.session_state.df_original is not None:
                         use_container_width=True,
                         height=400
                     )
+            else:
+                st.info("Não há dados de SREs sincronizados para os filtros selecionados.")
     
     # ============================================
     # TOP 10 RESPONSÁVEIS
@@ -1487,26 +1535,29 @@ if st.session_state.df_original is not None:
             top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
             top_responsaveis.columns = ['Responsável', 'Demandas']
             
-            fig_top = px.bar(
-                top_responsaveis,
-                x='Demandas',
-                y='Responsável',
-                orientation='h',
-                text='Demandas',
-                color='Demandas',
-                color_continuous_scale='Blues'
-            )
-            
-            fig_top.update_traces(
-                texttemplate='%{text}',
-                textposition='outside',
-                marker_line_color='#0c2461',
-                marker_line_width=1.5,
-                opacity=0.9
-            )
-            
-            fig_top.update_layout(height=500, plot_bgcolor='white', showlegend=False)
-            st.plotly_chart(fig_top, use_container_width=True)
+            if not top_responsaveis.empty:
+                fig_top = px.bar(
+                    top_responsaveis,
+                    x='Demandas',
+                    y='Responsável',
+                    orientation='h',
+                    text='Demandas',
+                    color='Demandas',
+                    color_continuous_scale='Blues'
+                )
+                
+                fig_top.update_traces(
+                    texttemplate='%{text}',
+                    textposition='outside',
+                    marker_line_color='#0c2461',
+                    marker_line_width=1.5,
+                    opacity=0.9
+                )
+                
+                fig_top.update_layout(height=500, plot_bgcolor='white', showlegend=False)
+                st.plotly_chart(fig_top, use_container_width=True)
+            else:
+                st.info("Não há dados de responsáveis.")
     
     with col_dist:
         st.markdown('<div class="section-title-exec">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
@@ -1516,26 +1567,29 @@ if st.session_state.df_original is not None:
             tipos_chamado.columns = ['Tipo', 'Quantidade']
             tipos_chamado = tipos_chamado.sort_values('Quantidade', ascending=True)
             
-            fig_tipos = px.bar(
-                tipos_chamado,
-                x='Quantidade',
-                y='Tipo',
-                orientation='h',
-                text='Quantidade',
-                color='Quantidade',
-                color_continuous_scale='Viridis'
-            )
-            
-            fig_tipos.update_traces(
-                texttemplate='%{text}',
-                textposition='outside',
-                marker_line_color='rgb(8,48,107)',
-                marker_line_width=1,
-                opacity=0.9
-            )
-            
-            fig_tipos.update_layout(height=500, plot_bgcolor='white', showlegend=False)
-            st.plotly_chart(fig_tipos, use_container_width=True)
+            if not tipos_chamado.empty:
+                fig_tipos = px.bar(
+                    tipos_chamado,
+                    x='Quantidade',
+                    y='Tipo',
+                    orientation='h',
+                    text='Quantidade',
+                    color='Quantidade',
+                    color_continuous_scale='Viridis'
+                )
+                
+                fig_tipos.update_traces(
+                    texttemplate='%{text}',
+                    textposition='outside',
+                    marker_line_color='rgb(8,48,107)',
+                    marker_line_width=1,
+                    opacity=0.9
+                )
+                
+                fig_tipos.update_layout(height=500, plot_bgcolor='white', showlegend=False)
+                st.plotly_chart(fig_tipos, use_container_width=True)
+            else:
+                st.info("Não há dados de tipos de chamados.")
     
     # ============================================
     # ÚLTIMAS DEMANDAS
@@ -1626,6 +1680,8 @@ if st.session_state.df_original is not None:
                 use_container_width=True,
                 key="btn_exportar"
             )
+        else:
+            st.info("Nenhum dado para exibir com os filtros atuais.")
 
 else:
     # TELA INICIAL
