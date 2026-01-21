@@ -1301,7 +1301,7 @@ if st.session_state.df_original is not None:
             with col_erro2:
                 if 'Criado' in df.columns:
                     df['Mes_Ano'] = df['Criado'].dt.strftime('%Y-%m')
-                    evol_tipos = df.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
+                    evol_tipos = df.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
                     evol_tipos.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     top_tipos = df['Tipo_Chamado'].value_counts().head(5).index.tolist()
@@ -1407,7 +1407,7 @@ if st.session_state.df_original is not None:
     # ÚLTIMAS DEMANDAS REGISTRADAS COM FILTROS (ORIGINAL)
     # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title_exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
     
     if 'Criado' in df.columns:
         # FILTRO DE BUSCA POR CHAMADO ESPECÍFICO - MANTIDO
