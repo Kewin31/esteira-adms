@@ -1178,9 +1178,42 @@ if st.session_state.df_original is not None:
     with tab2:
         st.markdown('<div class="section-title-exec">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
         
-        if 'Revisões' in df.columns and 'Responsável_Formatado' in df.columns:
+        # ADICIONADO: Filtros de ano e mês para análise de revisões
+        col_filtro_rev1, col_filtro_rev2 = st.columns(2)
+        
+        with col_filtro_rev1:
+            if 'Ano' in df.columns:
+                anos_rev = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_rev = ['Todos os Anos'] + list(anos_rev)
+                ano_rev = st.selectbox(
+                    "📅 Ano:",
+                    options=anos_opcoes_rev,
+                    index=len(anos_opcoes_rev)-1,
+                    key="filtro_ano_rev"
+                )
+        
+        with col_filtro_rev2:
+            if 'Mês' in df.columns:
+                meses_rev = sorted(df['Mês'].dropna().unique().astype(int))
+                meses_opcoes_rev = ['Todos os Meses'] + [str(m) for m in meses_rev]
+                mes_rev = st.selectbox(
+                    "📆 Mês:",
+                    options=meses_opcoes_rev,
+                    key="filtro_mes_rev"
+                )
+        
+        # Filtrar dados conforme ano e mês selecionados
+        df_rev = df.copy()
+        
+        if ano_rev != 'Todos os Anos':
+            df_rev = df_rev[df_rev['Ano'] == int(ano_rev)]
+        
+        if mes_rev != 'Todos os Meses':
+            df_rev = df_rev[df_rev['Mês'] == int(mes_rev)]
+        
+        if 'Revisões' in df_rev.columns and 'Responsável_Formatado' in df_rev.columns:
             # Filtrar apenas responsáveis com revisões
-            df_com_revisoes = df[df['Revisões'] > 0].copy()
+            df_com_revisoes = df_rev[df_rev['Revisões'] > 0].copy()
             
             if not df_com_revisoes.empty:
                 # Agrupar por responsável
@@ -1191,6 +1224,18 @@ if st.session_state.df_original is not None:
                 
                 revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
                 revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
+                
+                # Criar título dinâmico
+                titulo_periodo = ""
+                if ano_rev != 'Todos os Anos':
+                    titulo_periodo = f" em {ano_rev}"
+                if mes_rev != 'Todos os Meses':
+                    meses_nomes = {
+                        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                        5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                        9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+                    }
+                    titulo_periodo += f" - {meses_nomes[int(mes_rev)]}"
                 
                 # Criar gráfico de barras com cores vermelho (maior) para verde (menor)
                 fig_revisoes = go.Figure()
@@ -1227,7 +1272,7 @@ if st.session_state.df_original is not None:
                 ))
                 
                 fig_revisoes.update_layout(
-                    title='Top 15 Responsáveis com Mais Revisões',
+                    title=f'Top 15 Responsáveis com Mais Revisões{titulo_periodo}',
                     xaxis_title='Responsável',
                     yaxis_title='Total de Revisões',
                     plot_bgcolor='white',
@@ -1248,9 +1293,42 @@ if st.session_state.df_original is not None:
     with tab3:
         st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
         
-        if 'Status' in df.columns and 'Criado' in df.columns:
+        # ADICIONADO: Filtros de ano e mês para sincronizados por dia
+        col_filtro_sinc1, col_filtro_sinc2 = st.columns(2)
+        
+        with col_filtro_sinc1:
+            if 'Ano' in df.columns:
+                anos_sinc = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_sinc = ['Todos os Anos'] + list(anos_sinc)
+                ano_sinc = st.selectbox(
+                    "📅 Ano:",
+                    options=anos_opcoes_sinc,
+                    index=len(anos_opcoes_sinc)-1,
+                    key="filtro_ano_sinc"
+                )
+        
+        with col_filtro_sinc2:
+            if 'Mês' in df.columns:
+                meses_sinc = sorted(df['Mês'].dropna().unique().astype(int))
+                meses_opcoes_sinc = ['Todos os Meses'] + [str(m) for m in meses_sinc]
+                mes_sinc = st.selectbox(
+                    "📆 Mês:",
+                    options=meses_opcoes_sinc,
+                    key="filtro_mes_sinc"
+                )
+        
+        # Filtrar dados conforme ano e mês selecionados
+        df_sinc = df.copy()
+        
+        if ano_sinc != 'Todos os Anos':
+            df_sinc = df_sinc[df_sinc['Ano'] == int(ano_sinc)]
+        
+        if mes_sinc != 'Todos os Meses':
+            df_sinc = df_sinc[df_sinc['Mês'] == int(mes_sinc)]
+        
+        if 'Status' in df_sinc.columns and 'Criado' in df_sinc.columns:
             # Filtrar apenas chamados sincronizados
-            df_sincronizados = df[df['Status'] == 'Sincronizado'].copy()
+            df_sincronizados = df_sinc[df_sinc['Status'] == 'Sincronizado'].copy()
             
             if not df_sincronizados.empty:
                 # Extrair data sem hora
@@ -1262,6 +1340,18 @@ if st.session_state.df_original is not None:
                 
                 # Ordenar por data
                 sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
+                
+                # Criar título dinâmico
+                titulo_periodo = ""
+                if ano_sinc != 'Todos os Anos':
+                    titulo_periodo = f" em {ano_sinc}"
+                if mes_sinc != 'Todos os Meses':
+                    meses_nomes = {
+                        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                        5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                        9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+                    }
+                    titulo_periodo += f" - {meses_nomes[int(mes_sinc)]}"
                 
                 # Criar gráfico de linha com área
                 fig_dia = go.Figure()
@@ -1283,13 +1373,12 @@ if st.session_state.df_original is not None:
                 fig_dia.add_trace(go.Scatter(
                     x=sincronizados_por_dia['Data'],
                     y=sincronizados_por_dia['Media_Movel'],
-                    mode='lines',
                     name='Média Móvel (7 dias)',
                     line=dict(color='#dc3545', width=2, dash='dash')
                 ))
                 
                 fig_dia.update_layout(
-                    title='Evolução Diária de Chamados Sincronizados',
+                    title=f'Evolução Diária de Chamados Sincronizados{titulo_periodo}',
                     xaxis_title='Data',
                     yaxis_title='Número de Chamados Sincronizados',
                     plot_bgcolor='white',
@@ -1427,51 +1516,47 @@ if st.session_state.df_original is not None:
                     st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
                 with col_ranking:
-                    # Top 3 SREs - COLOCADO DO LADO DIREITO
+                    # Top 3 SREs - SIMPLIFICADO (sem destaques)
                     st.markdown("### 🏆 Ranking")
+                    
+                    # Container simples para ranking
+                    ranking_html = """
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6;">
+                    """
                     
                     if len(sinc_por_sre) >= 1:
                         sre1 = sinc_por_sre.iloc[0]
-                        st.markdown(f"""
-                        <div style="background: linear-gradient(135deg, #FFD700 0%, #FFEC8B 100%); 
-                                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; 
-                                    border: 2px solid #DAA520; text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold;">🥇</div>
-                            <div style="font-weight: bold; color: #1e3799;">1º Lugar</div>
-                            <div style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">{sre1['SRE']}</div>
+                        ranking_html += f"""
+                        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #e8f4f8; border-radius: 5px;">
+                            <div style="font-weight: bold; color: #1e3799;">🥇 1º: {sre1['SRE']}</div>
                             <div style="font-size: 0.9rem; color: #495057;">{sre1['Sincronizados']} sinc.</div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        """
                     
                     if len(sinc_por_sre) >= 2:
                         sre2 = sinc_por_sre.iloc[1]
-                        st.markdown(f"""
-                        <div style="background: linear-gradient(135deg, #C0C0C0 0%, #E8E8E8 100%); 
-                                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; 
-                                    border: 2px solid #A9A9A9; text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold;">🥈</div>
-                            <div style="font-weight: bold; color: #1e3799;">2º Lugar</div>
-                            <div style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">{sre2['SRE']}</div>
+                        ranking_html += f"""
+                        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #f0f0f0; border-radius: 5px;">
+                            <div style="font-weight: bold; color: #1e3799;">🥈 2º: {sre2['SRE']}</div>
                             <div style="font-size: 0.9rem; color: #495057;">{sre2['Sincronizados']} sinc.</div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        """
                     
                     if len(sinc_por_sre) >= 3:
                         sre3 = sinc_por_sre.iloc[2]
-                        st.markdown(f"""
-                        <div style="background: linear-gradient(135deg, #CD7F32 0%, #E8B580 100%); 
-                                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; 
-                                    border: 2px solid #8B4513; text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold;">🥉</div>
-                            <div style="font-weight: bold; color: #1e3799;">3º Lugar</div>
-                            <div style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">{sre3['SRE']}</div>
+                        ranking_html += f"""
+                        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #f8f0e8; border-radius: 5px;">
+                            <div style="font-weight: bold; color: #1e3799;">🥉 3º: {sre3['SRE']}</div>
                             <div style="font-size: 0.9rem; color: #495057;">{sre3['Sincronizados']} sinc.</div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        """
+                    
+                    ranking_html += "</div>"
+                    st.markdown(ranking_html, unsafe_allow_html=True)
                 
                 # REMOVIDO: Os st.metric() antigos que estavam embaixo do gráfico
                 
-                # Tabela completa
+                # Tabela completa - MELHORADA
                 st.markdown("### 📋 Performance Detalhada dos SREs")
                 
                 # Calcular métricas adicionais
@@ -1492,28 +1577,51 @@ if st.session_state.df_original is not None:
                         else:
                             cards_retorno = 0
                         
+                        # Taxa de retorno
+                        taxa_retorno = (cards_retorno / total_cards * 100) if total_cards > 0 else 0
+                        
+                        # Taxa de sincronização
+                        taxa_sinc = (sincronizados / total_cards * 100) if total_cards > 0 else 0
+                        
                         # Usar nome formatado
                         sre_formatado = formatar_nome_responsavel(sre)
                         
                         sres_metrics.append({
                             'SRE': sre_formatado,
-                            'Total_Cards': total_cards,
+                            'Total Cards': total_cards,
                             'Sincronizados': sincronizados,
-                            'Cards_Retorno': cards_retorno
+                            'Taxa Sinc. (%)': round(taxa_sinc, 1),
+                            'Cards Retorno': cards_retorno,
+                            'Taxa Retorno (%)': round(taxa_retorno, 1)
                         })
                 
                 if sres_metrics:
                     df_sres_metrics = pd.DataFrame(sres_metrics)
                     df_sres_metrics = df_sres_metrics.sort_values('Sincronizados', ascending=False)
                     
+                    # Formatar a tabela para ficar mais bonita
+                    styled_df = df_sres_metrics.style\
+                        .background_gradient(subset=['Taxa Sinc. (%)'], cmap='RdYlGn')\
+                        .background_gradient(subset=['Taxa Retorno (%)'], cmap='RdYlGn_r')\
+                        .format({
+                            'Total Cards': '{:,}',
+                            'Sincronizados': '{:,}',
+                            'Taxa Sinc. (%)': '{:.1f}%',
+                            'Cards Retorno': '{:,}',
+                            'Taxa Retorno (%)': '{:.1f}%'
+                        })
+                    
                     st.dataframe(
-                        df_sres_metrics,
+                        styled_df,
                         use_container_width=True,
+                        height=400,
                         column_config={
-                            "SRE": st.column_config.TextColumn("SRE"),
-                            "Total_Cards": st.column_config.NumberColumn("Total Cards", format="%d"),
-                            "Sincronizados": st.column_config.NumberColumn("Sincronizados", format="%d"),
-                            "Cards_Retorno": st.column_config.NumberColumn("Cards Retorno", format="%d")
+                            "SRE": st.column_config.TextColumn("SRE", width="large"),
+                            "Total Cards": st.column_config.NumberColumn("Total Cards", width="small"),
+                            "Sincronizados": st.column_config.NumberColumn("Sincronizados", width="small"),
+                            "Taxa Sinc. (%)": st.column_config.NumberColumn("Taxa Sinc.", width="small", help="Porcentagem de cards sincronizados"),
+                            "Cards Retorno": st.column_config.NumberColumn("Cards Retorno", width="small"),
+                            "Taxa Retorno (%)": st.column_config.NumberColumn("Taxa Retorno", width="small", help="Porcentagem de cards que retornaram")
                         }
                     )
     
@@ -1581,11 +1689,29 @@ if st.session_state.df_original is not None:
             if mes_perf != 'Todos os Meses':
                 df_perf = df_perf[df_perf['Mês'] == int(mes_perf)]
             
+            # ADICIONADO: Filtrar para excluir Bruna, Pierry e Kewin (SREs)
+            sres_excluir = ['Bruna', 'Pierry', 'Kewin']
+            
+            # Aplicar filtro para excluir SREs (considerando diferentes variações dos nomes)
+            devs_permitidos = []
+            for dev in df_perf['Responsável_Formatado'].unique():
+                if pd.isna(dev):
+                    continue
+                dev_str = str(dev).lower()
+                # Verificar se o nome não contém nenhum dos nomes dos SREs
+                if all(sre.lower() not in dev_str for sre in sres_excluir):
+                    devs_permitidos.append(dev)
+            
+            df_perf = df_perf[df_perf['Responsável_Formatado'].isin(devs_permitidos)]
+            
             # Calcular métricas por desenvolvedor
             dev_metrics = []
             devs = df_perf['Responsável_Formatado'].unique()
             
             for dev in devs:
+                if pd.isna(dev):
+                    continue
+                    
                 dev_data = df_perf[df_perf['Responsável_Formatado'] == dev]
                 total_chamados = len(dev_data)
                 
@@ -1639,7 +1765,7 @@ if st.session_state.df_original is not None:
                     df_dev_metrics = df_dev_metrics.sort_values('Produtividade', ascending=False)
                 
                 # ============================================
-                # MATRIZ DE PERFORMANCE PARA DEVS
+                # MATRIZ DE PERFORMANCE PARA DEVS - COM FILTRO ANO/MÊS
                 # ============================================
                 st.markdown("### 🎯 Matriz de Performance - Desenvolvedores")
                 
@@ -1664,8 +1790,52 @@ if st.session_state.df_original is not None:
                     - **🔄 Necessita Apoio**: Baixa eficiência + Baixa qualidade
                     """)
                 
+                # ADICIONADO: Filtros para a Matriz de Performance
+                col_matriz1, col_matriz2 = st.columns(2)
+                
+                with col_matriz1:
+                    if 'Ano' in df.columns:
+                        anos_matriz = sorted(df['Ano'].dropna().unique().astype(int))
+                        anos_opcoes_matriz = ['Todos os Anos'] + list(anos_matriz)
+                        ano_matriz = st.selectbox(
+                            "📅 Ano para Matriz:",
+                            options=anos_opcoes_matriz,
+                            index=len(anos_opcoes_matriz)-1,
+                            key="filtro_ano_matriz"
+                        )
+                
+                with col_matriz2:
+                    if 'Mês' in df.columns:
+                        meses_matriz = sorted(df['Mês'].dropna().unique().astype(int))
+                        meses_opcoes_matriz = ['Todos os Meses'] + [str(m) for m in meses_matriz]
+                        mes_matriz = st.selectbox(
+                            "📆 Mês para Matriz:",
+                            options=meses_opcoes_matriz,
+                            key="filtro_mes_matriz"
+                        )
+                
+                # Filtrar dados para a matriz
+                df_matriz = df.copy()
+                
+                if ano_matriz != 'Todos os Anos':
+                    df_matriz = df_matriz[df_matriz['Ano'] == int(ano_matriz)]
+                
+                if mes_matriz != 'Todos os Meses':
+                    df_matriz = df_matriz[df_matriz['Mês'] == int(mes_matriz)]
+                
+                # Filtrar para excluir SREs também na matriz
+                devs_matriz_permitidos = []
+                for dev in df_matriz['Responsável_Formatado'].unique():
+                    if pd.isna(dev):
+                        continue
+                    dev_str = str(dev).lower()
+                    if all(sre.lower() not in dev_str for sre in sres_excluir):
+                        devs_matriz_permitidos.append(dev)
+                
+                df_matriz = df_matriz[df_matriz['Responsável_Formatado'].isin(devs_matriz_permitidos)]
+                
                 # Criar matriz de performance
-                matriz_df = criar_matriz_performance_dev(df_perf)
+                matriz_df = criar_matriz_performance_dev(df_matriz)
                 
                 if not matriz_df.empty:
                     # REMOVIDO: filtro por mínimo de cards
@@ -1705,6 +1875,18 @@ if st.session_state.df_original is not None:
                             blue = int(69 * pos_normalizada + 69 * (1 - pos_normalizada))
                             colors_scatter.append(f'rgb({red}, {green}, {blue})')
                         
+                        # Criar título dinâmico para matriz
+                        titulo_matriz = "Matriz de Performance: Eficiência vs Qualidade"
+                        if ano_matriz != 'Todos os Anos':
+                            titulo_matriz += f" - {ano_matriz}"
+                        if mes_matriz != 'Todos os Meses':
+                            meses_nomes = {
+                                1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                                5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                                9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+                            }
+                            titulo_matriz += f" - {meses_nomes[int(mes_matriz)]}"
+                        
                         # Gráfico de dispersão com cores personalizadas
                         fig_matriz = px.scatter(
                             matriz_filtrada,
@@ -1713,7 +1895,7 @@ if st.session_state.df_original is not None:
                             size='Score',
                             color=colors_scatter,  # Usar lista de cores personalizadas
                             hover_name='Desenvolvedor',
-                            title='Matriz de Performance: Eficiência vs Qualidade',
+                            title=titulo_matriz,
                             labels={
                                 'Eficiencia': 'Eficiência (Cards/Mês)',
                                 'Qualidade': 'Qualidade (% Aprovação sem Revisão)',
@@ -1839,7 +2021,7 @@ if st.session_state.df_original is not None:
                         st.markdown("### 💡 Recomendações Personalizadas")
                         
                         # Seletor de Desenvolvedor para recomendações
-                        devs_recom = sorted(df_perf['Responsável_Formatado'].dropna().unique())
+                        devs_recom = sorted([d for d in df_perf['Responsável_Formatado'].dropna().unique() if d in devs_permitidos])
                         
                         if devs_recom:
                             dev_recom_selecionado = st.selectbox(
@@ -1898,95 +2080,105 @@ if st.session_state.df_original is not None:
                             else:
                                 st.success(f"✅ {dev_recom_selecionado} está com excelente performance! Não há recomendações específicas no momento.")
                 
-                # Mostrar top 10
+                # Mostrar top 10 - EXCLUINDO SREs
                 st.markdown(f"### 🏆 Top 10 Desenvolvedores ({ordenar_por})")
+                
+                # Filtrar desenvolvedores para excluir SREs
+                df_dev_metrics_filtrado = df_dev_metrics.copy()
+                df_dev_metrics_filtrado = df_dev_metrics_filtrado[~df_dev_metrics_filtrado['Desenvolvedor'].str.contains('|'.join(sres_excluir), case=False, na=False)]
                 
                 # Gráfico de barras horizontais para Score de Qualidade
                 if ordenar_por == "Score de Qualidade":
-                    top10_score = df_dev_metrics.head(10)
+                    top10_score = df_dev_metrics_filtrado.head(10)
                     
-                    fig_score = px.bar(
-                        top10_score,
-                        y='Desenvolvedor',
-                        x='Score Qualidade',
-                        orientation='h',
-                        title='Top 10 - Score de Qualidade',
-                        text='Score Qualidade',
-                        color='Score Qualidade',
-                        color_continuous_scale='RdYlGn',
-                        range_color=[0, 100]
-                    )
-                    
-                    fig_score.update_traces(
-                        texttemplate='%{text:.1f}%',
-                        textposition='outside',
-                        marker_line_color='black',
-                        marker_line_width=0.5
-                    )
-                    
-                    fig_score.update_layout(
-                        height=500,
-                        plot_bgcolor='white',
-                        yaxis={'categoryorder': 'total ascending'},
-                        xaxis_title="Score de Qualidade (%)",
-                        yaxis_title="Desenvolvedor",
-                        xaxis_range=[0, 100]
-                    )
-                    
-                    st.plotly_chart(fig_score, use_container_width=True)
+                    if not top10_score.empty:
+                        fig_score = px.bar(
+                            top10_score,
+                            y='Desenvolvedor',
+                            x='Score Qualidade',
+                            orientation='h',
+                            title='Top 10 - Score de Qualidade',
+                            text='Score Qualidade',
+                            color='Score Qualidade',
+                            color_continuous_scale='RdYlGn',
+                            range_color=[0, 100]
+                        )
+                        
+                        fig_score.update_traces(
+                            texttemplate='%{text:.1f}%',
+                            textposition='outside',
+                            marker_line_color='black',
+                            marker_line_width=0.5
+                        )
+                        
+                        fig_score.update_layout(
+                            height=500,
+                            plot_bgcolor='white',
+                            yaxis={'categoryorder': 'total ascending'},
+                            xaxis_title="Score de Qualidade (%)",
+                            yaxis_title="Desenvolvedor",
+                            xaxis_range=[0, 100]
+                        )
+                        
+                        st.plotly_chart(fig_score, use_container_width=True)
                     
                 else:
                     # Para outras ordenações, usar gráfico de barras
-                    top10_other = df_dev_metrics.head(10)
+                    top10_other = df_dev_metrics_filtrado.head(10)
                     
-                    if ordenar_por == "Total de Chamados":
-                        col_ordenada = 'Total Chamados'
-                        color_scale = 'Blues'
-                        titulo = 'Top 10 - Total de Chamados'
-                    elif ordenar_por == "Eficiência":
-                        col_ordenada = 'Eficiência'
-                        color_scale = 'Greens'
-                        titulo = 'Top 10 - Eficiência'
-                    else:  # Produtividade
-                        col_ordenada = 'Produtividade'
-                        color_scale = 'Purples'
-                        titulo = 'Top 10 - Produtividade'
-                    
-                    fig_other = px.bar(
-                        top10_other,
-                        x='Desenvolvedor',
-                        y=col_ordenada,
-                        title=titulo,
-                        text=col_ordenada,
-                        color=col_ordenada,
-                        color_continuous_scale=color_scale
-                    )
-                    
-                    if ordenar_por in ["Score de Qualidade", "Eficiência"]:
-                        fig_other.update_traces(texttemplate='%{text:.1f}%')
-                    else:
-                        fig_other.update_traces(texttemplate='%{text:.1f}')
-                    
-                    fig_other.update_traces(
-                        textposition='outside',
-                        marker_line_color='black',
-                        marker_line_width=0.5
-                    )
-                    
-                    fig_other.update_layout(
-                        height=500,
-                        plot_bgcolor='white',
-                        xaxis_title="Desenvolvedor",
-                        yaxis_title=ordenar_por,
-                        xaxis_tickangle=45
-                    )
-                    
-                    st.plotly_chart(fig_other, use_container_width=True)
+                    if not top10_other.empty:
+                        if ordenar_por == "Total de Chamados":
+                            col_ordenada = 'Total Chamados'
+                            color_scale = 'Blues'
+                            titulo = 'Top 10 - Total de Chamados'
+                        elif ordenar_por == "Eficiência":
+                            col_ordenada = 'Eficiência'
+                            color_scale = 'Greens'
+                            titulo = 'Top 10 - Eficiência'
+                        else:  # Produtividade
+                            col_ordenada = 'Produtividade'
+                            color_scale = 'Purples'
+                            titulo = 'Top 10 - Produtividade'
+                        
+                        fig_other = px.bar(
+                            top10_other,
+                            x='Desenvolvedor',
+                            y=col_ordenada,
+                            title=titulo,
+                            text=col_ordenada,
+                            color=col_ordenada,
+                            color_continuous_scale=color_scale
+                        )
+                        
+                        if ordenar_por in ["Score de Qualidade", "Eficiência"]:
+                            fig_other.update_traces(texttemplate='%{text:.1f}%')
+                        else:
+                            fig_other.update_traces(texttemplate='%{text:.1f}')
+                        
+                        fig_other.update_traces(
+                            textposition='outside',
+                            marker_line_color='black',
+                            marker_line_width=0.5
+                        )
+                        
+                        fig_other.update_layout(
+                            height=500,
+                            plot_bgcolor='white',
+                            xaxis_title="Desenvolvedor",
+                            yaxis_title=ordenar_por,
+                            xaxis_tickangle=45
+                        )
+                        
+                        st.plotly_chart(fig_other, use_container_width=True)
                 
-                # Tabela completa
+                # Tabela completa - EXCLUINDO SREs
                 st.markdown("### 📋 Performance Detalhada")
+                
+                # Filtrar para excluir SREs na tabela também
+                df_dev_metrics_final = df_dev_metrics_filtrado.copy()
+                
                 st.dataframe(
-                    df_dev_metrics,
+                    df_dev_metrics_final,
                     use_container_width=True,
                     height=400,
                     column_config={
