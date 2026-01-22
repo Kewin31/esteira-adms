@@ -1147,13 +1147,13 @@ if st.session_state.df_original is not None:
                 # Ranking dos SREs que mais encontraram erros (mais revisões)
                 st.markdown("### 🥇 Ranking de Detecção de Erros por SRE")
                 
-                # Agrupar por SRE e calcular métricas
+                # Agrupar por SRE e calcular métricas - CORRIGIDO AQUI
                 sre_performance = df_sincronizados.groupby('SRE').agg({
                     'Chamado': 'count',  # Total de chamados avaliados
-                    'Revisões': 'sum',   # Total de revisões (erros encontrados)
-                    'Revisões': 'mean'   # Média de revisões por chamado
+                    'Revisões': ['sum', 'mean']  # Soma e média de revisões
                 }).reset_index()
                 
+                # Ajustar nomes das colunas após agregação
                 sre_performance.columns = ['SRE', 'Chamados_Avaliados', 'Total_Revisões', 'Media_Revisões']
                 
                 # Calcular taxa de detecção
