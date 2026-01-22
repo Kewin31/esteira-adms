@@ -1556,7 +1556,7 @@ if st.session_state.df_original is not None:
                 
                 # REMOVIDO: Os st.metric() antigos que estavam embaixo do gráfico
                 
-                # Tabela completa - MELHORADA
+                # Tabela completa - CORRIGIDA: removido background_gradient
                 st.markdown("### 📋 Performance Detalhada dos SREs")
                 
                 # Calcular métricas adicionais
@@ -1599,17 +1599,14 @@ if st.session_state.df_original is not None:
                     df_sres_metrics = pd.DataFrame(sres_metrics)
                     df_sres_metrics = df_sres_metrics.sort_values('Sincronizados', ascending=False)
                     
-                    # Formatar a tabela para ficar mais bonita
-                    styled_df = df_sres_metrics.style\
-                        .background_gradient(subset=['Taxa Sinc. (%)'], cmap='RdYlGn')\
-                        .background_gradient(subset=['Taxa Retorno (%)'], cmap='RdYlGn_r')\
-                        .format({
-                            'Total Cards': '{:,}',
-                            'Sincronizados': '{:,}',
-                            'Taxa Sinc. (%)': '{:.1f}%',
-                            'Cards Retorno': '{:,}',
-                            'Taxa Retorno (%)': '{:.1f}%'
-                        })
+                    # Formatar a tabela sem background_gradient
+                    styled_df = df_sres_metrics.style.format({
+                        'Total Cards': '{:,}',
+                        'Sincronizados': '{:,}',
+                        'Taxa Sinc. (%)': '{:.1f}%',
+                        'Cards Retorno': '{:,}',
+                        'Taxa Retorno (%)': '{:.1f}%'
+                    })
                     
                     st.dataframe(
                         styled_df,
@@ -3007,7 +3004,7 @@ if st.session_state.df_original is not None:
         st.markdown('<div class="section-title-exec">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
         
         if 'Responsável_Formatado' in df.columns:
-            top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
+            top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).resetindex()
             top_responsaveis.columns = ['Responsável', 'Demandas']
             
             fig_top = px.bar(
