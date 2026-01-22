@@ -1187,7 +1187,7 @@ if st.session_state.df_original is not None:
                 revisoes_por_responsavel = df_com_revisoes.groupby('Responsável_Formatado').agg({
                     'Revisões': 'sum',
                     'Chamado': 'count'
-                }).resetindex()
+                }).reset_index()
                 
                 revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
                 revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
