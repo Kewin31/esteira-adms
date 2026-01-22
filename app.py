@@ -774,7 +774,7 @@ with st.sidebar:
 # CONTEÚDO PRINCIPAL
 # ============================================
 
-# HEADER ATUALIZADO (removido "Última atualização")
+# HEADER ATUALIZADO (removida a data completamente)
 st.markdown("""
 <div class="main-header">
     <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -789,7 +789,7 @@ st.markdown("""
         </div>
         <div style="text-align: right;">
             <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 0.9rem;">
-            {}
+            Dashboard de Performance
             </p>
             <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.85rem;">
             v5.5 | Sistema de Performance SRE
@@ -797,7 +797,7 @@ st.markdown("""
         </div>
     </div>
 </div>
-""".format(datetime.now().strftime('%d/%m/%Y %H:%M')), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
@@ -1101,7 +1101,7 @@ if st.session_state.df_original is not None:
     with tab4:
         st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
         
-        if 'SRE' in df.columns and 'Status' in df.columns:
+        if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
             # Filtros específicos para esta aba
             col_filtro1, col_filtro2 = st.columns(2)
             
@@ -1140,50 +1140,75 @@ if st.session_state.df_original is not None:
             df_sincronizados = df_sre[df_sre['Status'] == 'Sincronizado'].copy()
             
             if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
-                # Ranking dos SREs que mais sincronizaram
-                st.markdown("### 🥇 Ranking de Sincronizações por SRE")
+                # ============================================
+                # NOVA LÓGICA: SRE BOM = ENCONTRA MAIS ERROS
+                # ============================================
                 
-                sincronizacoes_por_sre = df_sincronizados['SRE'].value_counts().reset_index()
-                sincronizacoes_por_sre.columns = ['SRE', 'Sincronizações']
-                sincronizacoes_por_sre = sincronizacoes_por_sre.sort_values('Sincronizações', ascending=False)
+                # Ranking dos SREs que mais encontraram erros (mais revisões)
+                st.markdown("### 🥇 Ranking de Detecção de Erros por SRE")
+                
+                # Agrupar por SRE e calcular métricas
+                sre_performance = df_sincronizados.groupby('SRE').agg({
+                    'Chamado': 'count',  # Total de chamados avaliados
+                    'Revisões': 'sum',   # Total de revisões (erros encontrados)
+                    'Revisões': 'mean'   # Média de revisões por chamado
+                }).reset_index()
+                
+                sre_performance.columns = ['SRE', 'Chamados_Avaliados', 'Total_Revisões', 'Media_Revisões']
+                
+                # Calcular taxa de detecção
+                sre_performance['Taxa_Detecção'] = (sre_performance['Total_Revisões'] / 
+                                                   sre_performance['Chamados_Avaliados'] * 100).round(1)
+                
+                # Calcular Score SRE (quanto maior, melhor)
+                # Fórmula: (Taxa de detecção * 0.6) + (Média revisões * 10 * 0.4)
+                sre_performance['Score_SRE'] = (
+                    sre_performance['Taxa_Detecção'] * 0.6 +
+                    sre_performance['Media_Revisões'] * 10 * 0.4
+                ).round(1)
+                
+                # Ordenar por Score SRE (quanto maior, melhor)
+                sre_performance = sre_performance.sort_values('Score_SRE', ascending=False)
                 
                 # Criar título dinâmico
-                titulo_sinc = "Top 10 SREs com Mais Sincronizações"
+                titulo_deteccao = "Top 10 SREs em Detecção de Erros"
                 if ano_sre != 'Todos':
-                    titulo_sinc += f" - {ano_sre}"
+                    titulo_deteccao += f" - {ano_sre}"
                 if mes_sre != 'Todos':
-                    titulo_sinc += f"/{mes_sre}"
+                    titulo_deteccao += f"/{mes_sre}"
                 
-                # Criar gráfico de barras
-                fig_sinc_sre = px.bar(
-                    sincronizacoes_por_sre.head(10),
+                # Gráfico de barras para taxa de detecção
+                fig_deteccao = px.bar(
+                    sre_performance.head(10),
                     x='SRE',
-                    y='Sincronizações',
-                    title=titulo_sinc,
-                    text='Sincronizações',
-                    color='Sincronizações',
-                    color_continuous_scale='Greens'
+                    y='Taxa_Detecção',
+                    title=titulo_deteccao,
+                    text='Taxa_Detecção',
+                    color='Taxa_Detecção',
+                    color_continuous_scale='RdYlGn_r',  # Invertido: vermelho=baixo, verde=alto
+                    range_color=[0, 100]
                 )
                 
-                fig_sinc_sre.update_traces(
-                    texttemplate='%{text}',
+                fig_deteccao.update_traces(
+                    texttemplate='%{text:.1f}%',
                     textposition='outside',
-                    marker_line_color='#218838',
-                    marker_line_width=1.5
+                    marker_line_color='black',
+                    marker_line_width=1
                 )
                 
-                fig_sinc_sre.update_layout(
+                fig_deteccao.update_layout(
                     height=400,
                     plot_bgcolor='white',
                     xaxis_title="SRE",
-                    yaxis_title="Número de Sincronizações",
-                    margin=dict(t=50, b=50, l=50, r=50)
+                    yaxis_title="Taxa de Detecção (%)",
+                    margin=dict(t=50, b=50, l=50, r=50),
+                    yaxis=dict(range=[0, 100])
                 )
                 
-                st.plotly_chart(fig_sinc_sre, use_container_width=True)
+                st.plotly_chart(fig_deteccao, use_container_width=True)
                 
                 # ============================================
-                # DASHBOARD COMPARATIVO DOS SREs - MELHORADO
+                # DASHBOARD COMPARATIVO DOS SREs - NOVA LÓGICA
                 # ============================================
                 st.markdown("### 📊 Dashboard Comparativo dos SREs")
                 
@@ -1191,18 +1216,18 @@ if st.session_state.df_original is not None:
                 col_dash1, col_dash2, col_dash3 = st.columns(3)
                 
                 with col_dash1:
-                    min_sinc = st.slider(
-                        "Mínimo de sincronizações:",
+                    min_avaliacoes = st.slider(
+                        "Mínimo de chamados avaliados:",
                         min_value=1,
                         max_value=50,
                         value=5,
-                        help="Filtrar SREs com pelo menos X sincronizações"
+                        help="Filtrar SREs com pelo menos X chamados avaliados"
                     )
                 
                 with col_dash2:
                     ordenar_dash = st.selectbox(
                         "Ordenar dashboard por:",
-                        options=["Sincronizações", "Eficiência", "Revisões por Sincronização", "Score Geral"],
+                        options=["Score SRE", "Taxa de Detecção", "Total de Revisões", "Média Revisões"],
                         index=0
                     )
                 
@@ -1215,103 +1240,63 @@ if st.session_state.df_original is not None:
                         help="Quantidade de SREs para exibir no dashboard"
                     )
                 
-                # Calcular métricas avançadas para cada SRE
-                sre_metrics = []
+                # Filtrar por mínimo de avaliações
+                sre_filtrado = sre_performance[sre_performance['Chamados_Avaliados'] >= min_avaliacoes].copy()
                 
-                for sre in df_sincronizados['SRE'].unique():
-                    sre_data = df_sincronizados[df_sincronizados['SRE'] == sre]
-                    total_sinc = len(sre_data)
+                if not sre_filtrado.empty:
+                    # Classificação baseada no Score SRE
+                    def classificar_sre(score):
+                        if score >= 80:
+                            return "Excelente", "badge-excelente"
+                        elif score >= 65:
+                            return "Bom", "bom"
+                        elif score >= 50:
+                            return "Regular", "regular"
+                        else:
+                            return "Precisa melhorar", "melhorar"
                     
-                    if total_sinc >= min_sinc:
-                        # Métricas básicas
-                        sincronizacoes = total_sinc
-                        
-                        # Revisões
-                        if 'Revisões' in sre_data.columns:
-                            total_revisoes = int(sre_data['Revisões'].sum())
-                            media_revisoes = sre_data['Revisões'].mean()
-                        else:
-                            total_revisoes = 0
-                            media_revisoes = 0
-                        
-                        # Eficiência (quanto menos revisões por sincronização, melhor)
-                        eficiencia = (1 / (media_revisoes + 1)) * 100 if media_revisoes > 0 else 100
-                        
-                        # Score Geral (combinação de métricas)
-                        score_geral = (
-                            (sincronizacoes / sincronizacoes_por_sre['Sincronizações'].max() * 40) +
-                            (eficiencia * 0.4) +
-                            ((1 / (media_revisoes + 1)) * 20)
-                        )
-                        
-                        # Classificação baseada no score
-                        if score_geral >= 80:
-                            classificacao = "Excelente"
-                            badge_class = "badge-excelente"
-                        elif score_geral >= 65:
-                            classificacao = "Bom"
-                            badge_class = "bom"
-                        elif score_geral >= 50:
-                            classificacao = "Regular"
-                            badge_class = "regular"
-                        else:
-                            classificacao = "Melhorar"
-                            badge_class = "melhorar"
-                        
-                        sre_metrics.append({
-                            'SRE': sre,
-                            'Sincronizações': sincronizacoes,
-                            'Total Revisões': total_revisoes,
-                            'Média Revisões': round(media_revisoes, 2),
-                            'Eficiência': round(eficiencia, 1),
-                            'Revisões/Sinc': round(media_revisoes, 2),
-                            'Score Geral': round(score_geral, 1),
-                            'Classificação': classificacao,
-                            'Badge Class': badge_class
-                        })
-                
-                if sre_metrics:
-                    # Converter para DataFrame
-                    df_sre_metrics = pd.DataFrame(sre_metrics)
+                    sre_filtrado[['Classificação', 'Badge_Class']] = sre_filtrado['Score_SRE'].apply(
+                        lambda x: pd.Series(classificar_sre(x))
+                    )
                     
                     # Ordenar conforme seleção
-                    if ordenar_dash == "Sincronizações":
-                        df_sre_metrics = df_sre_metrics.sort_values('Sincronizações', ascending=False)
-                    elif ordenar_dash == "Eficiência":
-                        df_sre_metrics = df_sre_metrics.sort_values('Eficiência', ascending=False)
-                    elif ordenar_dash == "Revisões por Sincronização":
-                        df_sre_metrics = df_sre_metrics.sort_values('Revisões/Sinc')
-                    elif ordenar_dash == "Score Geral":
-                        df_sre_metrics = df_sre_metrics.sort_values('Score Geral', ascending=False)
+                    if ordenar_dash == "Score SRE":
+                        sre_filtrado = sre_filtrado.sort_values('Score_SRE', ascending=False)
+                    elif ordenar_dash == "Taxa de Detecção":
+                        sre_filtrado = sre_filtrado.sort_values('Taxa_Detecção', ascending=False)
+                    elif ordenar_dash == "Total de Revisões":
+                        sre_filtrado = sre_filtrado.sort_values('Total_Revisões', ascending=False)
+                    elif ordenar_dash == "Média Revisões":
+                        sre_filtrado = sre_filtrado.sort_values('Media_Revisões', ascending=False)
                     
                     # Limitar ao top N
-                    df_sre_metrics = df_sre_metrics.head(mostrar_top)
+                    sre_filtrado = sre_filtrado.head(mostrar_top)
                     
                     # Layout do dashboard comparativo
                     col_comp1, col_comp2 = st.columns([2, 1])
                     
                     with col_comp1:
                         # Gráfico de radar para o top 3 SREs
-                        if len(df_sre_metrics) >= 3:
+                        if len(sre_filtrado) >= 3:
                             st.markdown("#### 🎯 Comparativo Radar - Top 3 SREs")
                             
-                            top3_sre = df_sre_metrics.head(3)
-                            categories = ['Sincronizações', 'Eficiência', 'Score Geral', 'Revisões/Sinc']
+                            top3_sre = sre_filtrado.head(3)
+                            categories = ['Taxa Detecção', 'Score SRE', 'Média Revisões', 'Chamados Avaliados']
                             
                             fig_radar = go.Figure()
                             
                             for idx, row in top3_sre.iterrows():
                                 # Normalizar valores para o radar (0-100)
-                                sinc_norm = (row['Sincronizações'] / df_sre_metrics['Sincronizações'].max()) * 100
-                                efic_norm = row['Eficiência']
-                                score_norm = row['Score Geral']
-                                rev_sinc_norm = 100 - (row['Revisões/Sinc'] * 20)  # Inverter: menos revisões é melhor
+                                taxa_norm = row['Taxa_Detecção']
+                                score_norm = row['Score_SRE']
+                                media_norm = row['Media_Revisões'] * 20  # Escalar
+                                chamados_norm = (row['Chamados_Avaliados'] / sre_filtrado['Chamados_Avaliados'].max()) * 100
                                 
                                 values = [
-                                    min(sinc_norm, 100),
-                                    min(efic_norm, 100),
+                                    min(taxa_norm, 100),
                                     min(score_norm, 100),
-                                    max(rev_sinc_norm, 0)
+                                    min(media_norm, 100),
+                                    min(chamados_norm, 100)
                                 ]
                                 
                                 fig_radar.add_trace(go.Scatterpolar(
@@ -1341,10 +1326,10 @@ if st.session_state.df_original is not None:
                         st.markdown("#### 🔥 Heatmap de Performance SRE")
                         
                         # Preparar dados para heatmap
-                        heatmap_data = df_sre_metrics.copy()
+                        heatmap_data = sre_filtrado.copy()
                         
                         # Normalizar dados para o heatmap
-                        for col in ['Sincronizações', 'Eficiência', 'Score Geral']:
+                        for col in ['Taxa_Detecção', 'Score_SRE', 'Media_Revisões']:
                             heatmap_data[col + '_norm'] = (
                                 (heatmap_data[col] - heatmap_data[col].min()) / 
                                 (heatmap_data[col].max() - heatmap_data[col].min()) * 100
@@ -1352,13 +1337,13 @@ if st.session_state.df_original is not None:
                         
                         # Criar heatmap
                         fig_heat = go.Figure(data=go.Heatmap(
-                            z=heatmap_data[['Sincronizações_norm', 'Eficiência_norm', 'Score Geral_norm']].values.T,
+                            z=heatmap_data[['Taxa_Detecção_norm', 'Score_SRE_norm', 'Media_Revisões_norm']].values.T,
                             x=heatmap_data['SRE'],
-                            y=['Sincronizações', 'Eficiência', 'Score Geral'],
-                            colorscale='RdYlGn',
+                            y=['Taxa Detecção', 'Score SRE', 'Média Revisões'],
+                            colorscale='RdYlGn',  # Verde=alto, Vermelho=baixo
                             showscale=True,
-                            text=heatmap_data[['Sincronizações', 'Eficiência', 'Score Geral']].values.T,
-                            texttemplate='%{text:.0f}',
+                            text=heatmap_data[['Taxa_Detecção', 'Score_SRE', 'Media_Revisões']].values.T,
+                            texttemplate='%{text:.1f}',
                             hoverinfo='text'
                         ))
                         
@@ -1376,7 +1361,7 @@ if st.session_state.df_original is not None:
                         st.markdown("#### 🏅 Performance por Classificação")
                         
                         # Distribuição por classificação
-                        dist_class = df_sre_metrics['Classificação'].value_counts()
+                        dist_class = sre_filtrado['Classificação'].value_counts()
                         
                         fig_pie = px.pie(
                             values=dist_class.values,
@@ -1387,7 +1372,7 @@ if st.session_state.df_original is not None:
                                 'Excelente': '#28a745',
                                 'Bom': '#17a2b8',
                                 'Regular': '#ffc107',
-                                'Melhorar': '#dc3545'
+                                'Precisa melhorar': '#dc3545'
                             }
                         )
                         
@@ -1408,24 +1393,24 @@ if st.session_state.df_original is not None:
                         st.markdown("#### ⭐ Destaques")
                         
                         # Melhor SRE por score
-                        melhor_sre = df_sre_metrics.loc[df_sre_metrics['Score Geral'].idxmax()]
+                        melhor_sre = sre_filtrado.loc[sre_filtrado['Score_SRE'].idxmax()]
                         st.markdown(f"""
                         <div class="performance-card">
-                            <strong>🏆 Melhor Performance</strong><br>
+                            <strong>🏆 Melhor Detector</strong><br>
                             <span style="font-size: 1.2rem; color: #1e3799;">{melhor_sre['SRE']}</span><br>
-                            <small>Score: {melhor_sre['Score Geral']} | {melhor_sre['Classificação']}</small><br>
-                            <small>Sincronizações: {melhor_sre['Sincronizações']}</small>
+                            <small>Score: {melhor_sre['Score_SRE']} | {melhor_sre['Classificação']}</small><br>
+                            <small>Taxa Detecção: {melhor_sre['Taxa_Detecção']}%</small>
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        # Melhor eficiência
-                        melhor_eficiencia = df_sre_metrics.loc[df_sre_metrics['Eficiência'].idxmax()]
+                        # SRE que mais encontrou erros
+                        mais_erros = sre_filtrado.loc[sre_filtrado['Total_Revisões'].idxmax()]
                         st.markdown(f"""
                         <div class="info-card">
-                            <strong>⚡ Maior Eficiência</strong><br>
-                            <span style="font-size: 1.1rem; color: #17a2b8;">{melhor_eficiencia['SRE']}</span><br>
-                            <small>Eficiência: {melhor_eficiencia['Eficiência']}%</small><br>
-                            <small>Revisões/Sinc: {melhor_eficiencia['Revisões/Sinc']}</small>
+                            <strong>🔍 Mais Erros Encontrados</strong><br>
+                            <span style="font-size: 1.1rem; color: #17a2b8;">{mais_erros['SRE']}</span><br>
+                            <small>Total Revisões: {int(mais_erros['Total_Revisões'])}</small><br>
+                            <small>Média: {mais_erros['Media_Revisões']:.1f} revisões/chamado</small>
                         </div>
                         """, unsafe_allow_html=True)
                     
@@ -1433,16 +1418,16 @@ if st.session_state.df_original is not None:
                     st.markdown("#### 📋 Tabela de Performance Detalhada")
                     
                     # Adicionar badges coloridos
-                    display_df = df_sre_metrics.copy()
+                    display_df = sre_filtrado.copy()
                     display_df['Classificação'] = display_df.apply(
-                        lambda row: f'<span class="sre-performance-badge {row["Badge Class"]}">{row["Classificação"]}</span>',
+                        lambda row: f'<span class="sre-performance-badge {row["Badge_Class"]}">{row["Classificação"]}</span>',
                         axis=1
                     )
                     
                     # Exibir tabela
                     st.markdown(
-                        display_df[['SRE', 'Sincronizações', 'Total Revisões', 'Média Revisões', 
-                                   'Eficiência', 'Revisões/Sinc', 'Score Geral', 'Classificação']].to_html(
+                        display_df[['SRE', 'Chamados_Avaliados', 'Total_Revisões', 'Media_Revisões', 
+                                   'Taxa_Detecção', 'Score_SRE', 'Classificação']].to_html(
                             escape=False, 
                             index=False,
                             classes='dataframe'
@@ -1454,20 +1439,20 @@ if st.session_state.df_original is not None:
                     col_stats1, col_stats2, col_stats3, col_stats4 = st.columns(4)
                     
                     with col_stats1:
-                        avg_sinc = df_sre_metrics['Sincronizações'].mean()
-                        st.metric("Média Sincronizações", f"{avg_sinc:.1f}")
+                        avg_taxa = sre_filtrado['Taxa_Detecção'].mean()
+                        st.metric("Média Taxa Detecção", f"{avg_taxa:.1f}%")
                     
                     with col_stats2:
-                        avg_efic = df_sre_metrics['Eficiência'].mean()
-                        st.metric("Média Eficiência", f"{avg_efic:.1f}%")
+                        avg_score = sre_filtrado['Score_SRE'].mean()
+                        st.metric("Média Score SRE", f"{avg_score:.1f}")
                     
                     with col_stats3:
-                        avg_score = df_sre_metrics['Score Geral'].mean()
-                        st.metric("Média Score Geral", f"{avg_score:.1f}")
+                        avg_media = sre_filtrado['Media_Revisões'].mean()
+                        st.metric("Média Revisões", f"{avg_media:.1f}")
                     
                     with col_stats4:
-                        total_sres = len(df_sre_metrics)
-                        st.metric("Total SREs Analisados", total_sres)
+                        total_sres = len(sre_filtrado)
+                        st.metric("SREs Analisados", total_sres)
                 else:
                     st.info("Nenhum SRE encontrado com os critérios selecionados.")
     
@@ -1977,11 +1962,11 @@ if st.session_state.df_original is not None:
                                  f"{melhor_taxa_hora['Taxa_Sinc']}%")
             
             # ============================================
-            # SAZONALIDADE MENSAL - COM FILTRO DE ANO
+            # SAZONALIDADE MENSAL - SIMPLIFICADA
             # ============================================
             st.markdown("### 📈 Sazonalidade Mensal")
             
-            # Filtro específico para sazonalidade mensal
+            # Filtro simples para sazonalidade mensal
             col_saz_mes1, col_saz_mes2 = st.columns(2)
             
             with col_saz_mes1:
@@ -1995,147 +1980,111 @@ if st.session_state.df_original is not None:
                 )
             
             with col_saz_mes2:
+                # Apenas mostra o ano selecionado
                 if ano_saz_mes != 'Todos os Anos':
-                    # Opção para comparar com outros anos
-                    comparar_com = st.multiselect(
-                        "Comparar com outros anos:",
-                        options=[a for a in anos_saz_mes if a != int(ano_saz_mes)],
-                        default=[],
-                        help="Selecione anos para comparação"
-                    )
+                    st.markdown(f"**Ano selecionado:** {ano_saz_mes}")
                 else:
-                    comparar_com = []
+                    st.markdown("**Todos os anos**")
             
             # Aplicar filtro para análise mensal
             if ano_saz_mes != 'Todos os Anos':
                 df_saz_mes = df[df['Ano'] == int(ano_saz_mes)].copy()
+            else:
+                df_saz_mes = df.copy()
+            
+            if not df_saz_mes.empty:
+                # Ordem dos meses
+                meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                 
-                if not df_saz_mes.empty:
-                    # Ordem dos meses
-                    meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-                    
-                    # Dados mensais para o ano selecionado
-                    df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.strftime('%b')
-                    demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reindex(meses_ordem).reset_index()
-                    demanda_mes.columns = ['Mês', 'Total']
-                    
-                    sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reindex(meses_ordem).reset_index()
-                    sinc_mes.columns = ['Mês', 'Sincronizados']
-                    
-                    dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
-                    dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).round(1)
-                    
-                    fig_mes_saz = go.Figure()
-                    
-                    fig_mes_saz.add_trace(go.Bar(
-                        x=dados_mes['Mês'],
-                        y=dados_mes['Total'],
-                        name='Total Demandas',
-                        marker_color='#1e3799',
-                        text=dados_mes['Total'],
-                        textposition='auto'
-                    ))
-                    
-                    fig_mes_saz.add_trace(go.Bar(
-                        x=dados_mes['Mês'],
-                        y=dados_mes['Sincronizados'],
-                        name='Sincronizados',
-                        marker_color='#28a745',
-                        text=dados_mes['Sincronizados'],
-                        textposition='auto'
-                    ))
-                    
-                    fig_mes_saz.add_trace(go.Scatter(
-                        x=dados_mes['Mês'],
-                        y=dados_mes['Taxa_Sinc'],
-                        name='Taxa Sinc (%)',
-                        yaxis='y2',
-                        mode='lines+markers',
-                        line=dict(color='#dc3545', width=3),
-                        marker=dict(size=8)
-                    ))
-                    
-                    # Adicionar comparação com outros anos se selecionado
-                    if comparar_com:
-                        for ano_comp in comparar_com:
-                            df_comp = df[df['Ano'] == ano_comp].copy()
-                            if not df_comp.empty:
-                                df_comp['Mês_Abrev'] = df_comp['Criado'].dt.strftime('%b')
-                                comp_mes = df_comp.groupby('Mês_Abrev').size().reindex(meses_ordem).reset_index()
-                                comp_mes.columns = ['Mês', f'Total_{ano_comp}']
-                                
-                                fig_mes_saz.add_trace(go.Scatter(
-                                    x=comp_mes['Mês'],
-                                    y=comp_mes[f'Total_{ano_comp}'],
-                                    name=f'{ano_comp} (Comparativo)',
-                                    mode='lines+markers',
-                                    line=dict(dash='dash', width=2),
-                                    marker=dict(size=6)
-                                ))
-                    
-                    fig_mes_saz.update_layout(
-                        title=f'Distribuição Mensal - {ano_saz_mes}',
-                        barmode='group',
-                        yaxis=dict(title='Quantidade'),
-                        yaxis2=dict(
-                            title='Taxa Sinc (%)',
-                            overlaying='y',
-                            side='right',
-                            range=[0, 100]
-                        ),
-                        height=400,
-                        showlegend=True
-                    )
-                    
-                    st.plotly_chart(fig_mes_saz, use_container_width=True)
-                    
-                    # Estatísticas de pico
-                    col_pico1, col_pico2, col_pico3 = st.columns(3)
-                    
-                    with col_pico1:
-                        mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
-                        st.metric("📈 Mês com mais demandas", 
-                                 f"{mes_maior_demanda['Mês']}: {int(mes_maior_demanda['Total'])}")
-                    
-                    with col_pico2:
-                        mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
-                        st.metric("✅ Mês com mais sincronizações", 
-                                 f"{mes_maior_sinc['Mês']}: {int(mes_maior_sinc['Sincronizados'])}")
-                    
-                    with col_pico3:
-                        melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
-                        st.metric("🏆 Melhor taxa de sincronização", 
-                                 f"{melhor_taxa['Mês']}: {melhor_taxa['Taxa_Sinc']}%")
-                    
-                    # Análise comparativa se houver anos para comparar
-                    if comparar_com:
-                        st.markdown("#### 📊 Análise Comparativa entre Anos")
-                        
-                        comp_data = []
-                        for ano_comp in [int(ano_saz_mes)] + comparar_com:
-                            df_comp_ano = df[df['Ano'] == ano_comp]
-                            total_ano = len(df_comp_ano)
-                            sinc_ano = len(df_comp_ano[df_comp_ano['Status'] == 'Sincronizado'])
-                            taxa_sinc_ano = (sinc_ano / total_ano * 100) if total_ano > 0 else 0
-                            
-                            comp_data.append({
-                                'Ano': ano_comp,
-                                'Total Demandas': total_ano,
-                                'Sincronizados': sinc_ano,
-                                'Taxa Sinc': round(taxa_sinc_ano, 1)
-                            })
-                        
-                        df_comp_analysis = pd.DataFrame(comp_data)
-                        st.dataframe(
-                            df_comp_analysis,
-                            use_container_width=True,
-                            column_config={
-                                "Ano": st.column_config.NumberColumn("Ano", format="%d"),
-                                "Total Demandas": st.column_config.NumberColumn("Total", format="%d"),
-                                "Sincronizados": st.column_config.NumberColumn("Sinc.", format="%d"),
-                                "Taxa Sinc": st.column_config.NumberColumn("Taxa %", format="%.1f%%")
-                            }
-                        )
+                # Dados mensais para o ano selecionado
+                df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.strftime('%b')
+                
+                # Garantir que todos os meses apareçam
+                demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reset_index()
+                demanda_mes.columns = ['Mês', 'Total']
+                
+                # Reindex para garantir todos os meses
+                demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
+                
+                sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reset_index()
+                sinc_mes.columns = ['Mês', 'Sincronizados']
+                
+                # Reindex para garantir todos os meses
+                sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
+                
+                dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
+                dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).where(dados_mes['Total'] > 0, 0).round(1)
+                
+                # Criar título dinâmico
+                titulo_grafico = f'Distribuição Mensal'
+                if ano_saz_mes != 'Todos os Anos':
+                    titulo_grafico += f' - {ano_saz_mes}'
+                
+                fig_mes_saz = go.Figure()
+                
+                fig_mes_saz.add_trace(go.Bar(
+                    x=dados_mes['Mês'],
+                    y=dados_mes['Total'],
+                    name='Total Demandas',
+                    marker_color='#1e3799',
+                    text=dados_mes['Total'],
+                    textposition='auto'
+                ))
+                
+                fig_mes_saz.add_trace(go.Bar(
+                    x=dados_mes['Mês'],
+                    y=dados_mes['Sincronizados'],
+                    name='Sincronizados',
+                    marker_color='#28a745',
+                    text=dados_mes['Sincronizados'],
+                    textposition='auto'
+                ))
+                
+                fig_mes_saz.add_trace(go.Scatter(
+                    x=dados_mes['Mês'],
+                    y=dados_mes['Taxa_Sinc'],
+                    name='Taxa Sinc (%)',
+                    yaxis='y2',
+                    mode='lines+markers',
+                    line=dict(color='#dc3545', width=3),
+                    marker=dict(size=8)
+                ))
+                
+                fig_mes_saz.update_layout(
+                    title=titulo_grafico,
+                    barmode='group',
+                    yaxis=dict(title='Quantidade'),
+                    yaxis2=dict(
+                        title='Taxa Sinc (%)',
+                        overlaying='y',
+                        side='right',
+                        range=[0, 100]
+                    ),
+                    height=400,
+                    showlegend=True
+                )
+                
+                st.plotly_chart(fig_mes_saz, use_container_width=True)
+                
+                # Estatísticas de pico
+                col_pico1, col_pico2, col_pico3 = st.columns(3)
+                
+                with col_pico1:
+                    mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
+                    st.metric("📈 Mês com mais demandas", 
+                             f"{mes_maior_demanda['Mês']}: {int(mes_maior_demanda['Total'])}")
+                
+                with col_pico2:
+                    mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
+                    st.metric("✅ Mês com mais sincronizações", 
+                             f"{mes_maior_sinc['Mês']}: {int(mes_maior_sinc['Sincronizados'])}")
+                
+                with col_pico3:
+                    melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
+                    st.metric("🏆 Melhor taxa de sincronização", 
+                             f"{melhor_taxa['Mês']}: {melhor_taxa['Taxa_Sinc']}%")
     
     # ABA 3: DIAGNÓSTICO DE ERROS - SURPREENDENTE
     with tab_extra3:
