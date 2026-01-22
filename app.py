@@ -1192,14 +1192,14 @@ if st.session_state.df_original is not None:
                 revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
                 revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
                 
-                # Criar gráfico de barras com cores do maior para o menor (vermelho para o maior)
+                # Criar gráfico de barras com cores vermelho (maior) para verde (menor)
                 fig_revisoes = go.Figure()
                 
-                # Criar escala de cores personalizada (vermelho para maiores, azul para menores)
+                # Criar escala de cores personalizada (vermelho para maiores, verde para menores)
                 max_revisoes = revisoes_por_responsavel['Total_Revisões'].max()
                 min_revisoes = revisoes_por_responsavel['Total_Revisões'].min()
                 
-                # Calcular cores baseadas no valor
+                # Calcular cores baseadas no valor (vermelho para maior, verde para menor)
                 colors = []
                 for valor in revisoes_por_responsavel['Total_Revisões']:
                     if max_revisoes == min_revisoes:
@@ -1207,10 +1207,11 @@ if st.session_state.df_original is not None:
                     else:
                         # Normalizar entre 0 e 1
                         normalized = (valor - min_revisoes) / (max_revisoes - min_revisoes)
-                        # Interpolar entre vermelho (#e74c3c) e azul claro (#3498db)
-                        red = int(231 * (1 - normalized) + 52 * normalized)  # 231->52
-                        green = int(76 * (1 - normalized) + 152 * normalized)  # 76->152
-                        blue = int(60 * (1 - normalized) + 219 * normalized)  # 60->219
+                        # Interpolar entre vermelho (#e74c3c) e verde (#28a745)
+                        # Quanto maior o valor, mais vermelho; quanto menor, mais verde
+                        red = int(231 * normalized + 40 * (1 - normalized))  # 231->40
+                        green = int(76 * normalized + 167 * (1 - normalized))  # 76->167
+                        blue = int(60 * normalized + 69 * (1 - normalized))  # 60->69
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_revisoes.add_trace(go.Bar(
@@ -1220,7 +1221,7 @@ if st.session_state.df_original is not None:
                     text=revisoes_por_responsavel['Total_Revisões'].head(15),
                     textposition='outside',
                     marker_color=colors[:15],
-                    marker_line_color='#c0392b',
+                    marker_line_color='#2c3e50',
                     marker_line_width=1.5,
                     opacity=0.8
                 ))
@@ -1357,7 +1358,7 @@ if st.session_state.df_original is not None:
             
             if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
                 # ============================================
-                # 1. SINCRONIZADOS POR SRE (GRÁFICO DE LINHA)
+                # 1. SINCRONIZADOS POR SRE (GRÁFICO DE BARRAS)
                 # ============================================
                 st.markdown("### 📈 Sincronizados por SRE")
                 
@@ -1366,22 +1367,38 @@ if st.session_state.df_original is not None:
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
-                # Criar gráfico de linha
-                fig_sinc_line = go.Figure()
+                # Criar gráfico de barras
+                fig_sinc_bar = go.Figure()
                 
-                fig_sinc_line.add_trace(go.Scatter(
+                # Cores do maior para o menor (azul escuro para azul claro)
+                max_sinc = sinc_por_sre['Sincronizados'].max()
+                min_sinc = sinc_por_sre['Sincronizados'].min()
+                
+                colors = []
+                for valor in sinc_por_sre['Sincronizados']:
+                    if max_sinc == min_sinc:
+                        colors.append('#1e3799')  # Azul escuro se todos forem iguais
+                    else:
+                        normalized = (valor - min_sinc) / (max_sinc - min_sinc)
+                        # Interpolar entre azul escuro (#1e3799) e azul claro (#4a69bd)
+                        red = int(30 * normalized + 74 * (1 - normalized))
+                        green = int(55 * normalized + 105 * (1 - normalized))
+                        blue = int(153 * normalized + 189 * (1 - normalized))
+                        colors.append(f'rgb({red}, {green}, {blue})')
+                
+                fig_sinc_bar.add_trace(go.Bar(
                     x=sinc_por_sre['SRE'].head(15),
                     y=sinc_por_sre['Sincronizados'].head(15),
-                    mode='lines+markers+text',
                     name='Sincronizados',
-                    line=dict(color='#1e3799', width=3),
-                    marker=dict(size=10, color='#0c2461'),
                     text=sinc_por_sre['Sincronizados'].head(15),
-                    textposition='top center',
-                    textfont=dict(size=12, color='#1e3799')
+                    textposition='outside',
+                    marker_color=colors[:15],
+                    marker_line_color='#0c2461',
+                    marker_line_width=1.5,
+                    opacity=0.8
                 ))
                 
-                fig_sinc_line.update_layout(
+                fig_sinc_bar.update_layout(
                     title=f'Sincronizados por SRE',
                     xaxis_title='SRE',
                     yaxis_title='Número de Sincronizados',
@@ -1400,7 +1417,7 @@ if st.session_state.df_original is not None:
                     )
                 )
                 
-                st.plotly_chart(fig_sinc_line, use_container_width=True)
+                st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
                 # Top 3 SREs
                 col_top1, col_top2, col_top3 = st.columns(3)
@@ -1440,15 +1457,6 @@ if st.session_state.df_original is not None:
                         total_cards = len(df_sre_data)
                         sincronizados = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
                         
-                        # Taxa de sincronização
-                        taxa_sinc = (sincronizados / total_cards * 100) if total_cards > 0 else 0
-                        
-                        # Média de revisões
-                        if 'Revisões' in df_sre_data.columns:
-                            media_revisoes = df_sre_data['Revisões'].mean()
-                        else:
-                            media_revisoes = 0
-                        
                         # Cards que retornaram (revisões > 0)
                         if 'Revisões' in df_sre_data.columns:
                             cards_retorno = len(df_sre_data[df_sre_data['Revisões'] > 0])
@@ -1459,8 +1467,6 @@ if st.session_state.df_original is not None:
                             'SRE': sre,
                             'Total_Cards': total_cards,
                             'Sincronizados': sincronizados,
-                            'Taxa_Sinc': round(taxa_sinc, 1),
-                            'Média_Revisões': round(media_revisoes, 1),
                             'Cards_Retorno': cards_retorno
                         })
                 
@@ -1475,8 +1481,6 @@ if st.session_state.df_original is not None:
                             "SRE": st.column_config.TextColumn("SRE"),
                             "Total_Cards": st.column_config.NumberColumn("Total Cards", format="%d"),
                             "Sincronizados": st.column_config.NumberColumn("Sincronizados", format="%d"),
-                            "Taxa_Sinc": st.column_config.NumberColumn("Taxa Sinc %", format="%.1f%%"),
-                            "Média_Revisões": st.column_config.NumberColumn("Média Rev.", format="%.1f"),
                             "Cards_Retorno": st.column_config.NumberColumn("Cards Retorno", format="%d")
                         }
                     )
@@ -1496,22 +1500,7 @@ if st.session_state.df_original is not None:
     
     # ABA 1: PERFORMANCE DE DESENVOLVEDORES - MELHORADA E DINÂMICA
     with tab_extra1:
-        # Container expansível para informações
-        with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
-            st.markdown("""
-            **Métricas Calculadas:**
-            
-            ```
-            Score = (Chamados sem revisão / Total de chamados) × 100
-            Eficiência = (Sincronizados / Total) × 100
-            Produtividade = Total de chamados / Mês
-            ```
-            
-            **Indicadores:**
-            - 🟢 **Alto Performance**: Score > 80% + Alta produtividade
-            - 🟡 **Média Performance**: Score 60-80%
-            - 🔴 **Baixa Performance**: Score < 60%
-            """)
+        # APAGADO: Container expansível "SOBRE ESTA ANÁLISE"
         
         if 'Responsável_Formatado' in df.columns and 'Revisões' in df.columns and 'Status' in df.columns:
             # Filtros para performance
@@ -1611,6 +1600,27 @@ if st.session_state.df_original is not None:
                 # ============================================
                 st.markdown("### 🎯 Matriz de Performance - Desenvolvedores")
                 
+                # Container expansível para explicação da métrica
+                with st.expander("📊 **Como é calculada a Matriz de Performance?**", expanded=False):
+                    st.markdown("""
+                    **Fórmulas de Cálculo:**
+                    
+                    1. **Eficiência** = Total de Cards / Número de Meses Ativos
+                    - Mede a produtividade mensal do desenvolvedor
+                    
+                    2. **Qualidade** = (Cards sem Revisão / Total de Cards) × 100
+                    - Mede a taxa de aprovação na primeira tentativa
+                    
+                    3. **Score** = (Qualidade × 0.5) + (Eficiência × 5 × 0.3) + ((Total_Cards / Total_Geral) × 100 × 0.2)
+                    - Score composto que balanceia qualidade, eficiência e volume
+                    
+                    **Classificação por Quadrantes:**
+                    - **⭐ Estrelas**: Alta eficiência + Alta qualidade
+                    - **⚡ Eficientes**: Alta eficiência + Qualidade média/baixa
+                    - **🎯 Cuidadosos**: Baixa eficiência + Alta qualidade
+                    - **🔄 Necessita Apoio**: Baixa eficiência + Baixa qualidade
+                    """)
+                
                 # Criar matriz de performance
                 matriz_df = criar_matriz_performance_dev(df_perf)
                 
@@ -1636,13 +1646,29 @@ if st.session_state.df_original is not None:
                         
                         matriz_filtrada['Quadrante'] = matriz_filtrada.apply(classificar_quadrante, axis=1)
                         
-                        # Gráfico de dispersão
+                        # Determinar cores: verde para melhor qualidade, vermelho para pior
+                        # Ordenar por qualidade para atribuir cores
+                        matriz_filtrada = matriz_filtrada.sort_values('Qualidade', ascending=False)
+                        
+                        # Atribuir cores baseadas na posição na classificação de qualidade
+                        num_devs = len(matriz_filtrada)
+                        colors_scatter = []
+                        for i in range(num_devs):
+                            # Normalizar posição (0 = melhor qualidade, 1 = pior qualidade)
+                            pos_normalizada = i / max(num_devs - 1, 1)
+                            # Interpolar entre verde (#28a745) e vermelho (#dc3545)
+                            red = int(220 * pos_normalizada + 40 * (1 - pos_normalizada))
+                            green = int(53 * pos_normalizada + 167 * (1 - pos_normalizada))
+                            blue = int(69 * pos_normalizada + 69 * (1 - pos_normalizada))
+                            colors_scatter.append(f'rgb({red}, {green}, {blue})')
+                        
+                        # Gráfico de dispersão com cores personalizadas
                         fig_matriz = px.scatter(
                             matriz_filtrada,
                             x='Eficiencia',
                             y='Qualidade',
                             size='Score',
-                            color='Quadrante',
+                            color=colors_scatter,  # Usar lista de cores personalizadas
                             hover_name='Desenvolvedor',
                             title='Matriz de Performance: Eficiência vs Qualidade',
                             labels={
@@ -1652,6 +1678,9 @@ if st.session_state.df_original is not None:
                             },
                             size_max=30
                         )
+                        
+                        # Remover legenda de cores (não é necessária com cores personalizadas)
+                        fig_matriz.update_traces(showlegend=False)
                         
                         # Adicionar linhas de média
                         fig_matriz.add_shape(
@@ -1672,11 +1701,44 @@ if st.session_state.df_original is not None:
                             line=dict(color="gray", width=1, dash="dash")
                         )
                         
+                        # Adicionar anotações para os quadrantes
+                        fig_matriz.add_annotation(
+                            x=media_eficiencia + (matriz_filtrada['Eficiencia'].max() - media_eficiencia) * 0.5,
+                            y=media_qualidade + (matriz_filtrada['Qualidade'].max() - media_qualidade) * 0.5,
+                            text="⭐ Estrelas",
+                            showarrow=False,
+                            font=dict(size=12, color="#28a745")
+                        )
+                        
+                        fig_matriz.add_annotation(
+                            x=media_eficiencia + (matriz_filtrada['Eficiencia'].max() - media_eficiencia) * 0.5,
+                            y=media_qualidade - (media_qualidade - matriz_filtrada['Qualidade'].min()) * 0.5,
+                            text="⚡ Eficientes",
+                            showarrow=False,
+                            font=dict(size=12, color="#ffc107")
+                        )
+                        
+                        fig_matriz.add_annotation(
+                            x=media_eficiencia - (media_eficiencia - matriz_filtrada['Eficiencia'].min()) * 0.5,
+                            y=media_qualidade + (matriz_filtrada['Qualidade'].max() - media_qualidade) * 0.5,
+                            text="🎯 Cuidadosos",
+                            showarrow=False,
+                            font=dict(size=12, color="#007bff")
+                        )
+                        
+                        fig_matriz.add_annotation(
+                            x=media_eficiencia - (media_eficiencia - matriz_filtrada['Eficiencia'].min()) * 0.5,
+                            y=media_qualidade - (media_qualidade - matriz_filtrada['Qualidade'].min()) * 0.5,
+                            text="🔄 Necessita Apoio",
+                            showarrow=False,
+                            font=dict(size=12, color="#dc3545")
+                        )
+                        
                         fig_matriz.update_layout(
                             height=500,
                             xaxis_title="Eficiência (Cards por Mês)",
                             yaxis_title="Qualidade (% de Aprovação sem Revisão)",
-                            showlegend=True
+                            showlegend=False
                         )
                         
                         st.plotly_chart(fig_matriz, use_container_width=True)
@@ -1729,7 +1791,7 @@ if st.session_state.df_original is not None:
                                 """, unsafe_allow_html=True)
                         
                         # ============================================
-                        # RECOMENDAÇÕES PERSONALIZADAS PARA DEVS
+                        # RECOMENDAÇÕES PERSONALIZADAS PARA DEVS (MINIMIZADO)
                         # ============================================
                         st.markdown("### 💡 Recomendações Personalizadas")
                         
@@ -1747,46 +1809,49 @@ if st.session_state.df_original is not None:
                             recomendacoes = gerar_recomendacoes_dev(df_perf, dev_recom_selecionado)
                             
                             if recomendacoes:
-                                for rec in recomendacoes:
-                                    if rec['prioridade'] == 'ALTA':
-                                        cor_card = "warning-card"
-                                        emoji = "🔴"
-                                    elif rec['prioridade'] == 'MÉDIA':
-                                        cor_card = "info-card"
-                                        emoji = "🟡"
-                                    else:
-                                        cor_card = "performance-card"
-                                        emoji = "🟢"
-                                    
-                                    st.markdown(f"""
-                                    <div class="{cor_card}" style="margin-bottom: 15px;">
-                                        <div style="display: flex; align-items: start; gap: 10px;">
-                                            <span style="font-size: 1.5rem;">{emoji}</span>
-                                            <div>
-                                                <h4 style="margin: 0;">{rec['titulo']}</h4>
-                                                <p style="margin: 5px 0; color: #6c757d;">{rec['descricao']}</p>
-                                                <p style="margin: 0; font-weight: 600;">Ação sugerida: {rec['acao']}</p>
+                                # Container colapsável para as recomendações
+                                with st.expander(f"📋 Ver Recomendações para {dev_recom_selecionado}", expanded=False):
+                                    for rec in recomendacoes:
+                                        if rec['prioridade'] == 'ALTA':
+                                            cor_card = "warning-card"
+                                            emoji = "🔴"
+                                        elif rec['prioridade'] == 'MÉDIA':
+                                            cor_card = "info-card"
+                                            emoji = "🟡"
+                                        else:
+                                            cor_card = "performance-card"
+                                            emoji = "🟢"
+                                        
+                                        st.markdown(f"""
+                                        <div class="{cor_card}" style="margin-bottom: 15px;">
+                                            <div style="display: flex; align-items: start; gap: 10px;">
+                                                <span style="font-size: 1.5rem;">{emoji}</span>
+                                                <div>
+                                                    <h4 style="margin: 0;">{rec['titulo']}</h4>
+                                                    <p style="margin: 5px 0; color: #6c757d;">{rec['descricao']}</p>
+                                                    <p style="margin: 0; font-weight: 600;">Ação sugerida: {rec['acao']}</p>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
-                                
-                                # Plano de ação geral
-                                st.markdown("#### 📋 Plano de Ação Sugerido")
-                                acoes = [
-                                    "1. Implementar checklist padronizado antes do envio",
-                                    "2. Realizar code review com desenvolvedores experientes",
-                                    "3. Estabelecer metas de qualidade por desenvolvedor",
-                                    "4. Criar banco de conhecimento com erros comuns",
-                                    "5. Implementar sistema de feedback contínuo com SREs"
-                                ]
-                                
-                                for acao in acoes:
-                                    st.markdown(f"""
-                                    <div style="padding: 10px; margin-bottom: 5px; background: #f8f9fa; border-radius: 5px;">
-                                        {acao}
-                                    </div>
-                                    """, unsafe_allow_html=True)
+                                        """, unsafe_allow_html=True)
+                                    
+                                    # Botão para expandir plano de ação
+                                    if st.button("📋 Ver Plano de Ação Completo", key="btn_plano_acao"):
+                                        st.markdown("#### 🚀 Plano de Ação Sugerido")
+                                        acoes = [
+                                            "1. Implementar checklist padronizado antes do envio",
+                                            "2. Realizar code review com desenvolvedores experientes",
+                                            "3. Estabelecer metas de qualidade por desenvolvedor",
+                                            "4. Criar banco de conhecimento com erros comuns",
+                                            "5. Implementar sistema de feedback contínuo com SREs"
+                                        ]
+                                        
+                                        for acao in acoes:
+                                            st.markdown(f"""
+                                            <div style="padding: 10px; margin-bottom: 5px; background: #f8f9fa; border-radius: 5px;">
+                                                {acao}
+                                            </div>
+                                            """, unsafe_allow_html=True)
                             else:
                                 st.success(f"✅ {dev_recom_selecionado} está com excelente performance! Não há recomendações específicas no momento.")
                 
@@ -1899,10 +1964,33 @@ if st.session_state.df_original is not None:
     with tab_extra2:
         with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
             st.markdown("""
-            **Identificação de Padrões:**
-            - 📅 **Sazonalidade mensal**: Picos e vales ao longo do ano
-            - 📊 **Horários de pico**: Melhores momentos para sincronização
-            - 📈 **Tendências**: Evolução temporal das demandas
+            **Análise de Sazonalidade e Padrões Temporais:**
+            
+            Esta análise identifica padrões no fluxo de demandas ao longo do tempo:
+            
+            **📅 Padrões por Dia da Semana:**
+            - Identifica quais dias têm mais/menos demandas
+            - Mostra taxa de sincronização por dia
+            - Útil para planejamento de recursos
+            
+            **🕐 Demandas por Hora do Dia:**
+            - Identifica horários de pico de criação de chamados
+            - Mostra horários com maior taxa de sincronização
+            - Filtros por ano e mês disponíveis
+            
+            **📈 Sazonalidade Mensal:**
+            - Distribuição de demandas ao longo dos meses
+            - Identifica meses com maior volume
+            - Mostra taxa de sincronização mensal
+            - Inclui todos os 12 meses (Janeiro a Dezembro)
+            
+            **📊 Tipos de Gráficos:**
+            - Gráficos de barras para comparação
+            - Gráficos de linha para tendências
+            - Taxas de sincronização sobrepostas
+            
+            **🎯 Objetivo:**
+            Otimizar alocação de recursos e identificar padrões para melhorar eficiência.
             """)
         
         if 'Criado' in df.columns and 'Status' in df.columns:
