@@ -771,14 +771,13 @@ if st.session_state.df_original is not None:
             total_revisoes = int(df['Revisões'].sum())
             st.markdown(criar_card_indicador_simples(total_revisoes, "Total de Revisões", "📝"), unsafe_allow_html=True)
     
-    # ABAS PRINCIPAIS
+    # ABAS PRINCIPAIS - REMOVIDA A ABA "🏆 Performance dos SREs"
     st.markdown("---")
     
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3 = st.tabs([
         "📅 Evolução de Demandas", 
         "📊 Análise de Revisões", 
-        "📈 Sincronizados por Dia",
-        "🏆 Performance dos SREs"
+        "📈 Sincronizados por Dia"
     ])
     
     with tab1:
@@ -1058,178 +1057,6 @@ if st.session_state.df_original is not None:
                 )
                 
                 st.plotly_chart(fig_dia, use_container_width=True)
-    
-        with tab4:
-        st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
-        
-        if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
-            col_filtro1, col_filtro2 = st.columns(2)
-            
-            with col_filtro1:
-                if 'Ano' in df.columns:
-                    anos_sre = sorted(df['Ano'].dropna().unique().astype(int))
-                    anos_opcoes_sre = ['Todos'] + list(anos_sre)
-                    ano_sre = st.selectbox("📅 Filtrar por Ano:", options=anos_opcoes_sre, key="filtro_ano_sre")
-            
-            with col_filtro2:
-                if 'Mês' in df.columns:
-                    meses_sre = sorted(df['Mês'].dropna().unique().astype(int))
-                    meses_opcoes_sre = ['Todos'] + [str(m) for m in meses_sre]
-                    mes_sre = st.selectbox("📆 Filtrar por Mês:", options=meses_opcoes_sre, key="filtro_mes_sre")
-            
-            df_sre = df.copy()
-            
-            if 'Ano' in df_sre.columns and ano_sre != 'Todos':
-                df_sre = df_sre[df_sre['Ano'] == int(ano_sre)]
-            
-            if 'Mês' in df_sre.columns and mes_sre != 'Todos':
-                df_sre = df_sre[df_sre['Mês'] == int(mes_sre)]
-            
-            df_sincronizados = df_sre[df_sre['Status'] == 'Sincronizado'].copy()
-            
-            if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
-                # ============================================
-                # 1. SINCRONIZADOS POR SRE (GRÁFICO DE BARRAS)
-                # ============================================
-                st.markdown("### 📈 Sincronizados por SRE")
-                
-                df_sincronizados['SRE_Formatado'] = df_sincronizados['SRE'].apply(lambda x: formatar_nome_responsavel(x) if pd.notna(x) else x)
-                
-                sinc_por_sre = df_sincronizados.groupby('SRE_Formatado').size().resetindex()
-                sinc_por_sre.columns = ['SRE', 'Sincronizados']
-                sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
-                
-                # AQUI NÃO HÁ MAIS RANKING - CÓDIGO COMPLETAMENTE REMOVIDO
-                # AGORA VAMOS DIRETO PARA O GRÁFICO
-                
-                fig_sinc_bar = go.Figure()
-                
-                max_sinc = sinc_por_sre['Sincronizados'].max()
-                min_sinc = sinc_por_sre['Sincronizados'].min()
-                
-                colors = []
-                for valor in sinc_por_sre['Sincronizados']:
-                    if max_sinc == min_sinc:
-                        colors.append('#1e3799')
-                    else:
-                        normalized = (valor - min_sinc) / (max_sinc - min_sinc)
-                        red = int(30 * normalized + 74 * (1 - normalized))
-                        green = int(55 * normalized + 105 * (1 - normalized))
-                        blue = int(153 * normalized + 189 * (1 - normalized))
-                        colors.append(f'rgb({red}, {green}, {blue})')
-                
-                fig_sinc_bar.add_trace(go.Bar(
-                    x=sinc_por_sre['SRE'].head(15),
-                    y=sinc_por_sre['Sincronizados'].head(15),
-                    name='Sincronizados',
-                    text=sinc_por_sre['Sincronizados'].head(15),
-                    textposition='outside',
-                    marker_color=colors[:15],
-                    marker_line_color='#0c2461',
-                    marker_line_width=1.5,
-                    opacity=0.8
-                ))
-                
-                fig_sinc_bar.update_layout(
-                    title=f'Sincronizados por SRE',
-                    xaxis_title='SRE',
-                    yaxis_title='Número de Sincronizados',
-                    plot_bgcolor='white',
-                    height=500,
-                    showlegend=False,
-                    margin=dict(t=50, b=100, l=50, r=50),
-                    xaxis=dict(
-                        tickangle=45,
-                        gridcolor='rgba(0,0,0,0.05)',
-                        categoryorder='total descending'
-                    ),
-                    yaxis=dict(
-                        gridcolor='rgba(0,0,0,0.05)',
-                        rangemode='tozero'
-                    )
-                )
-                
-                st.plotly_chart(fig_sinc_bar, use_container_width=True)
-                
-                # Tabela de Performance dos SREs
-                st.markdown("### 📋 Performance Detalhada dos SREs")
-                
-                sres_metrics = []
-                sres_list = df_sre['SRE'].dropna().unique()
-                
-                for sre in sres_list:
-                    df_sre_data = df_sre[df_sre['SRE'] == sre].copy()
-                    
-                    if len(df_sre_data) > 0:
-                        total_cards = len(df_sre_data)
-                        sincronizados = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
-                        
-                        if 'Revisões' in df_sre_data.columns:
-                            cards_retorno = len(df_sre_data[df_sre_data['Revisões'] > 0])
-                        else:
-                            cards_retorno = 0
-                        
-                        taxa_retorno = (cards_retorno / total_cards * 100) if total_cards > 0 else 0
-                        taxa_sinc = (sincronizados / total_cards * 100) if total_cards > 0 else 0
-                        
-                        sre_formatado = formatar_nome_responsavel(sre)
-                        
-                        sres_metrics.append({
-                            'SRE': sre_formatado,
-                            'Total Cards': total_cards,
-                            'Sincronizados': sincronizados,
-                            'Taxa Sinc. (%)': round(taxa_sinc, 1),
-                            'Cards Retorno': cards_retorno,
-                            'Taxa Retorno (%)': round(taxa_retorno, 1),
-                            'Performance': '✅ Excelente' if taxa_sinc > 90 and taxa_retorno < 10 else 
-                                          '🟡 Boa' if taxa_sinc > 70 else 
-                                          '🟠 Regular' if taxa_sinc > 50 else 
-                                          '🔴 Necessita Atenção'
-                        })
-                
-                if sres_metrics:
-                    df_sres_metrics = pd.DataFrame(sres_metrics)
-                    df_sres_metrics = df_sres_metrics.sort_values('Sincronizados', ascending=False)
-                    
-                    num_sres = len(df_sres_metrics)
-                    altura_tabela = max(150, num_sres * 50 + 50)
-                    
-                    styled_df = df_sres_metrics.style.format({
-                        'Total Cards': '{:,}',
-                        'Sincronizados': '{:,}',
-                        'Taxa Sinc. (%)': '{:.1f}%',
-                        'Cards Retorno': '{:,}',
-                        'Taxa Retorno (%)': '{:.1f}%'
-                    })
-                    
-                    st.dataframe(
-                        styled_df,
-                        use_container_width=True,
-                        height=altura_tabela,
-                        column_config={
-                            "SRE": st.column_config.TextColumn("SRE", width="medium"),
-                            "Total Cards": st.column_config.NumberColumn("Total", width="small"),
-                            "Sincronizados": st.column_config.NumberColumn("Sinc.", width="small"),
-                            "Taxa Sinc. (%)": st.column_config.NumberColumn("Taxa Sinc.", width="small", help="% de cards sincronizados"),
-                            "Cards Retorno": st.column_config.NumberColumn("Retorno", width="small", help="Cards que retornaram"),
-                            "Taxa Retorno (%)": st.column_config.NumberColumn("Taxa Ret.", width="small", help="% de cards que retornaram"),
-                            "Performance": st.column_config.TextColumn("Performance", width="medium")
-                        }
-                    )
-                    
-                    if num_sres > 0:
-                        col_sum1, col_sum2, col_sum3 = st.columns(3)
-                        
-                        with col_sum1:
-                            st.metric("👥 SREs Ativos", num_sres)
-                        
-                        with col_sum2:
-                            total_sinc = df_sres_metrics['Sincronizados'].sum()
-                            st.metric("✅ Total Sincronizado", f"{total_sinc:,}")
-                        
-                        with col_sum3:
-                            avg_sync_rate = df_sres_metrics['Taxa Sinc. (%)'].mean()
-                            st.metric("📈 Taxa Média Sinc.", f"{avg_sync_rate:.1f}%")
     
     # ANÁLISES MELHORADAS
     st.markdown("---")
