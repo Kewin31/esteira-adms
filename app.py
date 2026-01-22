@@ -1516,30 +1516,32 @@ if st.session_state.df_original is not None:
                     st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
                 with col_ranking:
-                    # Ranking dos SREs
+                    # Ranking dos SREs - CORRIGIDO
                     st.markdown("### 🏆 Ranking SREs")
                     
                     # Calcular ranking baseado em sincronizados
                     sre_ranking = sinc_por_sre.copy()
                     sre_ranking = sre_ranking.sort_values('Sincronizados', ascending=False).reset_index(drop=True)
                     
-                    # Container para ranking
-                    st.markdown('<div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 1rem;">', unsafe_allow_html=True)
-                    st.markdown('<div style="text-align: center; font-weight: bold; color: #1e3799; margin-bottom: 0.5rem;">🏆 CLASSIFICAÇÃO</div>', unsafe_allow_html=True)
+                    # Construir HTML completo para o ranking
+                    ranking_html = '''
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 1rem;">
+                        <div style="text-align: center; font-weight: bold; color: #1e3799; margin-bottom: 0.5rem;">🏆 CLASSIFICAÇÃO</div>
+                    '''
                     
-                    # Medalhas e cores
-                    medalhas = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']
-                    cores_bg = ['#e8f4f8', '#f0f0f0', '#f8f0e8', '#f8f9fa', '#ffffff']
-                    cores_borda = ['#1e3799', '#495057', '#856404', '#6c757d', '#adb5bd']
+                    # Medalhas e cores (apenas 4 primeiras)
+                    medalhas = ['🥇', '🥈', '🥉', '4️⃣']
+                    cores_bg = ['#e8f4f8', '#f0f0f0', '#f8f0e8', '#f8f9fa']
+                    cores_borda = ['#1e3799', '#495057', '#856404', '#6c757d']
                     
-                    # Mostrar até 5 SREs
-                    num_sres = min(len(sre_ranking), 5)
+                    # Mostrar apenas 4 SREs
+                    num_sres = min(len(sre_ranking), 4)
                     
                     for i in range(num_sres):
                         sre = sre_ranking.iloc[i]
                         medalha = medalhas[i] if i < len(medalhas) else f"{i+1}️⃣"
                         
-                        html_item = f"""
+                        ranking_html += f'''
                         <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: {cores_bg[i]}; 
                                     border-radius: 5px; border-left: 4px solid {cores_borda[i]};">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1554,10 +1556,12 @@ if st.session_state.df_original is not None:
                                 </div>
                             </div>
                         </div>
-                        """
-                        st.markdown(html_item, unsafe_allow_html=True)
+                        '''
                     
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    ranking_html += '</div>'
+                    
+                    # Exibir o ranking
+                    st.markdown(ranking_html, unsafe_allow_html=True)
                     
                     # Adicionar estatísticas
                     if not sre_ranking.empty:
@@ -2755,7 +2759,7 @@ if st.session_state.df_original is not None:
                 st.markdown("### 🔍 Análise de Tipos de Erro")
                 
                 # Distribuição por tipo
-                tipos_erro = df_diag['Tipo_Chamado'].value_counts().reset_index()
+                tipos_erro = df_diag['Tipo_Chamado'].value_counts().resetindex()
                 tipos_erro.columns = ['Tipo', 'Frequência']
                 tipos_erro['Percentual'] = (tipos_erro['Frequência'] / len(df_diag) * 100).round(1)
                 
@@ -2830,7 +2834,7 @@ if st.session_state.df_original is not None:
                     # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
-                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     # Top 5 tipos para análise
