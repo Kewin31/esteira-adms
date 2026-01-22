@@ -1516,7 +1516,7 @@ if st.session_state.df_original is not None:
                     st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
                 with col_ranking:
-                    # Ranking dos SREs - CORRIGIDO
+                    # Ranking dos SREs - CORREÇÃO COMPLETA
                     st.markdown("### 🏆 Ranking SREs")
                     
                     # Calcular ranking baseado em sincronizados
@@ -1524,10 +1524,8 @@ if st.session_state.df_original is not None:
                     sre_ranking = sre_ranking.sort_values('Sincronizados', ascending=False).reset_index(drop=True)
                     
                     # Construir HTML completo para o ranking
-                    ranking_html = '''
-                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 1rem;">
-                        <div style="text-align: center; font-weight: bold; color: #1e3799; margin-bottom: 0.5rem;">🏆 CLASSIFICAÇÃO</div>
-                    '''
+                    ranking_html = '<div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 1rem;">'
+                    ranking_html += '<div style="text-align: center; font-weight: bold; color: #1e3799; margin-bottom: 0.5rem;">🏆 CLASSIFICAÇÃO</div>'
                     
                     # Medalhas e cores (apenas 4 primeiras)
                     medalhas = ['🥇', '🥈', '🥉', '4️⃣']
@@ -1551,7 +1549,7 @@ if st.session_state.df_original is not None:
                                 <div>
                                     <span style="background: white; padding: 0.2rem 0.5rem; border-radius: 10px; 
                                                 font-weight: bold; color: {cores_borda[i]}; font-size: 0.85rem;">
-                                        {sre['Sincronizados']} sinc
+                                        {int(sre['Sincronizados'])} sinc
                                     </span>
                                 </div>
                             </div>
@@ -2759,7 +2757,7 @@ if st.session_state.df_original is not None:
                 st.markdown("### 🔍 Análise de Tipos de Erro")
                 
                 # Distribuição por tipo
-                tipos_erro = df_diag['Tipo_Chamado'].value_counts().resetindex()
+                tipos_erro = df_diag['Tipo_Chamado'].value_counts().reset_index()
                 tipos_erro.columns = ['Tipo', 'Frequência']
                 tipos_erro['Percentual'] = (tipos_erro['Frequência'] / len(df_diag) * 100).round(1)
                 
@@ -2834,7 +2832,7 @@ if st.session_state.df_original is not None:
                     # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
-                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     # Top 5 tipos para análise
