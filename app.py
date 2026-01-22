@@ -3004,7 +3004,7 @@ if st.session_state.df_original is not None:
         st.markdown('<div class="section-title-exec">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
         
         if 'Responsável_Formatado' in df.columns:
-            top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).resetindex()
+            top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
             top_responsaveis.columns = ['Responsável', 'Demandas']
             
             fig_top = px.bar(
