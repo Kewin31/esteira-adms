@@ -264,7 +264,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #1e3799;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05)
     }
     
     .matrix-quadrant {
@@ -1187,7 +1187,7 @@ if st.session_state.df_original is not None:
                 revisoes_por_responsavel = df_com_revisoes.groupby('Responsável_Formatado').agg({
                     'Revisões': 'sum',
                     'Chamado': 'count'
-                }).reset_index()
+                }).resetindex()
                 
                 revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
                 revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
@@ -1362,92 +1362,121 @@ if st.session_state.df_original is not None:
                 # ============================================
                 st.markdown("### 📈 Sincronizados por SRE")
                 
-                # Calcular sincronizados por SRE
-                sinc_por_sre = df_sincronizados.groupby('SRE').size().reset_index()
+                # Criar coluna com nomes formatados (remover emails)
+                df_sincronizados['SRE_Formatado'] = df_sincronizados['SRE'].apply(lambda x: formatar_nome_responsavel(x) if pd.notna(x) else x)
+                
+                # Calcular sincronizados por SRE (usando nomes formatados)
+                sinc_por_sre = df_sincronizados.groupby('SRE_Formatado').size().reset_index()
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
-                # Criar gráfico de barras
-                fig_sinc_bar = go.Figure()
+                # Criar layout com gráfico e ranking lado a lado
+                col_grafico, col_ranking = st.columns([3, 1])
                 
-                # Cores do maior para o menor (azul escuro para azul claro)
-                max_sinc = sinc_por_sre['Sincronizados'].max()
-                min_sinc = sinc_por_sre['Sincronizados'].min()
-                
-                colors = []
-                for valor in sinc_por_sre['Sincronizados']:
-                    if max_sinc == min_sinc:
-                        colors.append('#1e3799')  # Azul escuro se todos forem iguais
-                    else:
-                        normalized = (valor - min_sinc) / (max_sinc - min_sinc)
-                        # Interpolar entre azul escuro (#1e3799) e azul claro (#4a69bd)
-                        red = int(30 * normalized + 74 * (1 - normalized))
-                        green = int(55 * normalized + 105 * (1 - normalized))
-                        blue = int(153 * normalized + 189 * (1 - normalized))
-                        colors.append(f'rgb({red}, {green}, {blue})')
-                
-                fig_sinc_bar.add_trace(go.Bar(
-                    x=sinc_por_sre['SRE'].head(15),
-                    y=sinc_por_sre['Sincronizados'].head(15),
-                    name='Sincronizados',
-                    text=sinc_por_sre['Sincronizados'].head(15),
-                    textposition='outside',
-                    marker_color=colors[:15],
-                    marker_line_color='#0c2461',
-                    marker_line_width=1.5,
-                    opacity=0.8
-                ))
-                
-                fig_sinc_bar.update_layout(
-                    title=f'Sincronizados por SRE',
-                    xaxis_title='SRE',
-                    yaxis_title='Número de Sincronizados',
-                    plot_bgcolor='white',
-                    height=500,
-                    showlegend=False,
-                    margin=dict(t=50, b=100, l=50, r=50),
-                    xaxis=dict(
-                        tickangle=45,
-                        gridcolor='rgba(0,0,0,0.05)',
-                        categoryorder='total descending'
-                    ),
-                    yaxis=dict(
-                        gridcolor='rgba(0,0,0,0.05)',
-                        rangemode='tozero'
+                with col_grafico:
+                    # Criar gráfico de barras
+                    fig_sinc_bar = go.Figure()
+                    
+                    # Cores do maior para o menor (azul escuro para azul claro)
+                    max_sinc = sinc_por_sre['Sincronizados'].max()
+                    min_sinc = sinc_por_sre['Sincronizados'].min()
+                    
+                    colors = []
+                    for valor in sinc_por_sre['Sincronizados']:
+                        if max_sinc == min_sinc:
+                            colors.append('#1e3799')  # Azul escuro se todos forem iguais
+                        else:
+                            normalized = (valor - min_sinc) / (max_sinc - min_sinc)
+                            # Interpolar entre azul escuro (#1e3799) e azul claro (#4a69bd)
+                            red = int(30 * normalized + 74 * (1 - normalized))
+                            green = int(55 * normalized + 105 * (1 - normalized))
+                            blue = int(153 * normalized + 189 * (1 - normalized))
+                            colors.append(f'rgb({red}, {green}, {blue})')
+                    
+                    fig_sinc_bar.add_trace(go.Bar(
+                        x=sinc_por_sre['SRE'].head(15),
+                        y=sinc_por_sre['Sincronizados'].head(15),
+                        name='Sincronizados',
+                        text=sinc_por_sre['Sincronizados'].head(15),
+                        textposition='outside',
+                        marker_color=colors[:15],
+                        marker_line_color='#0c2461',
+                        marker_line_width=1.5,
+                        opacity=0.8
+                    ))
+                    
+                    fig_sinc_bar.update_layout(
+                        title=f'Sincronizados por SRE',
+                        xaxis_title='SRE',
+                        yaxis_title='Número de Sincronizados',
+                        plot_bgcolor='white',
+                        height=500,
+                        showlegend=False,
+                        margin=dict(t=50, b=100, l=50, r=50),
+                        xaxis=dict(
+                            tickangle=45,
+                            gridcolor='rgba(0,0,0,0.05)',
+                            categoryorder='total descending'
+                        ),
+                        yaxis=dict(
+                            gridcolor='rgba(0,0,0,0.05)',
+                            rangemode='tozero'
+                        )
                     )
-                )
+                    
+                    st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
-                st.plotly_chart(fig_sinc_bar, use_container_width=True)
-                
-                # Top 3 SREs
-                col_top1, col_top2, col_top3 = st.columns(3)
-                
-                if len(sinc_por_sre) >= 1:
-                    with col_top1:
+                with col_ranking:
+                    # Top 3 SREs - COLOCADO DO LADO DIREITO
+                    st.markdown("### 🏆 Ranking")
+                    
+                    if len(sinc_por_sre) >= 1:
                         sre1 = sinc_por_sre.iloc[0]
-                        st.metric("🥇 1º Lugar Sincronizados", 
-                                 f"{sre1['SRE']}", 
-                                 f"{sre1['Sincronizados']} sinc.")
-                
-                if len(sinc_por_sre) >= 2:
-                    with col_top2:
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, #FFD700 0%, #FFEC8B 100%); 
+                                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; 
+                                    border: 2px solid #DAA520; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold;">🥇</div>
+                            <div style="font-weight: bold; color: #1e3799;">1º Lugar</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">{sre1['SRE']}</div>
+                            <div style="font-size: 0.9rem; color: #495057;">{sre1['Sincronizados']} sinc.</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    if len(sinc_por_sre) >= 2:
                         sre2 = sinc_por_sre.iloc[1]
-                        st.metric("🥈 2º Lugar Sincronizados", 
-                                 f"{sre2['SRE']}", 
-                                 f"{sre2['Sincronizados']} sinc.")
-                
-                if len(sinc_por_sre) >= 3:
-                    with col_top3:
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, #C0C0C0 0%, #E8E8E8 100%); 
+                                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; 
+                                    border: 2px solid #A9A9A9; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold;">🥈</div>
+                            <div style="font-weight: bold; color: #1e3799;">2º Lugar</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">{sre2['SRE']}</div>
+                            <div style="font-size: 0.9rem; color: #495057;">{sre2['Sincronizados']} sinc.</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    if len(sinc_por_sre) >= 3:
                         sre3 = sinc_por_sre.iloc[2]
-                        st.metric("🥉 3º Lugar Sincronizados", 
-                                 f"{sre3['SRE']}", 
-                                 f"{sre3['Sincronizados']} sinc.")
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, #CD7F32 0%, #E8B580 100%); 
+                                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; 
+                                    border: 2px solid #8B4513; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold;">🥉</div>
+                            <div style="font-weight: bold; color: #1e3799;">3º Lugar</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">{sre3['SRE']}</div>
+                            <div style="font-size: 0.9rem; color: #495057;">{sre3['Sincronizados']} sinc.</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # REMOVIDO: Os st.metric() antigos que estavam embaixo do gráfico
                 
                 # Tabela completa
                 st.markdown("### 📋 Performance Detalhada dos SREs")
                 
                 # Calcular métricas adicionais
                 sres_metrics = []
+                # Usar nomes formatados para a tabela também
                 sres_list = df_sre['SRE'].dropna().unique()
                 
                 for sre in sres_list:
@@ -1463,8 +1492,11 @@ if st.session_state.df_original is not None:
                         else:
                             cards_retorno = 0
                         
+                        # Usar nome formatado
+                        sre_formatado = formatar_nome_responsavel(sre)
+                        
                         sres_metrics.append({
-                            'SRE': sre,
+                            'SRE': sre_formatado,
                             'Total_Cards': total_cards,
                             'Sincronizados': sincronizados,
                             'Cards_Retorno': cards_retorno
@@ -1503,40 +1535,51 @@ if st.session_state.df_original is not None:
         # APAGADO: Container expansível "SOBRE ESTA ANÁLISE"
         
         if 'Responsável_Formatado' in df.columns and 'Revisões' in df.columns and 'Status' in df.columns:
-            # Filtros para performance
+            # Filtros para performance - REMOVIDO "Mínimo de chamados" e ADICIONADO Ano e Mês
             col_filtro_perf1, col_filtro_perf2, col_filtro_perf3 = st.columns(3)
             
             with col_filtro_perf1:
-                min_chamados = st.slider(
-                    "Mínimo de chamados:",
-                    min_value=1,
-                    max_value=50,
-                    value=5,
-                    help="Filtrar desenvolvedores com pelo menos X chamados"
-                )
+                # REMOVIDO: filtro de mínimo de chamados
+                # ADICIONADO: Filtro por ano
+                if 'Ano' in df.columns:
+                    anos_perf = sorted(df['Ano'].dropna().unique().astype(int))
+                    anos_opcoes_perf = ['Todos os Anos'] + list(anos_perf)
+                    ano_perf = st.selectbox(
+                        "📅 Ano:",
+                        options=anos_opcoes_perf,
+                        index=len(anos_opcoes_perf)-1,
+                        key="filtro_ano_perf"
+                    )
             
             with col_filtro_perf2:
-                periodo_perf = st.selectbox(
-                    "Período de análise:",
-                    options=["Últimos 30 dias", "Últimos 90 dias", "Todo o período", "Personalizado"],
-                    index=2
-                )
+                # ADICIONADO: Filtro por mês
+                if 'Mês' in df.columns:
+                    meses_perf = sorted(df['Mês'].dropna().unique().astype(int))
+                    meses_opcoes_perf = ['Todos os Meses'] + [str(m) for m in meses_perf]
+                    mes_perf = st.selectbox(
+                        "📆 Mês:",
+                        options=meses_opcoes_perf,
+                        key="filtro_mes_perf"
+                    )
             
             with col_filtro_perf3:
                 ordenar_por = st.selectbox(
                     "Ordenar por:",
                     options=["Score de Qualidade", "Total de Chamados", "Eficiência", "Produtividade"],
-                    index=0
+                    index=0,
+                    key="ordenar_perf"
                 )
             
-            # Filtrar dados conforme período selecionado
+            # Filtrar dados conforme ano e mês selecionados
             df_perf = df.copy()
-            if periodo_perf == "Últimos 30 dias" and 'Criado' in df_perf.columns:
-                data_limite = datetime.now() - timedelta(days=30)
-                df_perf = df_perf[df_perf['Criado'] >= data_limite]
-            elif periodo_perf == "Últimos 90 dias" and 'Criado' in df_perf.columns:
-                data_limite = datetime.now() - timedelta(days=90)
-                df_perf = df_perf[df_perf['Criado'] >= data_limite]
+            
+            # Aplicar filtro de ano
+            if ano_perf != 'Todos os Anos':
+                df_perf = df_perf[df_perf['Ano'] == int(ano_perf)]
+            
+            # Aplicar filtro de mês
+            if mes_perf != 'Todos os Meses':
+                df_perf = df_perf[df_perf['Mês'] == int(mes_perf)]
             
             # Calcular métricas por desenvolvedor
             dev_metrics = []
@@ -1546,40 +1589,40 @@ if st.session_state.df_original is not None:
                 dev_data = df_perf[df_perf['Responsável_Formatado'] == dev]
                 total_chamados = len(dev_data)
                 
-                if total_chamados >= min_chamados:
-                    # Chamados sem revisão
-                    sem_revisao = len(dev_data[dev_data['Revisões'] == 0])
-                    score_qualidade = (sem_revisao / total_chamados * 100) if total_chamados > 0 else 0
-                    
-                    # Eficiência (sincronizados)
-                    sincronizados = len(dev_data[dev_data['Status'] == 'Sincronizado'])
-                    eficiencia = (sincronizados / total_chamados * 100) if total_chamados > 0 else 0
-                    
-                    # Produtividade (chamados por mês)
-                    if 'Criado' in dev_data.columns:
-                        meses_ativos = dev_data['Criado'].dt.to_period('M').nunique()
-                        produtividade = total_chamados / meses_ativos if meses_ativos > 0 else 0
-                    else:
-                        produtividade = 0
-                    
-                    # Classificação
-                    if score_qualidade >= 80 and produtividade >= 5:
-                        classificacao = "🟢 Alto"
-                    elif score_qualidade >= 60:
-                        classificacao = "🟡 Médio"
-                    else:
-                        classificacao = "🔴 Baixo"
-                    
-                    dev_metrics.append({
-                        'Desenvolvedor': dev,
-                        'Total Chamados': total_chamados,
-                        'Sem Revisão': sem_revisao,
-                        'Score Qualidade': round(score_qualidade, 1),
-                        'Sincronizados': sincronizados,
-                        'Eficiência': round(eficiencia, 1),
-                        'Produtividade': round(produtividade, 1),
-                        'Classificação': classificacao
-                    })
+                # REMOVIDO: if total_chamados >= min_chamados: (agora mostra todos)
+                # Chamados sem revisão
+                sem_revisao = len(dev_data[dev_data['Revisões'] == 0])
+                score_qualidade = (sem_revisao / total_chamados * 100) if total_chamados > 0 else 0
+                
+                # Eficiência (sincronizados)
+                sincronizados = len(dev_data[dev_data['Status'] == 'Sincronizado'])
+                eficiencia = (sincronizados / total_chamados * 100) if total_chamados > 0 else 0
+                
+                # Produtividade (chamados por mês)
+                if 'Criado' in dev_data.columns:
+                    meses_ativos = dev_data['Criado'].dt.to_period('M').nunique()
+                    produtividade = total_chamados / meses_ativos if meses_ativos > 0 else 0
+                else:
+                    produtividade = 0
+                
+                # Classificação
+                if score_qualidade >= 80 and produtividade >= 5:
+                    classificacao = "🟢 Alto"
+                elif score_qualidade >= 60:
+                    classificacao = "🟡 Médio"
+                else:
+                    classificacao = "🔴 Baixo"
+                
+                dev_metrics.append({
+                    'Desenvolvedor': dev,
+                    'Total Chamados': total_chamados,
+                    'Sem Revisão': sem_revisao,
+                    'Score Qualidade': round(score_qualidade, 1),
+                    'Sincronizados': sincronizados,
+                    'Eficiência': round(eficiencia, 1),
+                    'Produtividade': round(produtividade, 1),
+                    'Classificação': classificacao
+                })
             
             if dev_metrics:
                 # Converter para DataFrame
@@ -1625,8 +1668,8 @@ if st.session_state.df_original is not None:
                 matriz_df = criar_matriz_performance_dev(df_perf)
                 
                 if not matriz_df.empty:
-                    # Filtrar desenvolvedores com mínimo de cards
-                    matriz_filtrada = matriz_df[matriz_df['Total_Cards'] >= min_chamados].copy()
+                    # REMOVIDO: filtro por mínimo de cards
+                    matriz_filtrada = matriz_df.copy()
                     
                     if not matriz_filtrada.empty:
                         # Calcular médias para quadrantes
@@ -1971,7 +2014,7 @@ if st.session_state.df_original is not None:
             **📅 Padrões por Dia da Semana:**
             - Identifica quais dias têm mais/menos demandas
             - Mostra taxa de sincronização por dia
-            - Útil para planejamento de recursos
+            - Útil para planningo de recursos
             
             **🕐 Demandas por Hora do Dia:**
             - Identifica horários de pico de criação de chamados
