@@ -1220,7 +1220,7 @@ if st.session_state.df_original is not None:
                 revisoes_por_responsavel = df_com_revisoes.groupby('Responsável_Formatado').agg({
                     'Revisões': 'sum',
                     'Chamado': 'count'
-                }).reset_index()
+                }).resetindex()
                 
                 revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
                 revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
@@ -1335,7 +1335,7 @@ if st.session_state.df_original is not None:
                 df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
                 
                 # Agrupar por data
-                sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
+                sincronizados_por_dia = df_sincronizados.groupby('Data').size().resetindex()
                 sincronizados_por_dia.columns = ['Data', 'Quantidade']
                 
                 # Ordenar por data
@@ -1459,132 +1459,60 @@ if st.session_state.df_original is not None:
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
-                # Criar layout com gráfico e ranking lado a lado
-                col_grafico, col_ranking = st.columns([3, 1])
+                # Criar layout com apenas o gráfico (removido ranking)
+                col_grafico = st.columns(1)[0]
                 
-                with col_grafico:
-                    # Criar gráfico de barras
-                    fig_sinc_bar = go.Figure()
-                    
-                    # Cores do maior para o menor (azul escuro para azul claro)
-                    max_sinc = sinc_por_sre['Sincronizados'].max()
-                    min_sinc = sinc_por_sre['Sincronizados'].min()
-                    
-                    colors = []
-                    for valor in sinc_por_sre['Sincronizados']:
-                        if max_sinc == min_sinc:
-                            colors.append('#1e3799')  # Azul escuro se todos forem iguais
-                        else:
-                            normalized = (valor - min_sinc) / (max_sinc - min_sinc)
-                            # Interpolar entre azul escuro (#1e3799) e azul claro (#4a69bd)
-                            red = int(30 * normalized + 74 * (1 - normalized))
-                            green = int(55 * normalized + 105 * (1 - normalized))
-                            blue = int(153 * normalized + 189 * (1 - normalized))
-                            colors.append(f'rgb({red}, {green}, {blue})')
-                    
-                    fig_sinc_bar.add_trace(go.Bar(
-                        x=sinc_por_sre['SRE'].head(15),
-                        y=sinc_por_sre['Sincronizados'].head(15),
-                        name='Sincronizados',
-                        text=sinc_por_sre['Sincronizados'].head(15),
-                        textposition='outside',
-                        marker_color=colors[:15],
-                        marker_line_color='#0c2461',
-                        marker_line_width=1.5,
-                        opacity=0.8
-                    ))
-                    
-                    fig_sinc_bar.update_layout(
-                        title=f'Sincronizados por SRE',
-                        xaxis_title='SRE',
-                        yaxis_title='Número de Sincronizados',
-                        plot_bgcolor='white',
-                        height=500,
-                        showlegend=False,
-                        margin=dict(t=50, b=100, l=50, r=50),
-                        xaxis=dict(
-                            tickangle=45,
-                            gridcolor='rgba(0,0,0,0.05)',
-                            categoryorder='total descending'
-                        ),
-                        yaxis=dict(
-                            gridcolor='rgba(0,0,0,0.05)',
-                            rangemode='tozero'
-                        )
+                # Criar gráfico de barras
+                fig_sinc_bar = go.Figure()
+                
+                # Cores do maior para o menor (azul escuro para azul claro)
+                max_sinc = sinc_por_sre['Sincronizados'].max()
+                min_sinc = sinc_por_sre['Sincronizados'].min()
+                
+                colors = []
+                for valor in sinc_por_sre['Sincronizados']:
+                    if max_sinc == min_sinc:
+                        colors.append('#1e3799')  # Azul escuro se todos forem iguais
+                    else:
+                        normalized = (valor - min_sinc) / (max_sinc - min_sinc)
+                        # Interpolar entre azul escuro (#1e3799) e azul claro (#4a69bd)
+                        red = int(30 * normalized + 74 * (1 - normalized))
+                        green = int(55 * normalized + 105 * (1 - normalized))
+                        blue = int(153 * normalized + 189 * (1 - normalized))
+                        colors.append(f'rgb({red}, {green}, {blue})')
+                
+                fig_sinc_bar.add_trace(go.Bar(
+                    x=sinc_por_sre['SRE'].head(15),
+                    y=sinc_por_sre['Sincronizados'].head(15),
+                    name='Sincronizados',
+                    text=sinc_por_sre['Sincronizados'].head(15),
+                    textposition='outside',
+                    marker_color=colors[:15],
+                    marker_line_color='#0c2461',
+                    marker_line_width=1.5,
+                    opacity=0.8
+                ))
+                
+                fig_sinc_bar.update_layout(
+                    title=f'Sincronizados por SRE',
+                    xaxis_title='SRE',
+                    yaxis_title='Número de Sincronizados',
+                    plot_bgcolor='white',
+                    height=500,
+                    showlegend=False,
+                    margin=dict(t=50, b=100, l=50, r=50),
+                    xaxis=dict(
+                        tickangle=45,
+                        gridcolor='rgba(0,0,0,0.05)',
+                        categoryorder='total descending'
+                    ),
+                    yaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)',
+                        rangemode='tozero'
                     )
-                    
-                    st.plotly_chart(fig_sinc_bar, use_container_width=True)
+                )
                 
-                with col_ranking:
-                    # Ranking dos SREs - CORREÇÃO COMPLETA
-                    st.markdown("### 🏆 Ranking SREs")
-                    
-                    # Calcular ranking baseado em sincronizados
-                    sre_ranking = sinc_por_sre.copy()
-                    sre_ranking = sre_ranking.sort_values('Sincronizados', ascending=False).reset_index(drop=True)
-                    
-                    # Construir HTML completo para o ranking
-                    ranking_html = '<div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 1rem;">'
-                    ranking_html += '<div style="text-align: center; font-weight: bold; color: #1e3799; margin-bottom: 0.5rem;">🏆 CLASSIFICAÇÃO</div>'
-                    
-                    # Medalhas e cores (apenas 4 primeiras)
-                    medalhas = ['🥇', '🥈', '🥉', '4️⃣']
-                    cores_bg = ['#e8f4f8', '#f0f0f0', '#f8f0e8', '#f8f9fa']
-                    cores_borda = ['#1e3799', '#495057', '#856404', '#6c757d']
-                    
-                    # Mostrar apenas 4 SREs
-                    num_sres = min(len(sre_ranking), 4)
-                    
-                    for i in range(num_sres):
-                        sre = sre_ranking.iloc[i]
-                        medalha = medalhas[i] if i < len(medalhas) else f"{i+1}️⃣"
-                        
-                        ranking_html += f'''
-                        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: {cores_bg[i]}; 
-                                    border-radius: 5px; border-left: 4px solid {cores_borda[i]};">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <span style="font-weight: bold; color: #1e3799; font-size: 0.9rem;">{medalha} {sre['SRE']}</span>
-                                </div>
-                                <div>
-                                    <span style="background: white; padding: 0.2rem 0.5rem; border-radius: 10px; 
-                                                font-weight: bold; color: {cores_borda[i]}; font-size: 0.85rem;">
-                                        {int(sre['Sincronizados'])} sinc
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        '''
-                    
-                    ranking_html += '</div>'
-                    
-                    # Exibir o ranking
-                    st.markdown(ranking_html, unsafe_allow_html=True)
-                    
-                    # Adicionar estatísticas
-                    if not sre_ranking.empty:
-                        total_sinc = sre_ranking['Sincronizados'].sum()
-                        media_sinc = sre_ranking['Sincronizados'].mean()
-                        
-                        stats_html = f"""
-                        <div style="background: white; padding: 0.8rem; border-radius: 8px; border: 1px solid #dee2e6; margin-top: 1rem;">
-                            <div style="font-size: 0.85rem; color: #495057;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
-                                    <span>📊 Total Sincronizados:</span>
-                                    <span style="font-weight: bold;">{int(total_sinc)}</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
-                                    <span>📈 Média por SRE:</span>
-                                    <span style="font-weight: bold;">{media_sinc:.1f}</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span>👥 SREs Ativos:</span>
-                                    <span style="font-weight: bold;">{len(sre_ranking)}</span>
-                                </div>
-                            </div>
-                        </div>
-                        """
-                        st.markdown(stats_html, unsafe_allow_html=True)
+                st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
                 # Tabela de Performance dos SREs - LIMITADA AO NÚMERO REAL DE SREs
                 st.markdown("### 📋 Performance Detalhada dos SREs")
