@@ -1516,52 +1516,81 @@ if st.session_state.df_original is not None:
                     st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
                 with col_ranking:
-                    # Top 3 SREs - SIMPLIFICADO (sem destaques)
-                    st.markdown("### 🏆 Ranking")
+                    # Ranking dos SREs
+                    st.markdown("### 🏆 Ranking SREs")
                     
-                    # Container simples para ranking
+                    # Calcular ranking baseado em sincronizados
+                    sre_ranking = sinc_por_sre.copy()
+                    sre_ranking = sre_ranking.sort_values('Sincronizados', ascending=False).reset_index(drop=True)
+                    
+                    # Container para ranking
                     ranking_html = """
-                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 1rem;">
+                        <div style="text-align: center; font-weight: bold; color: #1e3799; margin-bottom: 0.5rem;">🏆 CLASSIFICAÇÃO</div>
                     """
                     
-                    if len(sinc_por_sre) >= 1:
-                        sre1 = sinc_por_sre.iloc[0]
-                        ranking_html += f"""
-                        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #e8f4f8; border-radius: 5px;">
-                            <div style="font-weight: bold; color: #1e3799;">🥇 1º: {sre1['SRE']}</div>
-                            <div style="font-size: 0.9rem; color: #495057;">{sre1['Sincronizados']} sinc.</div>
-                        </div>
-                        """
+                    # Medalhas e cores
+                    medalhas = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']
+                    cores_bg = ['#e8f4f8', '#f0f0f0', '#f8f0e8', '#f8f9fa', '#ffffff']
+                    cores_borda = ['#1e3799', '#495057', '#856404', '#6c757d', '#adb5bd']
                     
-                    if len(sinc_por_sre) >= 2:
-                        sre2 = sinc_por_sre.iloc[1]
-                        ranking_html += f"""
-                        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #f0f0f0; border-radius: 5px;">
-                            <div style="font-weight: bold; color: #1e3799;">🥈 2º: {sre2['SRE']}</div>
-                            <div style="font-size: 0.9rem; color: #495057;">{sre2['Sincronizados']} sinc.</div>
-                        </div>
-                        """
+                    # Mostrar até 5 SREs ou todos se menos de 5
+                    num_sres = min(len(sre_ranking), 5)
                     
-                    if len(sinc_por_sre) >= 3:
-                        sre3 = sinc_por_sre.iloc[2]
+                    for i in range(num_sres):
+                        sre = sre_ranking.iloc[i]
+                        medalha = medalhas[i] if i < len(medalhas) else f"{i+1}️⃣"
+                        
                         ranking_html += f"""
-                        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #f8f0e8; border-radius: 5px;">
-                            <div style="font-weight: bold; color: #1e3799;">🥉 3º: {sre3['SRE']}</div>
-                            <div style="font-size: 0.9rem; color: #495057;">{sre3['Sincronizados']} sinc.</div>
+                        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: {cores_bg[i]}; 
+                                    border-radius: 5px; border-left: 4px solid {cores_borda[i]};">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="font-weight: bold; color: #1e3799; font-size: 0.9rem;">{medalha} {sre['SRE']}</span>
+                                </div>
+                                <div>
+                                    <span style="background: white; padding: 0.2rem 0.5rem; border-radius: 10px; 
+                                                font-weight: bold; color: {cores_borda[i]}; font-size: 0.85rem;">
+                                        {sre['Sincronizados']} sinc
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         """
                     
                     ranking_html += "</div>"
+                    
+                    # Adicionar estatísticas
+                    if not sre_ranking.empty:
+                        total_sinc = sre_ranking['Sincronizados'].sum()
+                        media_sinc = sre_ranking['Sincronizados'].mean()
+                        
+                        ranking_html += f"""
+                        <div style="background: white; padding: 0.8rem; border-radius: 8px; border: 1px solid #dee2e6; margin-top: 1rem;">
+                            <div style="font-size: 0.85rem; color: #495057;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                                    <span>📊 Total Sincronizados:</span>
+                                    <span style="font-weight: bold;">{int(total_sinc)}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                                    <span>📈 Média por SRE:</span>
+                                    <span style="font-weight: bold;">{media_sinc:.1f}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>👥 SREs Ativos:</span>
+                                    <span style="font-weight: bold;">{len(sre_ranking)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        """
+                    
                     st.markdown(ranking_html, unsafe_allow_html=True)
                 
-                # REMOVIDO: Os st.metric() antigos que estavam embaixo do gráfico
-                
-                # Tabela completa - CORRIGIDA: removido background_gradient
+                # Tabela de Performance dos SREs - LIMITADA AO NÚMERO REAL DE SREs
                 st.markdown("### 📋 Performance Detalhada dos SREs")
                 
                 # Calcular métricas adicionais
                 sres_metrics = []
-                # Usar nomes formatados para a tabela também
                 sres_list = df_sre['SRE'].dropna().unique()
                 
                 for sre in sres_list:
@@ -1592,14 +1621,24 @@ if st.session_state.df_original is not None:
                             'Sincronizados': sincronizados,
                             'Taxa Sinc. (%)': round(taxa_sinc, 1),
                             'Cards Retorno': cards_retorno,
-                            'Taxa Retorno (%)': round(taxa_retorno, 1)
+                            'Taxa Retorno (%)': round(taxa_retorno, 1),
+                            'Performance': '✅ Excelente' if taxa_sinc > 90 and taxa_retorno < 10 else 
+                                          '🟡 Boa' if taxa_sinc > 70 else 
+                                          '🟠 Regular' if taxa_sinc > 50 else 
+                                          '🔴 Necessita Atenção'
                         })
                 
                 if sres_metrics:
                     df_sres_metrics = pd.DataFrame(sres_metrics)
                     df_sres_metrics = df_sres_metrics.sort_values('Sincronizados', ascending=False)
                     
-                    # Formatar a tabela sem background_gradient
+                    # Mostrar apenas os SREs existentes (sem limite fixo de 10)
+                    num_sres = len(df_sres_metrics)
+                    
+                    # Calcular altura dinâmica da tabela
+                    altura_tabela = max(150, num_sres * 50 + 50)  # 50px por linha + cabeçalho
+                    
+                    # Formatar a tabela
                     styled_df = df_sres_metrics.style.format({
                         'Total Cards': '{:,}',
                         'Sincronizados': '{:,}',
@@ -1611,16 +1650,32 @@ if st.session_state.df_original is not None:
                     st.dataframe(
                         styled_df,
                         use_container_width=True,
-                        height=400,
+                        height=altura_tabela,
                         column_config={
-                            "SRE": st.column_config.TextColumn("SRE", width="large"),
-                            "Total Cards": st.column_config.NumberColumn("Total Cards", width="small"),
-                            "Sincronizados": st.column_config.NumberColumn("Sincronizados", width="small"),
-                            "Taxa Sinc. (%)": st.column_config.NumberColumn("Taxa Sinc.", width="small", help="Porcentagem de cards sincronizados"),
-                            "Cards Retorno": st.column_config.NumberColumn("Cards Retorno", width="small"),
-                            "Taxa Retorno (%)": st.column_config.NumberColumn("Taxa Retorno", width="small", help="Porcentagem de cards que retornaram")
+                            "SRE": st.column_config.TextColumn("SRE", width="medium"),
+                            "Total Cards": st.column_config.NumberColumn("Total", width="small"),
+                            "Sincronizados": st.column_config.NumberColumn("Sinc.", width="small"),
+                            "Taxa Sinc. (%)": st.column_config.NumberColumn("Taxa Sinc.", width="small", help="% de cards sincronizados"),
+                            "Cards Retorno": st.column_config.NumberColumn("Retorno", width="small", help="Cards que retornaram"),
+                            "Taxa Retorno (%)": st.column_config.NumberColumn("Taxa Ret.", width="small", help="% de cards que retornaram"),
+                            "Performance": st.column_config.TextColumn("Performance", width="medium")
                         }
                     )
+                    
+                    # Adicionar estatísticas resumidas
+                    if num_sres > 0:
+                        col_sum1, col_sum2, col_sum3 = st.columns(3)
+                        
+                        with col_sum1:
+                            st.metric("👥 SREs Ativos", num_sres)
+                        
+                        with col_sum2:
+                            total_sinc = df_sres_metrics['Sincronizados'].sum()
+                            st.metric("✅ Total Sincronizado", f"{total_sinc:,}")
+                        
+                        with col_sum3:
+                            avg_sync_rate = df_sres_metrics['Taxa Sinc. (%)'].mean()
+                            st.metric("📈 Taxa Média Sinc.", f"{avg_sync_rate:.1f}%")
     
     # ============================================
     # ANÁLISES MELHORADAS (COM NOVAS FUNCIONALIDADES)
@@ -2428,34 +2483,40 @@ if st.session_state.df_original is not None:
                     marker=dict(size=8)
                 ))
                 
-                # Identificar picos
+                # Corrigir as anotações para mostrar a hora formatada corretamente
                 if not dados_hora.empty:
                     pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
                     pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
+                    
+                    # Formatar hora para 2 dígitos (00, 01, 02, ..., 23)
+                    hora_demanda_fmt = f"{int(pico_demanda['Hora']):02d}"
+                    hora_sinc_fmt = f"{int(pico_sinc['Hora']):02d}"
                     
                     # Adicionar anotações para picos
                     fig_horas.add_annotation(
                         x=pico_demanda['Hora'],
                         y=pico_demanda['Total_Demandas'],
-                        text=f"Pico Demandas: {int(pico_demanda['Total_Demandas'])}<br>{pico_demanda['Hora']}:00h",
+                        text=f"Pico Demandas: {int(pico_demanda['Total_Demandas'])}<br>{hora_demanda_fmt}:00h",
                         showarrow=True,
                         arrowhead=2,
                         ax=0,
                         ay=-40,
                         bgcolor="white",
-                        bordercolor="black"
+                        bordercolor="black",
+                        font=dict(size=10)
                     )
                     
                     fig_horas.add_annotation(
                         x=pico_sinc['Hora'],
                         y=pico_sinc['Sincronizados'],
-                        text=f"Pico Sinc: {int(pico_sinc['Sincronizados'])}<br>{pico_sinc['Hora']}:00h",
+                        text=f"Pico Sinc: {int(pico_sinc['Sincronizados'])}<br>{hora_sinc_fmt}:00h",
                         showarrow=True,
                         arrowhead=2,
                         ax=0,
                         ay=40,
                         bgcolor="white",
-                        bordercolor="green"
+                        bordercolor="green",
+                        font=dict(size=10)
                     )
                 
                 fig_horas.update_layout(
@@ -2463,31 +2524,40 @@ if st.session_state.df_original is not None:
                     xaxis_title='Hora do Dia',
                     yaxis_title='Quantidade',
                     height=400,
-                    showlegend=True
+                    showlegend=True,
+                    xaxis=dict(
+                        tickmode='array',
+                        tickvals=list(range(0, 24)),
+                        ticktext=[f"{h:02d}:00" for h in range(0, 24)],
+                        tickangle=45
+                    )
                 )
                 
                 st.plotly_chart(fig_horas, use_container_width=True)
                 
-                # Estatísticas de pico
+                # Estatísticas de pico com horas formatadas
                 if not dados_hora.empty:
                     col_hora_stats1, col_hora_stats2, col_hora_stats3 = st.columns(3)
                     
                     with col_hora_stats1:
                         hora_pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
+                        hora_fmt_demanda = f"{int(hora_pico_demanda['Hora']):02d}:00h"
                         st.metric("🕐 Pico de Demandas", 
-                                 f"{hora_pico_demanda['Hora']}:00h", 
+                                 hora_fmt_demanda, 
                                  f"{int(hora_pico_demanda['Total_Demandas'])} demandas")
                     
                     with col_hora_stats2:
                         hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
+                        hora_fmt_sinc = f"{int(hora_pico_sinc['Hora']):02d}:00h"
                         st.metric("✅ Pico de Sincronizações", 
-                                 f"{hora_pico_sinc['Hora']}:00h", 
+                                 hora_fmt_sinc, 
                                  f"{int(hora_pico_sinc['Sincronizados'])} sinc.")
                     
                     with col_hora_stats3:
                         melhor_taxa_hora = dados_hora.loc[dados_hora['Taxa_Sinc'].idxmax()]
+                        hora_fmt_taxa = f"{int(melhor_taxa_hora['Hora']):02d}:00h"
                         st.metric("🏆 Melhor Taxa Sinc.", 
-                                 f"{melhor_taxa_hora['Hora']}:00h", 
+                                 hora_fmt_taxa, 
                                  f"{melhor_taxa_hora['Taxa_Sinc']}%")
             
             # ============================================
@@ -2762,7 +2832,7 @@ if st.session_state.df_original is not None:
                     # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
-                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     # Top 5 tipos para análise
