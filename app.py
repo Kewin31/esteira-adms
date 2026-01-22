@@ -1059,7 +1059,7 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_dia, use_container_width=True)
     
-    with tab4:
+        with tab4:
         st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
         
         if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
@@ -1099,7 +1099,8 @@ if st.session_state.df_original is not None:
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
-                # Código do ranking foi completamente removido
+                # AQUI NÃO HÁ MAIS RANKING - CÓDIGO COMPLETAMENTE REMOVIDO
+                # AGORA VAMOS DIRETO PARA O GRÁFICO
                 
                 fig_sinc_bar = go.Figure()
                 
