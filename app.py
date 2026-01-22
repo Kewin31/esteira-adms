@@ -1524,24 +1524,22 @@ if st.session_state.df_original is not None:
                     sre_ranking = sre_ranking.sort_values('Sincronizados', ascending=False).reset_index(drop=True)
                     
                     # Container para ranking
-                    ranking_html = """
-                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 1rem;">
-                        <div style="text-align: center; font-weight: bold; color: #1e3799; margin-bottom: 0.5rem;">🏆 CLASSIFICAÇÃO</div>
-                    """
+                    st.markdown('<div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 1rem;">', unsafe_allow_html=True)
+                    st.markdown('<div style="text-align: center; font-weight: bold; color: #1e3799; margin-bottom: 0.5rem;">🏆 CLASSIFICAÇÃO</div>', unsafe_allow_html=True)
                     
                     # Medalhas e cores
                     medalhas = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']
                     cores_bg = ['#e8f4f8', '#f0f0f0', '#f8f0e8', '#f8f9fa', '#ffffff']
                     cores_borda = ['#1e3799', '#495057', '#856404', '#6c757d', '#adb5bd']
                     
-                    # Mostrar até 5 SREs ou todos se menos de 5
+                    # Mostrar até 5 SREs
                     num_sres = min(len(sre_ranking), 5)
                     
                     for i in range(num_sres):
                         sre = sre_ranking.iloc[i]
                         medalha = medalhas[i] if i < len(medalhas) else f"{i+1}️⃣"
                         
-                        ranking_html += f"""
+                        html_item = f"""
                         <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: {cores_bg[i]}; 
                                     border-radius: 5px; border-left: 4px solid {cores_borda[i]};">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1557,15 +1555,16 @@ if st.session_state.df_original is not None:
                             </div>
                         </div>
                         """
+                        st.markdown(html_item, unsafe_allow_html=True)
                     
-                    ranking_html += "</div>"
+                    st.markdown('</div>', unsafe_allow_html=True)
                     
                     # Adicionar estatísticas
                     if not sre_ranking.empty:
                         total_sinc = sre_ranking['Sincronizados'].sum()
                         media_sinc = sre_ranking['Sincronizados'].mean()
                         
-                        ranking_html += f"""
+                        stats_html = f"""
                         <div style="background: white; padding: 0.8rem; border-radius: 8px; border: 1px solid #dee2e6; margin-top: 1rem;">
                             <div style="font-size: 0.85rem; color: #495057;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
@@ -1583,8 +1582,7 @@ if st.session_state.df_original is not None:
                             </div>
                         </div>
                         """
-                    
-                    st.markdown(ranking_html, unsafe_allow_html=True)
+                        st.markdown(stats_html, unsafe_allow_html=True)
                 
                 # Tabela de Performance dos SREs - LIMITADA AO NÚMERO REAL DE SREs
                 st.markdown("### 📋 Performance Detalhada dos SREs")
@@ -2832,7 +2830,7 @@ if st.session_state.df_original is not None:
                     # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
-                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     # Top 5 tipos para análise
