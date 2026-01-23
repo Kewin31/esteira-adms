@@ -522,14 +522,23 @@ with st.sidebar:
                     df = df[df['Empresa'] == empresa_selecionada]
             
             if 'SRE' in df.columns:
-                sres = ['Todos'] + sorted(df['SRE'].dropna().unique())
+                # Primeiro aplicamos a substituição de nomes aos SREs
+                sres_originais = sorted(df['SRE'].dropna().unique())
+                sres_formatados = [substituir_nome_sre(sre) for sre in sres_originais]
+                
+                # Criamos um dicionário de mapeamento
+                sre_mapping = dict(zip(sres_originais, sres_formatados))
+                
+                sres = ['Todos'] + sorted(list(set(sres_formatados)))  # Remover duplicados
                 sre_selecionado = st.selectbox(
                     "🔧 SRE Responsável",
                     options=sres,
                     key="filtro_sre"
                 )
                 if sre_selecionado != 'Todos':
-                    df = df[df['SRE'] == sre_selecionado]
+                    # Encontrar os SREs originais que correspondem ao nome formatado selecionado
+                    sres_correspondentes = [sre_orig for sre_orig, sre_fmt in sre_mapping.items() if sre_fmt == sre_selecionado]
+                    df = df[df['SRE'].isin(sres_correspondentes)]
             
             st.session_state.df_filtrado = df
             st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
@@ -1106,36 +1115,33 @@ if st.session_state.df_original is not None:
             if 'Mês' in df_sre.columns and mes_sre != 'Todos':
                 df_sre = df_sre[df_sre['Mês'] == int(mes_sre)]
             
-            # Filtrar apenas chamados sincronizados para análise SRE
-            df_sincronizados = df_sre[df_sre['Status'] == 'Sincronizado'].copy()
+            # CRIAÇÃO DE UMA CÓPIA COM OS NOMES DOS SREs FORMATADOS
+            df_sre_display = df_sre.copy()
+            df_sre_display['SRE_Formatado'] = df_sre_display['SRE'].apply(substituir_nome_sre)
             
-            if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
+            # Filtrar apenas chamados sincronizados para análise SRE
+            df_sincronizados = df_sre_display[df_sre_display['Status'] == 'Sincronizado'].copy()
+            
+            if not df_sincronizados.empty and 'SRE_Formatado' in df_sincronizados.columns:
                 # ============================================
                 # 1. SINCRONIZADOS POR SRE (GRÁFICO DE BARRAS)
                 # ============================================
                 st.markdown("### 📈 Sincronizados por SRE")
                 
-                # Calcular sincronizados por SRE
-                sinc_por_sre = df_sincronizados.groupby('SRE').size().reset_index()
+                # Calcular sincronizados por SRE (usando nomes formatados)
+                sinc_por_sre = df_sincronizados.groupby('SRE_Formatado').size().reset_index()
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
-                # Aplicar a substituição de nomes no DataFrame
-                sinc_por_sre['SRE_Nome'] = sinc_por_sre['SRE'].apply(substituir_nome_sre)
-                
-                # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
-                sinc_por_sre_nome = sinc_por_sre.groupby('SRE_Nome')['Sincronizados'].sum().reset_index()
-                sinc_por_sre_nome = sinc_por_sre_nome.sort_values('Sincronizados', ascending=False)
-                
-                # Criar gráfico de barras com nomes corrigidos
+                # Criar gráfico de barras com nomes formatados
                 fig_sinc_bar = go.Figure()
                 
                 # Cores do maior para o menor (azul escuro para azul claro)
-                max_sinc = sinc_por_sre_nome['Sincronizados'].max()
-                min_sinc = sinc_por_sre_nome['Sincronizados'].min()
+                max_sinc = sinc_por_sre['Sincronizados'].max()
+                min_sinc = sinc_por_sre['Sincronizados'].min()
                 
                 colors = []
-                for valor in sinc_por_sre_nome['Sincronizados']:
+                for valor in sinc_por_sre['Sincronizados']:
                     if max_sinc == min_sinc:
                         colors.append('#1e3799')
                     else:
@@ -1146,10 +1152,10 @@ if st.session_state.df_original is not None:
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_sinc_bar.add_trace(go.Bar(
-                    x=sinc_por_sre_nome['SRE_Nome'].head(15),
-                    y=sinc_por_sre_nome['Sincronizados'].head(15),
+                    x=sinc_por_sre['SRE'].head(15),
+                    y=sinc_por_sre['Sincronizados'].head(15),
                     name='Sincronizados',
-                    text=sinc_por_sre_nome['Sincronizados'].head(15),
+                    text=sinc_por_sre['Sincronizados'].head(15),
                     textposition='outside',
                     marker_color=colors[:15],
                     marker_line_color='#0c2461',
@@ -1198,36 +1204,36 @@ if st.session_state.df_original is not None:
                 # Top 3 SREs - COM NOMES CORRETOS
                 col_top1, col_top2, col_top3 = st.columns(3)
                 
-                if len(sinc_por_sre_nome) >= 1:
+                if len(sinc_por_sre) >= 1:
                     with col_top1:
-                        sre1 = sinc_por_sre_nome.iloc[0]
+                        sre1 = sinc_por_sre.iloc[0]
                         st.metric("🥇 1º Lugar Sincronizados", 
-                                 f"{sre1['SRE_Nome']}", 
+                                 f"{sre1['SRE']}", 
                                  f"{sre1['Sincronizados']} sinc.")
                 
-                if len(sinc_por_sre_nome) >= 2:
+                if len(sinc_por_sre) >= 2:
                     with col_top2:
-                        sre2 = sinc_por_sre_nome.iloc[1]
+                        sre2 = sinc_por_sre.iloc[1]
                         st.metric("🥈 2º Lugar Sincronizados", 
-                                 f"{sre2['SRE_Nome']}", 
+                                 f"{sre2['SRE']}", 
                                  f"{sre2['Sincronizados']} sinc.")
                 
-                if len(sinc_por_sre_nome) >= 3:
+                if len(sinc_por_sre) >= 3:
                     with col_top3:
-                        sre3 = sinc_por_sre_nome.iloc[2]
+                        sre3 = sinc_por_sre.iloc[2]
                         st.metric("🥉 3º Lugar Sincronizados", 
-                                 f"{sre3['SRE_Nome']}", 
+                                 f"{sre3['SRE']}", 
                                  f"{sre3['Sincronizados']} sinc.")
                 
                 # Tabela completa
                 st.markdown("### 📋 Performance Detalhada dos SREs")
                 
-                # Calcular métricas adicionais
+                # Calcular métricas adicionais usando nomes formatados
                 sres_metrics = []
-                sres_list = df_sre['SRE'].dropna().unique()
+                sres_list = df_sre_display['SRE_Formatado'].dropna().unique()
                 
-                for sre in sres_list:
-                    df_sre_data = df_sre[df_sre['SRE'] == sre].copy()
+                for sre_nome in sres_list:
+                    df_sre_data = df_sre_display[df_sre_display['SRE_Formatado'] == sre_nome].copy()
                     
                     if len(df_sre_data) > 0:
                         total_cards = len(df_sre_data)
@@ -1239,11 +1245,8 @@ if st.session_state.df_original is not None:
                         else:
                             cards_retorno = 0
                         
-                        # Substituir e-mail pelo nome correto
-                        nome_sre_display = substituir_nome_sre(sre)
-                        
                         sres_metrics.append({
-                            'SRE': nome_sre_display,
+                            'SRE': sre_nome,
                             'Total_Cards': total_cards,
                             'Sincronizados': sincronizados,
                             'Cards_Retorno': cards_retorno
@@ -1251,6 +1254,7 @@ if st.session_state.df_original is not None:
                 
                 if sres_metrics:
                     df_sres_metrics = pd.DataFrame(sres_metrics)
+                    
                     # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
                     df_sres_metrics = df_sres_metrics.groupby('SRE').agg({
                         'Total_Cards': 'sum',
