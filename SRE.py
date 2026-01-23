@@ -1059,7 +1059,7 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_dia, use_container_width=True)
     
-        with tab4:
+    with tab4:
         st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
         
         if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
