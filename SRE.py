@@ -799,10 +799,21 @@ if st.session_state.df_original is not None:
                         key="ano_evolucao"
                     )
         
-        if 'Ano' in df.columns and 'Nome_Mês' in df.columns and anos_disponiveis:
+        if 'Ano' in df.columns and 'Criado' in df.columns and anos_disponiveis:
             df_ano = df[df['Ano'] == ano_selecionado].copy()
             
             if not df_ano.empty:
+                # Garantir que a coluna 'Mês_Num' exista
+                if 'Mês_Num' not in df_ano.columns and 'Criado' in df_ano.columns:
+                    df_ano['Mês_Num'] = df_ano['Criado'].dt.month
+                
+                if 'Nome_Mês' not in df_ano.columns and 'Criado' in df_ano.columns:
+                    df_ano['Nome_Mês'] = df_ano['Criado'].dt.month.map({
+                        1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                        5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                        9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+                    })
+                
                 ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
                                          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                 
