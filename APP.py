@@ -914,7 +914,7 @@ if st.session_state.df_original is not None:
                 revisoes_por_responsavel = df_com_revisoes.groupby('Responsável_Formatado').agg({
                     'Revisões': 'sum',
                     'Chamado': 'count'
-                }).reset_index()
+                }).resetindex()
                 
                 revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
                 revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
@@ -1016,7 +1016,7 @@ if st.session_state.df_original is not None:
             if not df_sincronizados.empty:
                 df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
                 
-                sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
+                sincronizados_por_dia = df_sincronizados.groupby('Data').size().resetindex()
                 sincronizados_por_dia.columns = ['Data', 'Quantidade']
                 sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
                 
@@ -1133,6 +1133,9 @@ if st.session_state.df_original is not None:
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
+                # FILTRAR "NÃO INFORMADO" DO GRÁFICO
+                sinc_por_sre = sinc_por_sre[sinc_por_sre['SRE'] != 'Não informado']
+                
                 # Criar gráfico de barras com nomes formatados
                 fig_sinc_bar = go.Figure()
                 
@@ -1233,6 +1236,10 @@ if st.session_state.df_original is not None:
                 sres_list = df_sre_display['SRE_Formatado'].dropna().unique()
                 
                 for sre_nome in sres_list:
+                    # Pular "Não informado" já aqui para evitar processamento desnecessário
+                    if sre_nome == "Não informado":
+                        continue
+                    
                     df_sre_data = df_sre_display[df_sre_display['SRE_Formatado'] == sre_nome].copy()
                     
                     if len(df_sre_data) > 0:
@@ -1251,7 +1258,7 @@ if st.session_state.df_original is not None:
                             'Sincronizados': sincronizados,
                             'Cards_Retorno': cards_retorno
                         })
-                
+
                 if sres_metrics:
                     df_sres_metrics = pd.DataFrame(sres_metrics)
                     
@@ -1261,6 +1268,9 @@ if st.session_state.df_original is not None:
                         'Sincronizados': 'sum',
                         'Cards_Retorno': 'sum'
                     }).reset_index()
+                    
+                    # FILTRO ADICIONAL PARA REMOVER QUALQUER "NÃO INFORMADO" RESIDUAL
+                    df_sres_metrics = df_sres_metrics[df_sres_metrics['SRE'] != 'Não informado']
                     
                     df_sres_metrics = df_sres_metrics.sort_values('Sincronizados', ascending=False)
                     
@@ -1274,6 +1284,8 @@ if st.session_state.df_original is not None:
                             "Cards_Retorno": st.column_config.NumberColumn("Cards Retorno", format="%d")
                         }
                     )
+                else:
+                    st.info("Nenhum SRE encontrado para análise.")
     
     # ============================================
     # ANÁLISES AVANÇADAS
