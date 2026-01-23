@@ -781,7 +781,7 @@ if st.session_state.df_original is not None:
         "🏆 Performance dos SREs"
     ])
     
-        with tab1:
+    with tab1:
         col_titulo, col_seletor = st.columns([3, 1])
         
         with col_titulo:
