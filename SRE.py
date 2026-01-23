@@ -781,136 +781,136 @@ if st.session_state.df_original is not None:
         "🏆 Performance dos SREs"
     ])
     
-    with tab1:
-    col_titulo, col_seletor = st.columns([3, 1])
-    
-    with col_titulo:
-        st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
-    
-    with col_seletor:
-        if 'Ano' in df.columns:
-            anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
-            if anos_disponiveis:
-                ano_selecionado = st.selectbox(
-                    "Selecionar Ano:",
-                    options=anos_disponiveis,
-                    index=len(anos_disponiveis)-1,
-                    label_visibility="collapsed",
-                    key="ano_evolucao"
-                )
-    
-    if 'Ano' in df.columns and 'Criado' in df.columns and anos_disponiveis:
-        df_ano = df[df['Ano'] == ano_selecionado].copy()
+        with tab1:
+        col_titulo, col_seletor = st.columns([3, 1])
         
-        if not df_ano.empty:
-            # Garantir que a coluna 'Mês_Num' exista - CORREÇÃO MELHORADA
-            if 'Criado' in df_ano.columns:
-                # Garantir que a coluna Criado seja datetime
-                if not pd.api.types.is_datetime64_any_dtype(df_ano['Criado']):
-                    df_ano['Criado'] = pd.to_datetime(df_ano['Criado'], errors='coerce')
-                
-                # Criar coluna Mês_Num se não existir
-                df_ano['Mês_Num'] = df_ano['Criado'].dt.month
-                
-                # Criar coluna Nome_Mês se não existir
-                df_ano['Nome_Mês'] = df_ano['Criado'].dt.month.map({
-                    1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
-                    5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
-                    9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
-                })
-            
-            # Remover linhas onde Mês_Num é NaN
-            df_ano = df_ano.dropna(subset=['Mês_Num'])
-            
-            ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
-                                     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-            
-            todos_meses = pd.DataFrame({
-                'Mês_Num': range(1, 13),
-                'Nome_Mês': ordem_meses_abreviados
-            })
-            
-            # Verificar se a coluna Mês_Num existe antes de agrupar
-            if 'Mês_Num' in df_ano.columns:
-                demandas_por_mes = df_ano.groupby('Mês_Num').size().resetindex()
-                demandas_por_mes.columns = ['Mês_Num', 'Quantidade']
-                
-                demandas_completas = pd.merge(todos_meses, demandas_por_mes, on='Mês_Num', how='left')
-                demandas_completas['Quantidade'] = demandas_completas['Quantidade'].fillna(0).astype(int)
-                
-                fig_mes = go.Figure()
-                
-                fig_mes.add_trace(go.Scatter(
-                    x=demandas_completas['Nome_Mês'],
-                    y=demandas_completas['Quantidade'],
-                    mode='lines+markers+text',
-                    name='Demandas',
-                    line=dict(color='#1e3799', width=3),
-                    marker=dict(size=10, color='#0c2461'),
-                    text=demandas_completas['Quantidade'],
-                    textposition='top center',
-                    textfont=dict(size=12, color='#1e3799')
-                ))
-                
-                total_ano = int(demandas_completas['Quantidade'].sum())
-                
-                fig_mes.update_layout(
-                    title=f"Demandas em {ano_selecionado}",
-                    xaxis_title="Mês",
-                    yaxis_title="Número de Demandas",
-                    plot_bgcolor='white',
-                    height=450,
-                    showlegend=False,
-                    margin=dict(t=50, b=50, l=50, r=50),
-                    xaxis=dict(
-                        gridcolor='rgba(0,0,0,0.05)',
-                        tickmode='array',
-                        tickvals=list(range(12)),
-                        ticktext=ordem_meses_abreviados
-                    ),
-                    yaxis=dict(
-                        gridcolor='rgba(0,0,0,0.05)',
-                        rangemode='tozero'
+        with col_titulo:
+            st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+        
+        with col_seletor:
+            if 'Ano' in df.columns:
+                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
+                if anos_disponiveis:
+                    ano_selecionado = st.selectbox(
+                        "Selecionar Ano:",
+                        options=anos_disponiveis,
+                        index=len(anos_disponiveis)-1,
+                        label_visibility="collapsed",
+                        key="ano_evolucao"
                     )
-                )
+        
+        if 'Ano' in df.columns and 'Criado' in df.columns and anos_disponiveis:
+            df_ano = df[df['Ano'] == ano_selecionado].copy()
+            
+            if not df_ano.empty:
+                # Garantir que a coluna 'Mês_Num' exista - CORREÇÃO MELHORADA
+                if 'Criado' in df_ano.columns:
+                    # Garantir que a coluna Criado seja datetime
+                    if not pd.api.types.is_datetime64_any_dtype(df_ano['Criado']):
+                        df_ano['Criado'] = pd.to_datetime(df_ano['Criado'], errors='coerce')
+                    
+                    # Criar coluna Mês_Num se não existir
+                    df_ano['Mês_Num'] = df_ano['Criado'].dt.month
+                    
+                    # Criar coluna Nome_Mês se não existir
+                    df_ano['Nome_Mês'] = df_ano['Criado'].dt.month.map({
+                        1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                        5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                        9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+                    })
                 
-                fig_mes.add_annotation(
-                    x=0.5, y=0.95,
-                    xref="paper", yref="paper",
-                    text=f"Total no ano: {total_ano:,} demandas",
-                    showarrow=False,
-                    font=dict(size=12, color="#1e3799", weight="bold"),
-                    bgcolor="rgba(255,255,255,0.9)",
-                    bordercolor="#1e3799",
-                    borderwidth=1,
-                    borderpad=4
-                )
+                # Remover linhas onde Mês_Num é NaN
+                df_ano = df_ano.dropna(subset=['Mês_Num'])
                 
-                st.plotly_chart(fig_mes, use_container_width=True)
+                ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                                         'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                 
-                col_stats1, col_stats2, col_stats3 = st.columns(3)
-                with col_stats1:
-                    if not demandas_completas.empty:
-                        mes_max = demandas_completas.loc[demandas_completas['Quantidade'].idxmax()]
-                        st.metric("📈 Mês com mais demandas", f"{mes_max['Nome_Mês']}: {int(mes_max['Quantidade']):,}")
-                    else:
-                        st.metric("📈 Mês com mais demandas", "Nenhum dado")
+                todos_meses = pd.DataFrame({
+                    'Mês_Num': range(1, 13),
+                    'Nome_Mês': ordem_meses_abreviados
+                })
                 
-                with col_stats2:
-                    if not demandas_completas.empty:
-                        mes_min = demandas_completas.loc[demandas_completas['Quantidade'].idxmin()]
-                        st.metric("📉 Mês com menos demandas", f"{mes_min['Nome_Mês']}: {int(mes_min['Quantidade']):,}")
-                    else:
-                        st.metric("📉 Mês com menos demandas", "Nenhum dado")
-                
-                with col_stats3:
-                    if not demandas_completas.empty:
-                        media_mensal = int(demandas_completas['Quantidade'].mean())
-                        st.metric("📊 Média mensal", f"{media_mensal:,}")
-                    else:
-                        st.metric("📊 Média mensal", "0")
-            else:
-                st.warning("⚠️ Não foi possível criar a análise por mês. Verifique se os dados têm informações de data.")
+                # Verificar se a coluna Mês_Num existe antes de agrupar
+                if 'Mês_Num' in df_ano.columns:
+                    demandas_por_mes = df_ano.groupby('Mês_Num').size().resetindex()
+                    demandas_por_mes.columns = ['Mês_Num', 'Quantidade']
+                    
+                    demandas_completas = pd.merge(todos_meses, demandas_por_mes, on='Mês_Num', how='left')
+                    demandas_completas['Quantidade'] = demandas_completas['Quantidade'].fillna(0).astype(int)
+                    
+                    fig_mes = go.Figure()
+                    
+                    fig_mes.add_trace(go.Scatter(
+                        x=demandas_completas['Nome_Mês'],
+                        y=demandas_completas['Quantidade'],
+                        mode='lines+markers+text',
+                        name='Demandas',
+                        line=dict(color='#1e3799', width=3),
+                        marker=dict(size=10, color='#0c2461'),
+                        text=demandas_completas['Quantidade'],
+                        textposition='top center',
+                        textfont=dict(size=12, color='#1e3799')
+                    ))
+                    
+                    total_ano = int(demandas_completas['Quantidade'].sum())
+                    
+                    fig_mes.update_layout(
+                        title=f"Demandas em {ano_selecionado}",
+                        xaxis_title="Mês",
+                        yaxis_title="Número de Demandas",
+                        plot_bgcolor='white',
+                        height=450,
+                        showlegend=False,
+                        margin=dict(t=50, b=50, l=50, r=50),
+                        xaxis=dict(
+                            gridcolor='rgba(0,0,0,0.05)',
+                            tickmode='array',
+                            tickvals=list(range(12)),
+                            ticktext=ordem_meses_abreviados
+                        ),
+                        yaxis=dict(
+                            gridcolor='rgba(0,0,0,0.05)',
+                            rangemode='tozero'
+                        )
+                    )
+                    
+                    fig_mes.add_annotation(
+                        x=0.5, y=0.95,
+                        xref="paper", yref="paper",
+                        text=f"Total no ano: {total_ano:,} demandas",
+                        showarrow=False,
+                        font=dict(size=12, color="#1e3799", weight="bold"),
+                        bgcolor="rgba(255,255,255,0.9)",
+                        bordercolor="#1e3799",
+                        borderwidth=1,
+                        borderpad=4
+                    )
+                    
+                    st.plotly_chart(fig_mes, use_container_width=True)
+                    
+                    col_stats1, col_stats2, col_stats3 = st.columns(3)
+                    with col_stats1:
+                        if not demandas_completas.empty:
+                            mes_max = demandas_completas.loc[demandas_completas['Quantidade'].idxmax()]
+                            st.metric("📈 Mês com mais demandas", f"{mes_max['Nome_Mês']}: {int(mes_max['Quantidade']):,}")
+                        else:
+                            st.metric("📈 Mês com mais demandas", "Nenhum dado")
+                    
+                    with col_stats2:
+                        if not demandas_completas.empty:
+                            mes_min = demandas_completas.loc[demandas_completas['Quantidade'].idxmin()]
+                            st.metric("📉 Mês com menos demandas", f"{mes_min['Nome_Mês']}: {int(mes_min['Quantidade']):,}")
+                        else:
+                            st.metric("📉 Mês com menos demandas", "Nenhum dado")
+                    
+                    with col_stats3:
+                        if not demandas_completas.empty:
+                            media_mensal = int(demandas_completas['Quantidade'].mean())
+                            st.metric("📊 Média mensal", f"{media_mensal:,}")
+                        else:
+                            st.metric("📊 Média mensal", "0")
+                else:
+                    st.warning("⚠️ Não foi possível criar a análise por mês. Verifique se os dados têm informações de data.")
     
     with tab2:
         st.markdown('<div class="section-title-exec">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
