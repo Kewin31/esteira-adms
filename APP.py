@@ -358,6 +358,24 @@ def get_horario_brasilia():
     except:
         return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
+def substituir_nome_sre(sre_nome):
+    """Substitui e-mails por nomes corretos dos SREs"""
+    if pd.isna(sre_nome):
+        return "Não informado"
+    
+    sre_nome_str = str(sre_nome).lower()
+    
+    if "kewin" in sre_nome_str or "ferreira" in sre_nome_str:
+        return "Kewin Marcel"
+    elif "pierry" in sre_nome_str or "perez" in sre_nome_str:
+        return "Pierry Perez"
+    elif "bruna" in sre_nome_str or "maciel" in sre_nome_str:
+        return "Bruna Maciel"
+    elif "ramiza" in sre_nome_str or "irineu" in sre_nome_str:
+        return "Ramiza Irineu"
+    else:
+        return str(sre_nome).title()
+
 @st.cache_data
 def criar_matriz_performance_dev(df):
     """Cria matriz de performance (Eficiência vs Qualidade) para Desenvolvedores"""
@@ -1088,37 +1106,31 @@ if st.session_state.df_original is not None:
             if 'Mês' in df_sre.columns and mes_sre != 'Todos':
                 df_sre = df_sre[df_sre['Mês'] == int(mes_sre)]
             
-            def substituir_nome_sre(sre_nome):
-                if pd.isna(sre_nome):
-                    return "Não informado"
-                
-                sre_nome_str = str(sre_nome).lower()
-                
-                if "pierry" in sre_nome_str or "perez" in sre_nome_str:
-                    return "Pierry Perez"
-                elif "bruna" in sre_nome_str or "maciel" in sre_nome_str:
-                    return "Bruna Maciel"
-                elif "ramiza" in sre_nome_str or "irineu" in sre_nome_str:
-                    return "Ramiza Irineu"
-                else:
-                    return sre_nome
-            
+            # Filtrar apenas chamados sincronizados para análise SRE
             df_sincronizados = df_sre[df_sre['Status'] == 'Sincronizado'].copy()
             
             if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
+                # ============================================
+                # 1. SINCRONIZADOS POR SRE (GRÁFICO DE BARRAS)
+                # ============================================
                 st.markdown("### 📈 Sincronizados por SRE")
                 
+                # Calcular sincronizados por SRE
                 sinc_por_sre = df_sincronizados.groupby('SRE').size().reset_index()
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
+                # Aplicar a substituição de nomes no DataFrame
                 sinc_por_sre['SRE_Nome'] = sinc_por_sre['SRE'].apply(substituir_nome_sre)
                 
+                # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
                 sinc_por_sre_nome = sinc_por_sre.groupby('SRE_Nome')['Sincronizados'].sum().reset_index()
                 sinc_por_sre_nome = sinc_por_sre_nome.sort_values('Sincronizados', ascending=False)
                 
+                # Criar gráfico de barras com nomes corrigidos
                 fig_sinc_bar = go.Figure()
                 
+                # Cores do maior para o menor (azul escuro para azul claro)
                 max_sinc = sinc_por_sre_nome['Sincronizados'].max()
                 min_sinc = sinc_por_sre_nome['Sincronizados'].min()
                 
@@ -1145,6 +1157,7 @@ if st.session_state.df_original is not None:
                     opacity=0.8
                 ))
                 
+                # Criar título dinâmico
                 titulo_grafico = 'Sincronizados por SRE'
                 if ano_sre != 'Todos' or mes_sre != 'Todos':
                     titulo_grafico += ' - Filtrado'
@@ -1182,31 +1195,34 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
+                # Top 3 SREs - COM NOMES CORRETOS
+                col_top1, col_top2, col_top3 = st.columns(3)
+                
                 if len(sinc_por_sre_nome) >= 1:
-                    col_top1, col_top2, col_top3 = st.columns(3)
-                    
                     with col_top1:
                         sre1 = sinc_por_sre_nome.iloc[0]
                         st.metric("🥇 1º Lugar Sincronizados", 
                                  f"{sre1['SRE_Nome']}", 
                                  f"{sre1['Sincronizados']} sinc.")
-                    
-                    if len(sinc_por_sre_nome) >= 2:
-                        with col_top2:
-                            sre2 = sinc_por_sre_nome.iloc[1]
-                            st.metric("🥈 2º Lugar Sincronizados", 
-                                     f"{sre2['SRE_Nome']}", 
-                                     f"{sre2['Sincronizados']} sinc.")
-                    
-                    if len(sinc_por_sre_nome) >= 3:
-                        with col_top3:
-                            sre3 = sinc_por_sre_nome.iloc[2]
-                            st.metric("🥉 3º Lugar Sincronizados", 
-                                     f"{sre3['SRE_Nome']}", 
-                                     f"{sre3['Sincronizados']} sinc.")
                 
+                if len(sinc_por_sre_nome) >= 2:
+                    with col_top2:
+                        sre2 = sinc_por_sre_nome.iloc[1]
+                        st.metric("🥈 2º Lugar Sincronizados", 
+                                 f"{sre2['SRE_Nome']}", 
+                                 f"{sre2['Sincronizados']} sinc.")
+                
+                if len(sinc_por_sre_nome) >= 3:
+                    with col_top3:
+                        sre3 = sinc_por_sre_nome.iloc[2]
+                        st.metric("🥉 3º Lugar Sincronizados", 
+                                 f"{sre3['SRE_Nome']}", 
+                                 f"{sre3['Sincronizados']} sinc.")
+                
+                # Tabela completa
                 st.markdown("### 📋 Performance Detalhada dos SREs")
                 
+                # Calcular métricas adicionais
                 sres_metrics = []
                 sres_list = df_sre['SRE'].dropna().unique()
                 
@@ -1217,11 +1233,13 @@ if st.session_state.df_original is not None:
                         total_cards = len(df_sre_data)
                         sincronizados = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
                         
+                        # Cards que retornaram (revisões > 0)
                         if 'Revisões' in df_sre_data.columns:
                             cards_retorno = len(df_sre_data[df_sre_data['Revisões'] > 0])
                         else:
                             cards_retorno = 0
                         
+                        # Substituir e-mail pelo nome correto
                         nome_sre_display = substituir_nome_sre(sre)
                         
                         sres_metrics.append({
@@ -1233,6 +1251,7 @@ if st.session_state.df_original is not None:
                 
                 if sres_metrics:
                     df_sres_metrics = pd.DataFrame(sres_metrics)
+                    # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
                     df_sres_metrics = df_sres_metrics.groupby('SRE').agg({
                         'Total_Cards': 'sum',
                         'Sincronizados': 'sum',
@@ -1597,6 +1616,7 @@ if st.session_state.df_original is not None:
                     
                     st.plotly_chart(fig_other, use_container_width=True)
                 
+                # Tabela completa
                 st.markdown("### 📋 Performance Detalhada")
                 st.dataframe(
                     df_dev_metrics,
