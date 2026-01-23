@@ -1178,9 +1178,43 @@ if st.session_state.df_original is not None:
     with tab2:
         st.markdown('<div class="section-title-exec">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
         
-        if 'Revisões' in df.columns and 'Responsável_Formatado' in df.columns:
+        # FILTROS PARA ANÁLISE DE REVISÕES
+        col_rev_filtro1, col_rev_filtro2 = st.columns(2)
+        
+        with col_rev_filtro1:
+            # Filtrar por ano
+            if 'Ano' in df.columns:
+                anos_rev = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_rev = ['Todos os Anos'] + list(anos_rev)
+                ano_rev = st.selectbox(
+                    "📅 Filtrar por Ano:",
+                    options=anos_opcoes_rev,
+                    key="filtro_ano_revisoes"
+                )
+        
+        with col_rev_filtro2:
+            # Filtrar por mês
+            if 'Mês' in df.columns:
+                meses_rev = sorted(df['Mês'].dropna().unique().astype(int))
+                meses_opcoes_rev = ['Todos os Meses'] + [str(m) for m in meses_rev]
+                mes_rev = st.selectbox(
+                    "📆 Filtrar por Mês:",
+                    options=meses_opcoes_rev,
+                    key="filtro_mes_revisoes"
+                )
+        
+        # Aplicar filtros
+        df_rev = df.copy()
+        
+        if ano_rev != 'Todos os Anos':
+            df_rev = df_rev[df_rev['Ano'] == int(ano_rev)]
+        
+        if mes_rev != 'Todos os Meses':
+            df_rev = df_rev[df_rev['Mês'] == int(mes_rev)]
+        
+        if 'Revisões' in df_rev.columns and 'Responsável_Formatado' in df_rev.columns:
             # Filtrar apenas responsáveis com revisões
-            df_com_revisoes = df[df['Revisões'] > 0].copy()
+            df_com_revisoes = df_rev[df_rev['Revisões'] > 0].copy()
             
             if not df_com_revisoes.empty:
                 # Agrupar por responsável
@@ -1191,6 +1225,18 @@ if st.session_state.df_original is not None:
                 
                 revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
                 revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
+                
+                # Criar título dinâmico
+                titulo_rev = 'Top 15 Responsáveis com Mais Revisões'
+                if ano_rev != 'Todos os Anos':
+                    titulo_rev += f' - {ano_rev}'
+                if mes_rev != 'Todos os Meses':
+                    meses_nomes = {
+                        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                        5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                        9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+                    }
+                    titulo_rev += f' - {meses_nomes[int(mes_rev)]}'
                 
                 # Criar gráfico de barras com cores vermelho (maior) para verde (menor)
                 fig_revisoes = go.Figure()
@@ -1227,7 +1273,7 @@ if st.session_state.df_original is not None:
                 ))
                 
                 fig_revisoes.update_layout(
-                    title='Top 15 Responsáveis com Mais Revisões',
+                    title=titulo_rev,
                     xaxis_title='Responsável',
                     yaxis_title='Total de Revisões',
                     plot_bgcolor='white',
@@ -1248,9 +1294,43 @@ if st.session_state.df_original is not None:
     with tab3:
         st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
         
-        if 'Status' in df.columns and 'Criado' in df.columns:
+        # FILTROS PARA SINCRONIZAÇÃO POR DIA
+        col_sinc_filtro1, col_sinc_filtro2 = st.columns(2)
+        
+        with col_sinc_filtro1:
+            # Filtrar por ano
+            if 'Ano' in df.columns:
+                anos_sinc = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_sinc = ['Todos os Anos'] + list(anos_sinc)
+                ano_sinc = st.selectbox(
+                    "📅 Filtrar por Ano:",
+                    options=anos_opcoes_sinc,
+                    key="filtro_ano_sinc"
+                )
+        
+        with col_sinc_filtro2:
+            # Filtrar por mês
+            if 'Mês' in df.columns:
+                meses_sinc = sorted(df['Mês'].dropna().unique().astype(int))
+                meses_opcoes_sinc = ['Todos os Meses'] + [str(m) for m in meses_sinc]
+                mes_sinc = st.selectbox(
+                    "📆 Filtrar por Mês:",
+                    options=meses_opcoes_sinc,
+                    key="filtro_mes_sinc"
+                )
+        
+        # Aplicar filtros
+        df_sinc = df.copy()
+        
+        if ano_sinc != 'Todos os Anos':
+            df_sinc = df_sinc[df_sinc['Ano'] == int(ano_sinc)]
+        
+        if mes_sinc != 'Todos os Meses':
+            df_sinc = df_sinc[df_sinc['Mês'] == int(mes_sinc)]
+        
+        if 'Status' in df_sinc.columns and 'Criado' in df_sinc.columns:
             # Filtrar apenas chamados sincronizados
-            df_sincronizados = df[df['Status'] == 'Sincronizado'].copy()
+            df_sincronizados = df_sinc[df_sinc['Status'] == 'Sincronizado'].copy()
             
             if not df_sincronizados.empty:
                 # Extrair data sem hora
@@ -1262,6 +1342,18 @@ if st.session_state.df_original is not None:
                 
                 # Ordenar por data
                 sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
+                
+                # Criar título dinâmico
+                titulo_sinc = 'Evolução Diária de Chamados Sincronizados'
+                if ano_sinc != 'Todos os Anos':
+                    titulo_sinc += f' - {ano_sinc}'
+                if mes_sinc != 'Todos os Meses':
+                    meses_nomes = {
+                        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                        5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                        9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+                    }
+                    titulo_sinc += f' - {meses_nomes[int(mes_sinc)]}'
                 
                 # Criar gráfico de linha com área
                 fig_dia = go.Figure()
@@ -1289,7 +1381,7 @@ if st.session_state.df_original is not None:
                 ))
                 
                 fig_dia.update_layout(
-                    title='Evolução Diária de Chamados Sincronizados',
+                    title=titulo_sinc,
                     xaxis_title='Data',
                     yaxis_title='Número de Chamados Sincronizados',
                     plot_bgcolor='white',
@@ -1419,28 +1511,61 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
-                # Top 3 SREs
+                # Top 3 SREs - COM NOMES CORRETOS
                 col_top1, col_top2, col_top3 = st.columns(3)
                 
                 if len(sinc_por_sre) >= 1:
                     with col_top1:
                         sre1 = sinc_por_sre.iloc[0]
+                        # Substituir e-mail pelo nome correto
+                        nome_sre1 = sre1['SRE']
+                        if "kewin" in nome_sre1.lower() or "ferreira" in nome_sre1.lower():
+                            nome_sre1 = "Kewin Marcel"
+                        elif "pierry" in nome_sre1.lower() or "perez" in nome_sre1.lower():
+                            nome_sre1 = "Pierry Perez"
+                        elif "bruna" in nome_sre1.lower() or "maciel" in nome_sre1.lower():
+                            nome_sre1 = "Bruna Maciel"
+                        elif "ramiza" in nome_sre1.lower() or "irineu" in nome_sre1.lower():
+                            nome_sre1 = "Ramiza Irineu"
+                        
                         st.metric("🥇 1º Lugar Sincronizados", 
-                                 f"{sre1['SRE']}", 
+                                 f"{nome_sre1}", 
                                  f"{sre1['Sincronizados']} sinc.")
                 
                 if len(sinc_por_sre) >= 2:
                     with col_top2:
                         sre2 = sinc_por_sre.iloc[1]
+                        # Substituir e-mail pelo nome correto
+                        nome_sre2 = sre2['SRE']
+                        if "kewin" in nome_sre2.lower() or "ferreira" in nome_sre2.lower():
+                            nome_sre2 = "Kewin Marcel"
+                        elif "pierry" in nome_sre2.lower() or "perez" in nome_sre2.lower():
+                            nome_sre2 = "Pierry Perez"
+                        elif "bruna" in nome_sre2.lower() or "maciel" in nome_sre2.lower():
+                            nome_sre2 = "Bruna Maciel"
+                        elif "ramiza" in nome_sre2.lower() or "irineu" in nome_sre2.lower():
+                            nome_sre2 = "Ramiza Irineu"
+                        
                         st.metric("🥈 2º Lugar Sincronizados", 
-                                 f"{sre2['SRE']}", 
+                                 f"{nome_sre2}", 
                                  f"{sre2['Sincronizados']} sinc.")
                 
                 if len(sinc_por_sre) >= 3:
                     with col_top3:
                         sre3 = sinc_por_sre.iloc[2]
+                        # Substituir e-mail pelo nome correto
+                        nome_sre3 = sre3['SRE']
+                        if "kewin" in nome_sre3.lower() or "ferreira" in nome_sre3.lower():
+                            nome_sre3 = "Kewin Marcel"
+                        elif "pierry" in nome_sre3.lower() or "perez" in nome_sre3.lower():
+                            nome_sre3 = "Pierry Perez"
+                        elif "bruna" in nome_sre3.lower() or "maciel" in nome_sre3.lower():
+                            nome_sre3 = "Bruna Maciel"
+                        elif "ramiza" in nome_sre3.lower() or "irineu" in nome_sre3.lower():
+                            nome_sre3 = "Ramiza Irineu"
+                        
                         st.metric("🥉 3º Lugar Sincronizados", 
-                                 f"{sre3['SRE']}", 
+                                 f"{nome_sre3}", 
                                  f"{sre3['Sincronizados']} sinc.")
                 
                 # Tabela completa
@@ -1463,8 +1588,19 @@ if st.session_state.df_original is not None:
                         else:
                             cards_retorno = 0
                         
+                        # Substituir e-mail pelo nome correto
+                        nome_sre_display = sre
+                        if "kewin" in nome_sre_display.lower() or "ferreira" in nome_sre_display.lower():
+                            nome_sre_display = "Kewin Marcel"
+                        elif "pierry" in nome_sre_display.lower() or "perez" in nome_sre_display.lower():
+                            nome_sre_display = "Pierry Perez"
+                        elif "bruna" in nome_sre_display.lower() or "maciel" in nome_sre_display.lower():
+                            nome_sre_display = "Bruna Maciel"
+                        elif "ramiza" in nome_sre_display.lower() or "irineu" in nome_sre_display.lower():
+                            nome_sre_display = "Ramiza Irineu"
+                        
                         sres_metrics.append({
-                            'SRE': sre,
+                            'SRE': nome_sre_display,
                             'Total_Cards': total_cards,
                             'Sincronizados': sincronizados,
                             'Cards_Retorno': cards_retorno
@@ -1503,24 +1639,30 @@ if st.session_state.df_original is not None:
         # APAGADO: Container expansível "SOBRE ESTA ANÁLISE"
         
         if 'Responsável_Formatado' in df.columns and 'Revisões' in df.columns and 'Status' in df.columns:
-            # Filtros para performance
+            # Filtros para performance - REMOVIDO "MÍNIMO DE CHAMADOS"
             col_filtro_perf1, col_filtro_perf2, col_filtro_perf3 = st.columns(3)
             
             with col_filtro_perf1:
-                min_chamados = st.slider(
-                    "Mínimo de chamados:",
-                    min_value=1,
-                    max_value=50,
-                    value=5,
-                    help="Filtrar desenvolvedores com pelo menos X chamados"
-                )
+                # Filtrar por ano
+                if 'Ano' in df.columns:
+                    anos_perf = sorted(df['Ano'].dropna().unique().astype(int))
+                    anos_opcoes_perf = ['Todos os Anos'] + list(anos_perf)
+                    ano_perf = st.selectbox(
+                        "📅 Filtrar por Ano:",
+                        options=anos_opcoes_perf,
+                        key="filtro_ano_perf"
+                    )
             
             with col_filtro_perf2:
-                periodo_perf = st.selectbox(
-                    "Período de análise:",
-                    options=["Últimos 30 dias", "Últimos 90 dias", "Todo o período", "Personalizado"],
-                    index=2
-                )
+                # Filtrar por mês
+                if 'Mês' in df.columns:
+                    meses_perf = sorted(df['Mês'].dropna().unique().astype(int))
+                    meses_opcoes_perf = ['Todos os Meses'] + [str(m) for m in meses_perf]
+                    mes_perf = st.selectbox(
+                        "📆 Filtrar por Mês:",
+                        options=meses_opcoes_perf,
+                        key="filtro_mes_perf"
+                    )
             
             with col_filtro_perf3:
                 ordenar_por = st.selectbox(
@@ -1531,12 +1673,12 @@ if st.session_state.df_original is not None:
             
             # Filtrar dados conforme período selecionado
             df_perf = df.copy()
-            if periodo_perf == "Últimos 30 dias" and 'Criado' in df_perf.columns:
-                data_limite = datetime.now() - timedelta(days=30)
-                df_perf = df_perf[df_perf['Criado'] >= data_limite]
-            elif periodo_perf == "Últimos 90 dias" and 'Criado' in df_perf.columns:
-                data_limite = datetime.now() - timedelta(days=90)
-                df_perf = df_perf[df_perf['Criado'] >= data_limite]
+            
+            if ano_perf != 'Todos os Anos':
+                df_perf = df_perf[df_perf['Ano'] == int(ano_perf)]
+            
+            if mes_perf != 'Todos os Meses':
+                df_perf = df_perf[df_perf['Mês'] == int(mes_perf)]
             
             # Calcular métricas por desenvolvedor
             dev_metrics = []
@@ -1546,7 +1688,7 @@ if st.session_state.df_original is not None:
                 dev_data = df_perf[df_perf['Responsável_Formatado'] == dev]
                 total_chamados = len(dev_data)
                 
-                if total_chamados >= min_chamados:
+                if total_chamados > 0:  # REMOVIDO O FILTRO DE MÍNIMO DE CHAMADOS
                     # Chamados sem revisão
                     sem_revisao = len(dev_data[dev_data['Revisões'] == 0])
                     score_qualidade = (sem_revisao / total_chamados * 100) if total_chamados > 0 else 0
@@ -1621,12 +1763,12 @@ if st.session_state.df_original is not None:
                     - **🔄 Necessita Apoio**: Baixa eficiência + Baixa qualidade
                     """)
                 
-                # Criar matriz de performance
+                # Criar matriz de performance com filtros
                 matriz_df = criar_matriz_performance_dev(df_perf)
                 
                 if not matriz_df.empty:
-                    # Filtrar desenvolvedores com mínimo de cards
-                    matriz_filtrada = matriz_df[matriz_df['Total_Cards'] >= min_chamados].copy()
+                    # REMOVIDO O FILTRO DE MÍNIMO DE CARDS
+                    matriz_filtrada = matriz_df.copy()
                     
                     if not matriz_filtrada.empty:
                         # Calcular médias para quadrantes
@@ -2201,11 +2343,15 @@ if st.session_state.df_original is not None:
                     pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
                     pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
                     
+                    # ADJUSTED: Formatar hora corretamente
+                    hora_pico_demanda = f"{int(pico_demanda['Hora'])}:00h"
+                    hora_pico_sinc = f"{int(pico_sinc['Hora'])}:00h"
+                    
                     # Adicionar anotações para picos
                     fig_horas.add_annotation(
                         x=pico_demanda['Hora'],
                         y=pico_demanda['Total_Demandas'],
-                        text=f"Pico Demandas: {int(pico_demanda['Total_Demandas'])}<br>{pico_demanda['Hora']}:00h",
+                        text=f"Pico Demandas: {int(pico_demanda['Total_Demandas'])}<br>{hora_pico_demanda}",
                         showarrow=True,
                         arrowhead=2,
                         ax=0,
@@ -2217,7 +2363,7 @@ if st.session_state.df_original is not None:
                     fig_horas.add_annotation(
                         x=pico_sinc['Hora'],
                         y=pico_sinc['Sincronizados'],
-                        text=f"Pico Sinc: {int(pico_sinc['Sincronizados'])}<br>{pico_sinc['Hora']}:00h",
+                        text=f"Pico Sinc: {int(pico_sinc['Sincronizados'])}<br>{hora_pico_sinc}",
                         showarrow=True,
                         arrowhead=2,
                         ax=0,
@@ -2236,26 +2382,32 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_horas, use_container_width=True)
                 
-                # Estatísticas de pico
+                # Estatísticas de pico - ADJUSTED: Formatar hora corretamente
                 if not dados_hora.empty:
                     col_hora_stats1, col_hora_stats2, col_hora_stats3 = st.columns(3)
                     
                     with col_hora_stats1:
                         hora_pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
+                        # ADJUSTED: Formatar hora corretamente
+                        hora_formatada = f"{int(hora_pico_demanda['Hora'])}:00h"
                         st.metric("🕐 Pico de Demandas", 
-                                 f"{hora_pico_demanda['Hora']}:00h", 
+                                 hora_formatada, 
                                  f"{int(hora_pico_demanda['Total_Demandas'])} demandas")
                     
                     with col_hora_stats2:
                         hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
+                        # ADJUSTED: Formatar hora corretamente
+                        hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
                         st.metric("✅ Pico de Sincronizações", 
-                                 f"{hora_pico_sinc['Hora']}:00h", 
+                                 hora_sinc_formatada, 
                                  f"{int(hora_pico_sinc['Sincronizados'])} sinc.")
                     
                     with col_hora_stats3:
                         melhor_taxa_hora = dados_hora.loc[dados_hora['Taxa_Sinc'].idxmax()]
+                        # ADJUSTED: Formatar hora corretamente
+                        hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
                         st.metric("🏆 Melhor Taxa Sinc.", 
-                                 f"{melhor_taxa_hora['Hora']}:00h", 
+                                 hora_taxa_formatada, 
                                  f"{melhor_taxa_hora['Taxa_Sinc']}%")
             
             # ============================================
@@ -2530,7 +2682,7 @@ if st.session_state.df_original is not None:
                     # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
-                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     # Top 5 tipos para análise
