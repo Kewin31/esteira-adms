@@ -1337,7 +1337,7 @@ if st.session_state.df_original is not None:
                 df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
                 
                 # Agrupar por data
-                sincronizados_por_dia = df_sincronizados.groupby('Data').size().resetindex()
+                sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
                 sincronizados_por_dia.columns = ['Data', 'Quantidade']
                 
                 # Ordenar por data
