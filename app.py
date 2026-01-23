@@ -146,38 +146,6 @@ st.markdown("""
         margin-bottom: 1rem;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     }
-    
-    .matrix-quadrant {
-        padding: 10px;
-        border-radius: 8px;
-        margin: 5px;
-        font-weight: bold;
-        text-align: center;
-    }
-    
-    .quadrant-stars {
-        background-color: #d4edda;
-        color: #155724;
-        border: 2px solid #28a745;
-    }
-    
-    .quadrant-efficient {
-        background-color: #fff3cd;
-        color: #856404;
-        border: 2px solid #ffc107;
-    }
-    
-    .quadrant-careful {
-        background-color: #cce5ff;
-        color: #004085;
-        border: 2px solid #007bff;
-    }
-    
-    .quadrant-needs-help {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 2px solid #dc3545;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -771,7 +739,7 @@ if st.session_state.df_original is not None:
             total_revisoes = int(df['Revisões'].sum())
             st.markdown(criar_card_indicador_simples(total_revisoes, "Total de Revisões", "📝"), unsafe_allow_html=True)
     
-    # ABAS PRINCIPAIS - REMOVIDA A ABA "🏆 Performance dos SREs"
+    # ABAS PRINCIPAIS
     st.markdown("---")
     
     tab1, tab2, tab3 = st.tabs([
@@ -1095,18 +1063,6 @@ if st.session_state.df_original is not None:
             if mes_perf != 'Todos os Meses':
                 df_perf = df_perf[df_perf['Mês'] == int(mes_perf)]
             
-            sres_excluir = ['Bruna', 'Pierry', 'Kewin']
-            devs_permitidos = []
-            
-            for dev in df_perf['Responsável_Formatado'].unique():
-                if pd.isna(dev):
-                    continue
-                dev_str = str(dev).lower()
-                if all(sre.lower() not in dev_str for sre in sres_excluir):
-                    devs_permitidos.append(dev)
-            
-            df_perf = df_perf[df_perf['Responsável_Formatado'].isin(devs_permitidos)]
-            
             dev_metrics = []
             devs = df_perf['Responsável_Formatado'].unique()
             
@@ -1174,12 +1130,6 @@ if st.session_state.df_original is not None:
                     
                     3. **Score** = (Qualidade × 0.5) + (Eficiência × 5 × 0.3) + ((Total_Cards / Total_Geral) × 100 × 0.2)
                     - Score composto que balanceia qualidade, eficiência e volume
-                    
-                    **Classificação por Quadrantes:**
-                    - **⭐ Estrelas**: Alta eficiência + Alta qualidade
-                    - **⚡ Eficientes**: Alta eficiência + Qualidade média/baixa
-                    - **🎯 Cuidadosos**: Baixa eficiência + Alta qualidade
-                    - **🔄 Necessita Apoio**: Baixa eficiência + Baixa qualidade
                     """)
                 
                 if len(df_dev_metrics) > 0:
