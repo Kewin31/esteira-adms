@@ -1337,7 +1337,7 @@ if st.session_state.df_original is not None:
                 df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
                 
                 # Agrupar por data
-                sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
+                sincronizados_por_dia = df_sincronizados.groupby('Data').size().resetindex()
                 sincronizados_por_dia.columns = ['Data', 'Quantidade']
                 
                 # Ordenar por data
@@ -1445,6 +1445,25 @@ if st.session_state.df_original is not None:
             if 'Mês' in df_sre.columns and mes_sre != 'Todos':
                 df_sre = df_sre[df_sre['Mês'] == int(mes_sre)]
             
+            # Função para substituir e-mail pelo nome correto
+            def substituir_nome_sre(sre_nome):
+                if pd.isna(sre_nome):
+                    return "Não informado"
+                
+                sre_nome_str = str(sre_nome).lower()
+                
+                if "kewin" in sre_nome_str or "ferreira" in sre_nome_str:
+                    return "Kewin Marcel"
+                elif "pierry" in sre_nome_str or "perez" in sre_nome_str:
+                    return "Pierry Perez"
+                elif "bruna" in sre_nome_str or "maciel" in sre_nome_str:
+                    return "Bruna Maciel"
+                elif "ramiza" in sre_nome_str or "irineu" in sre_nome_str:
+                    return "Ramiza Irineu"
+                else:
+                    # Se não for nenhum dos nomes conhecidos, retornar o nome original
+                    return sre_nome
+            
             # Filtrar apenas chamados sincronizados para análise SRE
             df_sincronizados = df_sre[df_sre['Status'] == 'Sincronizado'].copy()
             
@@ -1459,15 +1478,22 @@ if st.session_state.df_original is not None:
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
-                # Criar gráfico de barras
+                # Aplicar a substituição de nomes no DataFrame
+                sinc_por_sre['SRE_Nome'] = sinc_por_sre['SRE'].apply(substituir_nome_sre)
+                
+                # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
+                sinc_por_sre_nome = sinc_por_sre.groupby('SRE_Nome')['Sincronizados'].sum().reset_index()
+                sinc_por_sre_nome = sinc_por_sre_nome.sort_values('Sincronizados', ascending=False)
+                
+                # Criar gráfico de barras com nomes corrigidos
                 fig_sinc_bar = go.Figure()
                 
                 # Cores do maior para o menor (azul escuro para azul claro)
-                max_sinc = sinc_por_sre['Sincronizados'].max()
-                min_sinc = sinc_por_sre['Sincronizados'].min()
+                max_sinc = sinc_por_sre_nome['Sincronizados'].max()
+                min_sinc = sinc_por_sre_nome['Sincronizados'].min()
                 
                 colors = []
-                for valor in sinc_por_sre['Sincronizados']:
+                for valor in sinc_por_sre_nome['Sincronizados']:
                     if max_sinc == min_sinc:
                         colors.append('#1e3799')  # Azul escuro se todos forem iguais
                     else:
@@ -1479,10 +1505,10 @@ if st.session_state.df_original is not None:
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_sinc_bar.add_trace(go.Bar(
-                    x=sinc_por_sre['SRE'].head(15),
-                    y=sinc_por_sre['Sincronizados'].head(15),
+                    x=sinc_por_sre_nome['SRE_Nome'].head(15),
+                    y=sinc_por_sre_nome['Sincronizados'].head(15),
                     name='Sincronizados',
-                    text=sinc_por_sre['Sincronizados'].head(15),
+                    text=sinc_por_sre_nome['Sincronizados'].head(15),
                     textposition='outside',
                     marker_color=colors[:15],
                     marker_line_color='#0c2461',
@@ -1490,8 +1516,25 @@ if st.session_state.df_original is not None:
                     opacity=0.8
                 ))
                 
+                # Criar título dinâmico
+                titulo_grafico = 'Sincronizados por SRE'
+                if ano_sre != 'Todos' or mes_sre != 'Todos':
+                    titulo_grafico += ' - Filtrado'
+                    if ano_sre != 'Todos':
+                        titulo_grafico += f' ({ano_sre}'
+                    if mes_sre != 'Todos':
+                        meses_nomes = {
+                            1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                            5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                            9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+                        }
+                        if ano_sre != 'Todos':
+                            titulo_grafico += f' - {meses_nomes[int(mes_sre)]})'
+                        else:
+                            titulo_grafico += f' ({meses_nomes[int(mes_sre)]})'
+                
                 fig_sinc_bar.update_layout(
-                    title=f'Sincronizados por SRE',
+                    title=titulo_grafico,
                     xaxis_title='SRE',
                     yaxis_title='Número de Sincronizados',
                     plot_bgcolor='white',
@@ -1514,58 +1557,25 @@ if st.session_state.df_original is not None:
                 # Top 3 SREs - COM NOMES CORRETOS
                 col_top1, col_top2, col_top3 = st.columns(3)
                 
-                if len(sinc_por_sre) >= 1:
+                if len(sinc_por_sre_nome) >= 1:
                     with col_top1:
-                        sre1 = sinc_por_sre.iloc[0]
-                        # Substituir e-mail pelo nome correto
-                        nome_sre1 = sre1['SRE']
-                        if "kewin" in nome_sre1.lower() or "ferreira" in nome_sre1.lower():
-                            nome_sre1 = "Kewin Marcel"
-                        elif "pierry" in nome_sre1.lower() or "perez" in nome_sre1.lower():
-                            nome_sre1 = "Pierry Perez"
-                        elif "bruna" in nome_sre1.lower() or "maciel" in nome_sre1.lower():
-                            nome_sre1 = "Bruna Maciel"
-                        elif "ramiza" in nome_sre1.lower() or "irineu" in nome_sre1.lower():
-                            nome_sre1 = "Ramiza Irineu"
-                        
+                        sre1 = sinc_por_sre_nome.iloc[0]
                         st.metric("🥇 1º Lugar Sincronizados", 
-                                 f"{nome_sre1}", 
+                                 f"{sre1['SRE_Nome']}", 
                                  f"{sre1['Sincronizados']} sinc.")
                 
-                if len(sinc_por_sre) >= 2:
+                if len(sinc_por_sre_nome) >= 2:
                     with col_top2:
-                        sre2 = sinc_por_sre.iloc[1]
-                        # Substituir e-mail pelo nome correto
-                        nome_sre2 = sre2['SRE']
-                        if "kewin" in nome_sre2.lower() or "ferreira" in nome_sre2.lower():
-                            nome_sre2 = "Kewin Marcel"
-                        elif "pierry" in nome_sre2.lower() or "perez" in nome_sre2.lower():
-                            nome_sre2 = "Pierry Perez"
-                        elif "bruna" in nome_sre2.lower() or "maciel" in nome_sre2.lower():
-                            nome_sre2 = "Bruna Maciel"
-                        elif "ramiza" in nome_sre2.lower() or "irineu" in nome_sre2.lower():
-                            nome_sre2 = "Ramiza Irineu"
-                        
+                        sre2 = sinc_por_sre_nome.iloc[1]
                         st.metric("🥈 2º Lugar Sincronizados", 
-                                 f"{nome_sre2}", 
+                                 f"{sre2['SRE_Nome']}", 
                                  f"{sre2['Sincronizados']} sinc.")
                 
-                if len(sinc_por_sre) >= 3:
+                if len(sinc_por_sre_nome) >= 3:
                     with col_top3:
-                        sre3 = sinc_por_sre.iloc[2]
-                        # Substituir e-mail pelo nome correto
-                        nome_sre3 = sre3['SRE']
-                        if "kewin" in nome_sre3.lower() or "ferreira" in nome_sre3.lower():
-                            nome_sre3 = "Kewin Marcel"
-                        elif "pierry" in nome_sre3.lower() or "perez" in nome_sre3.lower():
-                            nome_sre3 = "Pierry Perez"
-                        elif "bruna" in nome_sre3.lower() or "maciel" in nome_sre3.lower():
-                            nome_sre3 = "Bruna Maciel"
-                        elif "ramiza" in nome_sre3.lower() or "irineu" in nome_sre3.lower():
-                            nome_sre3 = "Ramiza Irineu"
-                        
+                        sre3 = sinc_por_sre_nome.iloc[2]
                         st.metric("🥉 3º Lugar Sincronizados", 
-                                 f"{nome_sre3}", 
+                                 f"{sre3['SRE_Nome']}", 
                                  f"{sre3['Sincronizados']} sinc.")
                 
                 # Tabela completa
@@ -1589,15 +1599,7 @@ if st.session_state.df_original is not None:
                             cards_retorno = 0
                         
                         # Substituir e-mail pelo nome correto
-                        nome_sre_display = sre
-                        if "kewin" in nome_sre_display.lower() or "ferreira" in nome_sre_display.lower():
-                            nome_sre_display = "Kewin Marcel"
-                        elif "pierry" in nome_sre_display.lower() or "perez" in nome_sre_display.lower():
-                            nome_sre_display = "Pierry Perez"
-                        elif "bruna" in nome_sre_display.lower() or "maciel" in nome_sre_display.lower():
-                            nome_sre_display = "Bruna Maciel"
-                        elif "ramiza" in nome_sre_display.lower() or "irineu" in nome_sre_display.lower():
-                            nome_sre_display = "Ramiza Irineu"
+                        nome_sre_display = substituir_nome_sre(sre)
                         
                         sres_metrics.append({
                             'SRE': nome_sre_display,
@@ -1608,6 +1610,13 @@ if st.session_state.df_original is not None:
                 
                 if sres_metrics:
                     df_sres_metrics = pd.DataFrame(sres_metrics)
+                    # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
+                    df_sres_metrics = df_sres_metrics.groupby('SRE').agg({
+                        'Total_Cards': 'sum',
+                        'Sincronizados': 'sum',
+                        'Cards_Retorno': 'sum'
+                    }).reset_index()
+                    
                     df_sres_metrics = df_sres_metrics.sort_values('Sincronizados', ascending=False)
                     
                     st.dataframe(
@@ -2682,7 +2691,7 @@ if st.session_state.df_original is not None:
                     # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
-                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     # Top 5 tipos para análise
