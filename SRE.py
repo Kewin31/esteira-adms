@@ -115,7 +115,7 @@ st.markdown("""
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         border: 1px solid #dee2e6;
     }
     
@@ -145,7 +145,7 @@ st.markdown("""
         border-radius: 8px;
         border-left: 4px solid #1e3799;
         margin-bottom: 0.5rem;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
     
     .sre-rank {
@@ -172,7 +172,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #28a745;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     
     .warning-card {
@@ -181,7 +181,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #dc3545;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     
     .info-card {
@@ -190,7 +190,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #17a2b8;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     
     .trend-up {
@@ -215,13 +215,13 @@ st.markdown("""
         border-radius: 10px;
         border: 1px solid #dee2e6;
         margin-bottom: 1rem;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.08);
         transition: all 0.3s ease;
     }
     
     .sre-comparison-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
     
     .sre-performance-badge {
@@ -264,7 +264,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #1e3799;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     
     .matrix-quadrant {
@@ -1645,7 +1645,41 @@ if st.session_state.df_original is not None:
     
     # ABA 1: PERFORMANCE DE DESENVOLVEDORES - MELHORADA E DINÂMICA
     with tab_extra1:
-        # APAGADO: Container expansível "SOBRE ESTA ANÁLISE"
+        # Container expansível "SOBRE ESTA ANÁLISE" - MANTIDO (sem alteração de estrutura)
+        with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
+            st.markdown("""
+            **Análise Avançada de Performance de Desenvolvedores:**
+            
+            Esta análise fornece uma visão detalhada da performance de cada desenvolvedor,
+            considerando múltiplas dimensões:
+            
+            **📊 Métricas Principais:**
+            - **Score de Qualidade**: Percentual de cards aprovados sem revisão
+            - **Eficiência**: Taxa de sincronização dos cards enviados
+            - **Produtividade**: Número de cards entregues por período
+            - **Total de Chamados**: Volume total de trabalho
+            
+            **🎯 Matriz de Performance:**
+            - **⭐ Estrelas**: Alta eficiência + Alta qualidade
+            - **⚡ Eficientes**: Alta eficiência + Qualidade média/baixa
+            - **🎯 Cuidadosos**: Baixa eficiência + Alta qualidade
+            - **🔄 Necessita Apoio**: Baixa eficiência + Baixa qualidade
+            
+            **🔍 Filtros Disponíveis:**
+            - Filtro por ano e mês
+            - Ordenação por diferentes métricas
+            - Nenhum filtro mínimo de cards (todos os desenvolvedores são incluídos)
+            - Recomendações personalizadas para cada desenvolvedor
+            
+            **💡 Recomendações Personalizadas:**
+            - Baseadas no perfil de performance de cada desenvolvedor
+            - Focadas em áreas específicas de melhoria
+            - Com planos de ação sugeridos
+            
+            **🎯 Objetivo:**
+            Identificar pontos fortes e oportunidades de melhoria para cada desenvolvedor,
+            promovendo desenvolvimento contínuo e aumento da qualidade geral do time.
+            """)
         
         if 'Responsável_Formatado' in df.columns and 'Revisões' in df.columns and 'Status' in df.columns:
             # Filtros para performance - REMOVIDO "MÍNIMO DE CHAMADOS"
@@ -2691,7 +2725,7 @@ if st.session_state.df_original is not None:
                     # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
-                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     # Top 5 tipos para análise
