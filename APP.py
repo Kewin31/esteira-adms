@@ -151,27 +151,6 @@ st.markdown("""
         color: #721c24;
         border: 2px solid #dc3545;
     }
-    
-    .calc-info {
-        background-color: #f8f9fa;
-        border-left: 4px solid #1e3799;
-        padding: 1rem;
-        margin-top: 1rem;
-        border-radius: 0 8px 8px 0;
-        font-size: 0.85rem;
-    }
-    
-    .calc-info h4 {
-        color: #1e3799;
-        margin-top: 0;
-        margin-bottom: 0.5rem;
-        font-size: 0.95rem;
-    }
-    
-    .calc-info ul {
-        margin-bottom: 0;
-        padding-left: 1.2rem;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -185,7 +164,6 @@ def formatar_nome_responsavel(nome):
     
     nome_str = str(nome).strip()
     
-    # Se for email, extrair nome
     if '@' in nome_str:
         partes = nome_str.split('@')[0]
         for separador in ['.', '_', '-']:
@@ -210,63 +188,6 @@ def formatar_nome_responsavel(nome):
         return nome_formatado
     
     return nome_str.title()
-
-def formatar_nome_sre(nome):
-    """Formata nomes dos SREs, especialmente emails"""
-    if pd.isna(nome):
-        return "Não informado"
-    
-    nome_str = str(nome).strip()
-    
-    # Casos específicos conhecidos
-    if "kewin" in nome_str.lower() or "ferreira" in nome_str.lower() or "@" in nome_str:
-        return "Kewin Ferreira"
-    
-    # Se for email, extrair nome
-    if '@' in nome_str:
-        partes = nome_str.split('@')[0]
-        for separador in ['.', '_', '-']:
-            if separador in partes:
-                partes = partes.replace(separador, ' ')
-        
-        palavras = [p.capitalize() for p in partes.split() if not p.isdigit()]
-        nome_formatado = ' '.join(palavras)
-        
-        correcoes = {
-            ' Da ': ' da ',
-            ' De ': ' de ',
-            ' Do ': ' do ',
-            ' Das ': ' das ',
-            ' Dos ': ' dos ',
-            ' E ': ' e ',
-        }
-        
-        for errado, correto in correcoes.items():
-            nome_formatado = nome_formatado.replace(errado, correto)
-        
-        return nome_formatado
-    
-    return nome_str.title()
-
-def substituir_nome_sre(sre_nome):
-    """Substitui emails por nomes formatados para SREs"""
-    if pd.isna(sre_nome):
-        return "Não informado"
-    
-    sre_nome_str = str(sre_nome).strip().lower()
-    
-    # Primeiro verificar por emails ou padrões conhecidos
-    if "@" in sre_nome_str or "kewin" in sre_nome_str:
-        return "Kewin Ferreira"
-    elif "pierry" in sre_nome_str or "perez" in sre_nome_str:
-        return "Pierry Perez"
-    elif "bruna" in sre_nome_str or "maciel" in sre_nome_str:
-        return "Bruna Maciel"
-    elif "ramiza" in sre_nome_str or "irineu" in sre_nome_str:
-        return "Ramiza Irineu"
-    else:
-        # Formatar nome normalmente
-        return formatar_nome_sre(sre_nome)
 
 def filtrar_kewin_dos_dados(df):
     """Remove Kewin dos dados de análise de desenvolvedores"""
@@ -354,10 +275,6 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         
         if 'Responsável' in df.columns:
             df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
-        
-        # Aplicar formatação para coluna SRE também
-        if 'SRE' in df.columns:
-            df['SRE_Formatado'] = df['SRE'].apply(formatar_nome_sre)
         
         date_columns = ['Criado', 'Modificado']
         for col in date_columns:
@@ -587,14 +504,14 @@ with st.sidebar:
                     df = df[df['Empresa'] == empresa_selecionada]
             
             if 'SRE' in df.columns:
-                sres = ['Todos'] + sorted(df['SRE_Formatado'].dropna().unique()) if 'SRE_Formatado' in df.columns else ['Todos']
+                sres = ['Todos'] + sorted(df['SRE'].dropna().unique())
                 sre_selecionado = st.selectbox(
                     "🔧 SRE Responsável",
                     options=sres,
                     key="filtro_sre"
                 )
                 if sre_selecionado != 'Todos':
-                    df = df[df['SRE_Formatado'] == sre_selecionado]
+                    df = df[df['SRE'] == sre_selecionado]
             
             st.session_state.df_filtrado = df
             st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
@@ -1034,7 +951,7 @@ if st.session_state.df_original is not None:
                 st.plotly_chart(fig_revisoes, use_container_width=True)
     
     with tab3:
-        st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title_exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
         
         col_sinc_filtro1, col_sinc_filtro2 = st.columns(2)
         
@@ -1171,30 +1088,42 @@ if st.session_state.df_original is not None:
             if 'Mês' in df_sre.columns and mes_sre != 'Todos':
                 df_sre = df_sre[df_sre['Mês'] == int(mes_sre)]
             
+            def substituir_nome_sre(sre_nome):
+                if pd.isna(sre_nome):
+                    return "Não informado"
+                
+                sre_nome_str = str(sre_nome).lower()
+                
+                if "pierry" in sre_nome_str or "perez" in sre_nome_str:
+                    return "Pierry Perez"
+                elif "bruna" in sre_nome_str or "maciel" in sre_nome_str:
+                    return "Bruna Maciel"
+                elif "ramiza" in sre_nome_str or "irineu" in sre_nome_str:
+                    return "Ramiza Irineu"
+                else:
+                    return sre_nome
+            
             df_sincronizados = df_sre[df_sre['Status'] == 'Sincronizado'].copy()
             
             if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
                 st.markdown("### 📈 Sincronizados por SRE")
                 
-                # Usar a coluna formatada SRE_Formatado se existir
-                if 'SRE_Formatado' in df_sincronizados.columns:
-                    sinc_por_sre = df_sincronizados.groupby('SRE_Formatado').size().reset_index()
-                    sinc_por_sre.columns = ['SRE', 'Sincronizados']
-                else:
-                    # Se não existir coluna formatada, aplicar formatação no momento
-                    df_sincronizados['SRE_Formatado'] = df_sincronizados['SRE'].apply(substituir_nome_sre)
-                    sinc_por_sre = df_sincronizados.groupby('SRE_Formatado').size().reset_index()
-                    sinc_por_sre.columns = ['SRE', 'Sincronizados']
-                
+                sinc_por_sre = df_sincronizados.groupby('SRE').size().reset_index()
+                sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
+                
+                sinc_por_sre['SRE_Nome'] = sinc_por_sre['SRE'].apply(substituir_nome_sre)
+                
+                sinc_por_sre_nome = sinc_por_sre.groupby('SRE_Nome')['Sincronizados'].sum().reset_index()
+                sinc_por_sre_nome = sinc_por_sre_nome.sort_values('Sincronizados', ascending=False)
                 
                 fig_sinc_bar = go.Figure()
                 
-                max_sinc = sinc_por_sre['Sincronizados'].max()
-                min_sinc = sinc_por_sre['Sincronizados'].min()
+                max_sinc = sinc_por_sre_nome['Sincronizados'].max()
+                min_sinc = sinc_por_sre_nome['Sincronizados'].min()
                 
                 colors = []
-                for valor in sinc_por_sre['Sincronizados']:
+                for valor in sinc_por_sre_nome['Sincronizados']:
                     if max_sinc == min_sinc:
                         colors.append('#1e3799')
                     else:
@@ -1205,10 +1134,10 @@ if st.session_state.df_original is not None:
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_sinc_bar.add_trace(go.Bar(
-                    x=sinc_por_sre['SRE'].head(15),
-                    y=sinc_por_sre['Sincronizados'].head(15),
+                    x=sinc_por_sre_nome['SRE_Nome'].head(15),
+                    y=sinc_por_sre_nome['Sincronizados'].head(15),
                     name='Sincronizados',
-                    text=sinc_por_sre['Sincronizados'].head(15),
+                    text=sinc_por_sre_nome['Sincronizados'].head(15),
                     textposition='outside',
                     marker_color=colors[:15],
                     marker_line_color='#0c2461',
@@ -1253,44 +1182,36 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
-                if len(sinc_por_sre) >= 1:
+                if len(sinc_por_sre_nome) >= 1:
                     col_top1, col_top2, col_top3 = st.columns(3)
                     
                     with col_top1:
-                        sre1 = sinc_por_sre.iloc[0]
+                        sre1 = sinc_por_sre_nome.iloc[0]
                         st.metric("🥇 1º Lugar Sincronizados", 
-                                 f"{sre1['SRE']}", 
+                                 f"{sre1['SRE_Nome']}", 
                                  f"{sre1['Sincronizados']} sinc.")
                     
-                    if len(sinc_por_sre) >= 2:
+                    if len(sinc_por_sre_nome) >= 2:
                         with col_top2:
-                            sre2 = sinc_por_sre.iloc[1]
+                            sre2 = sinc_por_sre_nome.iloc[1]
                             st.metric("🥈 2º Lugar Sincronizados", 
-                                     f"{sre2['SRE']}", 
+                                     f"{sre2['SRE_Nome']}", 
                                      f"{sre2['Sincronizados']} sinc.")
                     
-                    if len(sinc_por_sre) >= 3:
+                    if len(sinc_por_sre_nome) >= 3:
                         with col_top3:
-                            sre3 = sinc_por_sre.iloc[2]
+                            sre3 = sinc_por_sre_nome.iloc[2]
                             st.metric("🥉 3º Lugar Sincronizados", 
-                                     f"{sre3['SRE']}", 
+                                     f"{sre3['SRE_Nome']}", 
                                      f"{sre3['Sincronizados']} sinc.")
                 
                 st.markdown("### 📋 Performance Detalhada dos SREs")
                 
                 sres_metrics = []
-                # Usar SRE_Formatado se existir
-                if 'SRE_Formatado' in df_sre.columns:
-                    sres_list = df_sre['SRE_Formatado'].dropna().unique()
-                    sre_column = 'SRE_Formatado'
-                else:
-                    # Aplicar formatação se necessário
-                    df_sre['SRE_Formatado'] = df_sre['SRE'].apply(substituir_nome_sre)
-                    sres_list = df_sre['SRE_Formatado'].dropna().unique()
-                    sre_column = 'SRE_Formatado'
+                sres_list = df_sre['SRE'].dropna().unique()
                 
                 for sre in sres_list:
-                    df_sre_data = df_sre[df_sre[sre_column] == sre].copy()
+                    df_sre_data = df_sre[df_sre['SRE'] == sre].copy()
                     
                     if len(df_sre_data) > 0:
                         total_cards = len(df_sre_data)
@@ -1301,8 +1222,10 @@ if st.session_state.df_original is not None:
                         else:
                             cards_retorno = 0
                         
+                        nome_sre_display = substituir_nome_sre(sre)
+                        
                         sres_metrics.append({
-                            'SRE': sre,
+                            'SRE': nome_sre_display,
                             'Total_Cards': total_cards,
                             'Sincronizados': sincronizados,
                             'Cards_Retorno': cards_retorno
@@ -1335,9 +1258,10 @@ if st.session_state.df_original is not None:
     st.markdown("---")
     st.markdown('<div class="section-title-exec">🔍 ANÁLISES AVANÇADAS</div>', unsafe_allow_html=True)
     
-    tab_extra1, tab_extra2 = st.tabs([
+    tab_extra1, tab_extra2, tab_extra3 = st.tabs([
         "🚀 Performance de Desenvolvedores",
-        "📈 Análise de Sazonalidade"
+        "📈 Análise de Sazonalidade", 
+        "⚡ Diagnóstico de Erros"
     ])
     
     with tab_extra1:
@@ -1689,43 +1613,6 @@ if st.session_state.df_original is not None:
                         "Classificação": st.column_config.TextColumn("Classif.")
                     }
                 )
-                
-                # SECÇÃO DE CÁLCULOS
-                with st.expander("📝 **Detalhes dos Cálculos - Performance de Desenvolvedores**"):
-                    st.markdown("""
-                    <div class="calc-info">
-                    <h4>🔢 Fórmulas e Métricas Utilizadas:</h4>
-                    
-                    <ul>
-                    <li><strong>Score de Qualidade:</strong> (Chamados sem revisão / Total de chamados) × 100</li>
-                    <li><strong>Eficiência:</strong> (Chamados sincronizados / Total de chamados) × 100</li>
-                    <li><strong>Produtividade:</strong> Total de chamados / Número de meses ativos</li>
-                    <li><strong>Classificação:</strong>
-                        <ul>
-                        <li>🟢 Alto: Score Qualidade ≥ 80% E Produtividade ≥ 5 chamados/mês</li>
-                        <li>🟡 Médio: Score Qualidade ≥ 60%</li>
-                        <li>🔴 Baixo: Score Qualidade < 60%</li>
-                        </ul>
-                    </li>
-                    </ul>
-                    
-                    <h4>🎯 Matriz de Performance:</h4>
-                    <ul>
-                    <li><strong>Eficiência:</strong> Total de cards / Meses ativos</li>
-                    <li><strong>Qualidade:</strong> % de cards sem revisão</li>
-                    <li><strong>Quadrantes:</strong>
-                        <ul>
-                        <li>⭐ Estrelas: Acima da média em ambos</li>
-                        <li>⚡ Eficientes: Acima da média em eficiência, abaixo em qualidade</li>
-                        <li>🎯 Cuidadosos: Abaixo da média em eficiência, acima em qualidade</li>
-                        <li>🔄 Necessita Apoio: Abaixo da média em ambos</li>
-                        </ul>
-                    </li>
-                    </ul>
-                    
-                    <p><strong>Nota:</strong> Kewin Ferreira é removido das análises de desenvolvedores para evitar viés.</p>
-                    </div>
-                    """, unsafe_allow_html=True)
     
     with tab_extra2:
         if 'Criado' in df.columns and 'Status' in df.columns:
@@ -1978,33 +1865,47 @@ if st.session_state.df_original is not None:
                         st.metric("🏆 Melhor Taxa Sinc.", 
                                  hora_taxa_formatada, 
                                  f"{melhor_taxa_hora['Taxa_Sinc']}%")
+    
+    with tab_extra3:
+        if 'Tipo_Chamado' in df.columns:
+            col_diag1, col_diag2, col_diag3 = st.columns(3)
             
-            # SECÇÃO DE CÁLCULOS
-            with st.expander("📝 **Detalhes dos Cálculos - Análise de Sazonalidade**"):
-                st.markdown("""
-                <div class="calc-info">
-                <h4>📊 Métricas de Sazonalidade:</h4>
-                
-                <ul>
-                <li><strong>Demandas por Dia da Semana:</strong> Contagem total de chamados criados em cada dia</li>
-                <li><strong>Sincronizados por Dia da Semana:</strong> Contagem de chamados com status 'Sincronizado' por dia</li>
-                <li><strong>Taxa de Sincronização por Dia:</strong> (Sincronizados / Demandas Totais) × 100</li>
-                <li><strong>Demandas por Hora:</strong> Distribuição de chamados criados por hora do dia (0-23h)</li>
-                <li><strong>Pico de Demandas:</strong> Hora com maior número de chamados criados</li>
-                <li><strong>Pico de Sincronizações:</strong> Hora com maior número de sincronizações</li>
-                </ul>
-                
-                <h4>📈 Análises Realizadas:</h4>
-                <ul>
-                <li><strong>Padrões Semanais:</strong> Identificação de dias com maior/menor volume</li>
-                <li><strong>Eficiência por Dia:</strong> Relação entre volume e taxa de sucesso</li>
-                <li><strong>Distribuição Horária:</strong> Padrões de criação ao longo do dia</li>
-                <li><strong>Correlação Temporal:</strong> Relação entre hora de criação e sucesso</li>
-                </ul>
-                
-                <p><strong>Objetivo:</strong> Identificar padrões temporais para otimizar alocação de recursos e planejamento.</p>
-                </div>
-                """, unsafe_allow_html=True)
+            with col_diag1:
+                anos_diag = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_diag = ['Todos os Anos'] + list(anos_diag)
+                ano_diag = st.selectbox(
+                    "Selecionar Ano:",
+                    options=anos_opcoes_diag,
+                    index=len(anos_opcoes_diag)-1,
+                    key="ano_diag"
+                )
+            
+            with col_diag2:
+                if ano_diag != 'Todos os Anos':
+                    meses_diag = df[df['Ano'] == int(ano_diag)]['Mês'].unique()
+                    meses_opcoes_diag = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_diag])
+                    mes_diag = st.selectbox(
+                        "Selecionar Mês:",
+                        options=meses_opcoes_diag,
+                        key="mes_diag"
+                    )
+                else:
+                    mes_diag = 'Todos os Meses'
+            
+            with col_diag3:
+                tipo_analise_diag = st.selectbox(
+                    "Foco da Análise:",
+                    options=["Tipos de Erro", "Tendências Temporais", "Impacto nos SREs", "Recomendações"],
+                    index=0
+                )
+            
+            df_diag = df.copy()
+            
+            if ano_diag != 'Todos os Anos':
+                df_diag = df_diag[df_diag['Ano'] == int(ano_diag)]
+            
+            if mes_diag != 'Todos os Meses':
+                df_diag = df_diag[df_diag['Mês'] == int(mes_diag)]
     
     # ============================================
     # TOP 10 RESPONSÁVEIS
