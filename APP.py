@@ -605,69 +605,6 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     
     return dados_mes
 
-def gerar_recomendacoes_dev(df, dev_nome):
-    """Gera recomendações personalizadas para um Desenvolvedor"""
-    # Calcular métricas do Desenvolvedor
-    df_dev = df[df['Responsável_Formatado'] == dev_nome].copy()
-    
-    if len(df_dev) == 0:
-        return []
-    
-    total_cards = len(df_dev)
-    
-    # Calcular métricas de qualidade
-    if 'Revisões' in df_dev.columns:
-        cards_sem_revisao = len(df_dev[df_dev['Revisões'] == 0])
-        qualidade = (cards_sem_revisao / total_cards * 100) if total_cards > 0 else 0
-    else:
-        qualidade = 100
-    
-    # Calcular eficiência
-    if 'Criado' in df_dev.columns:
-        meses_ativos = df_dev['Criado'].dt.to_period('M').nunique()
-        eficiencia = total_cards / max(meses_ativos, 1)
-    else:
-        eficiencia = total_cards
-    
-    # Gerar recomendações baseadas nas métricas
-    recomendacoes = []
-    
-    if qualidade < 70:
-        recomendacoes.append({
-            'prioridade': 'ALTA',
-            'titulo': 'Melhorar qualidade do código',
-            'descricao': f'Taxa de aprovação sem revisão: {qualidade:.1f}% (abaixo de 70%)',
-            'acao': 'Implementar testes mais rigorosos antes do envio'
-        })
-    
-    if eficiencia < 3:
-        recomendacoes.append({
-            'prioridade': 'MÉDIA',
-            'titulo': 'Aumentar produtividade',
-            'descricao': f'Eficiência atual: {eficiencia:.1f} cards/mês',
-            'acao': 'Otimizar processo de desenvolvimento'
-        })
-    
-    if 'Status' in df_dev.columns:
-        cards_sincronizados = len(df_dev[df_dev['Status'] == 'Sincronizado'])
-        if cards_sincronizados < total_cards * 0.6:
-            recomendacoes.append({
-                'prioridade': 'ALTA',
-                'titulo': 'Melhorar taxa de sincronização',
-                'descricao': f'Apenas {cards_sincronizados}/{total_cards} cards sincronizados',
-                'acao': 'Revisar critérios antes do envio para SRE'
-            })
-    
-    if qualidade > 90 and eficiencia > 8:
-        recomendacoes.append({
-            'prioridade': 'BAIXA',
-            'titulo': 'Manter excelente performance',
-            'descricao': 'Excelente equilíbrio entre qualidade e eficiência',
-            'acao': 'Compartilhar melhores práticas com a equipe'
-        })
-    
-    return recomendacoes
-
 # ============================================
 # SIDEBAR - FILTROS E CONTROLES (REORGANIZADO)
 # ============================================
@@ -1482,136 +1419,99 @@ if st.session_state.df_original is not None:
                     )
                 
                 # ============================================
-                # 3. HEATMAP SEMANAL (ALTERADO PARA GRÁFICO DE LINHA/BARRA)
+                # 3. ANÁLISE SEMANAL - GRÁFICO DE BARRA POR DIA DA SEMANA
                 # ============================================
-                st.markdown("### 📅 Análise Semanal - Gráfico de Linha")
+                st.markdown("### 📅 Análise Semanal - Sincronizações por Dia da Semana")
                 
-                # Opções de visualização
-                col_viz1, col_viz2 = st.columns(2)
-                with col_viz1:
-                    tipo_grafico = st.selectbox(
-                        "Tipo de Gráfico:",
-                        options=["Linha", "Barra"],
-                        key="tipo_grafico_semanal"
+                # Verificar se existem dados de fevereiro de 2026
+                anos_disponiveis = sorted(df_sincronizados['Criado'].dt.year.unique())
+                
+                # Filtrar dados reais (excluir dados futuros que não existem)
+                df_semanal_real = df_sincronizados.copy()
+                
+                # Remover quaisquer dados de 2026 se não existirem nos dados originais
+                if 2026 not in anos_disponiveis:
+                    df_semanal_real = df_semanal_real[df_semanal_real['Criado'].dt.year != 2026]
+                
+                # Agrupar por dia da semana
+                dias_semana_ordem = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+                
+                # Contar sincronizações por dia da semana
+                sinc_por_dia_semana = df_semanal_real['Dia_Semana_PT'].value_counts().reindex(dias_semana_ordem).reset_index()
+                sinc_por_dia_semana.columns = ['Dia_Semana', 'Quantidade']
+                
+                # Preencher valores faltantes com 0
+                sinc_por_dia_semana['Quantidade'] = sinc_por_dia_semana['Quantidade'].fillna(0).astype(int)
+                
+                # Criar gráfico de barras
+                fig_dias_semana = go.Figure()
+                
+                # Calcular cores baseadas no valor (azul escuro para maior, azul claro para menor)
+                max_quant = sinc_por_dia_semana['Quantidade'].max()
+                min_quant = sinc_por_dia_semana['Quantidade'].min()
+                
+                colors = []
+                for valor in sinc_por_dia_semana['Quantidade']:
+                    if max_quant == min_quant:
+                        colors.append('#1e3799')  # Azul escuro se todos forem iguais
+                    else:
+                        normalized = (valor - min_quant) / (max_quant - min_quant)
+                        # Interpolar entre azul escuro (#1e3799) e azul claro (#4a69bd)
+                        red = int(30 * normalized + 74 * (1 - normalized))
+                        green = int(55 * normalized + 105 * (1 - normalized))
+                        blue = int(153 * normalized + 189 * (1 - normalized))
+                        colors.append(f'rgb({red}, {green}, {blue})')
+                
+                fig_dias_semana.add_trace(go.Bar(
+                    x=sinc_por_dia_semana['Dia_Semana'],
+                    y=sinc_por_dia_semana['Quantidade'],
+                    name='Sincronizações',
+                    text=sinc_por_dia_semana['Quantidade'],
+                    textposition='outside',
+                    marker_color=colors,
+                    marker_line_color='#0c2461',
+                    marker_line_width=1.5,
+                    opacity=0.8
+                ))
+                
+                fig_dias_semana.update_layout(
+                    title='Sincronizações por Dia da Semana',
+                    xaxis_title='Dia da Semana',
+                    yaxis_title='Quantidade de Sincronizações',
+                    height=400,
+                    plot_bgcolor='white',
+                    showlegend=False,
+                    margin=dict(t=50, b=50, l=50, r=50),
+                    xaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)'
+                    ),
+                    yaxis=dict(
+                        gridcolor='rgba(0,0,0,0.05)',
+                        rangemode='tozero'
                     )
+                )
                 
-                with col_viz2:
-                    # Verificar se existem dados de fevereiro de 2026
-                    # Primeiro, verificar quais anos/meses estão disponíveis nos dados
-                    anos_disponiveis = sorted(df_sincronizados['Criado'].dt.year.unique())
-                    meses_disponiveis = sorted(df_sincronizados['Criado'].dt.month.unique())
-                    
-                    # Filtrar dados reais (excluir dados futuros que não existem)
-                    df_semanal_real = df_sincronizados.copy()
-                    
-                    # Remover quaisquer dados de 2026 se não existirem nos dados originais
-                    data_atual = datetime.now()
-                    if 2026 not in anos_disponiveis:
-                        df_semanal_real = df_semanal_real[df_semanal_real['Criado'].dt.year != 2026]
-                    
-                    # Agrupar por semana
-                    df_semanal_real['Semana_Ano'] = df_semanal_real['Criado'].dt.isocalendar().week
-                    df_semanal_real['Ano_Semana'] = df_semanal_real['Criado'].dt.strftime('%Y-%W')
-                    
-                    # Ordenar semanas cronologicamente
-                    semanas_ordenadas = sorted(df_semanal_real['Ano_Semana'].unique())
-                    
-                    # Agrupar por semana
-                    dados_semana = df_semanal_real.groupby('Ano_Semana').size().reset_index()
-                    dados_semana.columns = ['Semana', 'Quantidade']
-                    
-                    # Ordenar por semana
-                    dados_semana['Semana_Num'] = pd.Categorical(
-                        dados_semana['Semana'],
-                        categories=semanas_ordenadas,
-                        ordered=True
-                    )
-                    dados_semana = dados_semana.sort_values('Semana_Num')
+                st.plotly_chart(fig_dias_semana, use_container_width=True)
                 
-                if tipo_grafico == "Linha":
-                    fig_semanal = go.Figure()
-                    
-                    fig_semanal.add_trace(go.Scatter(
-                        x=dados_semana['Semana'],
-                        y=dados_semana['Quantidade'],
-                        mode='lines+markers',
-                        name='Sincronizações',
-                        line=dict(color='#1e3799', width=3),
-                        marker=dict(size=8, color='#0c2461'),
-                        text=dados_semana['Quantidade'],
-                        textposition='top center'
-                    ))
-                    
-                    fig_semanal.update_layout(
-                        title='Evolução Semanal de Sincronizações',
-                        xaxis_title="Semana (Ano-Semana)",
-                        yaxis_title="Quantidade de Sincronizações",
-                        height=400,
-                        plot_bgcolor='white',
-                        showlegend=False,
-                        margin=dict(t=50, b=100, l=50, r=50),
-                        xaxis=dict(
-                            tickangle=45,
-                            gridcolor='rgba(0,0,0,0.05)'
-                        ),
-                        yaxis=dict(
-                            gridcolor='rgba(0,0,0,0.05)',
-                            rangemode='tozero'
-                        )
-                    )
-                    
-                    st.plotly_chart(fig_semanal, use_container_width=True)
+                # Estatísticas por dia da semana
+                col_dia1, col_dia2, col_dia3 = st.columns(3)
                 
-                else:  # Gráfico de Barras
-                    fig_semanal = go.Figure()
-                    
-                    fig_semanal.add_trace(go.Bar(
-                        x=dados_semana['Semana'],
-                        y=dados_semana['Quantidade'],
-                        name='Sincronizações',
-                        marker_color='#1e3799',
-                        text=dados_semana['Quantidade'],
-                        textposition='outside'
-                    ))
-                    
-                    fig_semanal.update_layout(
-                        title='Sincronizações por Semana',
-                        xaxis_title="Semana (Ano-Semana)",
-                        yaxis_title="Quantidade de Sincronizações",
-                        height=400,
-                        plot_bgcolor='white',
-                        showlegend=False,
-                        margin=dict(t=50, b=100, l=50, r=50),
-                        xaxis=dict(
-                            tickangle=45,
-                            gridcolor='rgba(0,0,0,0.05)'
-                        ),
-                        yaxis=dict(
-                            gridcolor='rgba(0,0,0,0.05)',
-                            rangemode='tozero'
-                        )
-                    )
-                    
-                    st.plotly_chart(fig_semanal, use_container_width=True)
+                with col_dia1:
+                    dia_max = sinc_por_dia_semana.loc[sinc_por_dia_semana['Quantidade'].idxmax()]
+                    st.metric("📈 Melhor Dia", 
+                             dia_max['Dia_Semana'], 
+                             f"{int(dia_max['Quantidade'])} sinc.")
                 
-                # Estatísticas semanais
-                col_sem1, col_sem2, col_sem3 = st.columns(3)
-                with col_sem1:
-                    semana_max = dados_semana.loc[dados_semana['Quantidade'].idxmax()]
-                    st.metric("📈 Melhor Semana", 
-                             f"Semana {semana_max['Semana']}", 
-                             f"{int(semana_max['Quantidade'])} sinc.")
+                with col_dia2:
+                    dia_min = sinc_por_dia_semana.loc[sinc_por_dia_semana['Quantidade'].idxmin()]
+                    st.metric("📉 Pior Dia", 
+                             dia_min['Dia_Semana'], 
+                             f"{int(dia_min['Quantidade'])} sinc.")
                 
-                with col_sem2:
-                    semana_min = dados_semana.loc[dados_semana['Quantidade'].idxmin()]
-                    st.metric("📉 Pior Semana", 
-                             f"Semana {semana_min['Semana']}", 
-                             f"{int(semana_min['Quantidade'])} sinc.")
-                
-                with col_sem3:
-                    media_semanal = dados_semana['Quantidade'].mean()
-                    st.metric("📊 Média Semanal", 
-                             f"{media_semanal:.1f}")
+                with col_dia3:
+                    media_dia_semana = sinc_por_dia_semana['Quantidade'].mean()
+                    st.metric("📊 Média por Dia", 
+                             f"{media_dia_semana:.1f}")
                 
                 # ============================================
                 # 4. SINCRONIZAÇÕES POR SRE (STACKED BAR)
@@ -1801,59 +1701,7 @@ if st.session_state.df_original is not None:
                             """, unsafe_allow_html=True)
                 
                 # ============================================
-                # 7. ALERTAS E ANÁLISES CRÍTICAS
-                # ============================================
-                st.markdown("### ⚠️ Alertas e Análises Críticas")
-                
-                col_alerta1, col_alerta2 = st.columns(2)
-                
-                with col_alerta1:
-                    # Dias com zero sincronizações (alerta)
-                    if dias_com_zero > 0:
-                        dias_zero_list = sincronizados_por_dia[sincronizados_por_dia['Quantidade'] == 0]['Data'].tolist()
-                        dias_zero_formatados = [d.strftime('%d/%m/%Y') for d in dias_zero_list]
-                        
-                        st.markdown(f"""
-                        <div class="warning-card">
-                            <h4>🔴 Dias com Zero Sincronizações</h4>
-                            <p><strong>{dias_com_zero} dias</strong> sem nenhuma sincronização</p>
-                            <small>Dias: {', '.join(dias_zero_formatados[:5])}{'...' if len(dias_zero_formatados) > 5 else ''}</small>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"""
-                        <div class="performance-card">
-                            <h4>✅ Excelente!</h4>
-                            <p>Todos os dias tiveram sincronizações</p>
-                            <small>Nenhum dia com zero sincronizações</small>
-                        </div>
-                        """, unsafe_allow_html=True)
-                
-                with col_alerta2:
-                    # Quebra de sequência de dias com sincronizações
-                    sequencia_atual = 0
-                    maior_sequencia = 0
-                    sequencia_atual_temp = 0
-                    
-                    for qtd in sincronizados_por_dia['Quantidade']:
-                        if qtd > 0:
-                            sequencia_atual_temp += 1
-                            maior_sequencia = max(maior_sequencia, sequencia_atual_temp)
-                        else:
-                            sequencia_atual_temp = 0
-                    
-                    sequencia_atual = sequencia_atual_temp
-                    
-                    st.markdown(f"""
-                    <div class="info-card">
-                        <h4>📊 Sequência Atual</h4>
-                        <p><strong>{sequencia_atual} dias</strong> consecutivos com sincronizações</p>
-                        <small>Maior sequência: {maior_sequencia} dias</small>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                # ============================================
-                # 8. RECORDES (MELHOR DIA, PIOR DIA) - REMOVIDO
+                # 7. ALERTAS E ANÁLISES CRÍTICAS - REMOVIDO
                 # ============================================
                 # REMOVIDO CONFORME SOLICITADO
             
@@ -2395,71 +2243,6 @@ if st.session_state.df_original is not None:
                                     <span style="font-size: 1.5rem;">{count}</span> DEVs
                                 </div>
                                 """, unsafe_allow_html=True)
-                        
-                        # ============================================
-                        # RECOMENDAÇÕES PERSONALIZADAS PARA DEVS (MINIMIZADO)
-                        # ============================================
-                        st.markdown("### 💡 Recomendações Personalizadas")
-                        
-                        # Seletor de Desenvolvedor para recomendações
-                        devs_recom = sorted(df_perf['Responsável_Formatado'].dropna().unique())
-                        
-                        if devs_recom:
-                            dev_recom_selecionado = st.selectbox(
-                                "Selecione o Desenvolvedor para recomendações:",
-                                options=devs_recom,
-                                key="dev_recomendacoes"
-                            )
-                            
-                            # Gerar recomendações
-                            recomendacoes = gerar_recomendacoes_dev(df_perf, dev_recom_selecionado)
-                            
-                            if recomendacoes:
-                                # Container colapsável para as recomendações
-                                with st.expander(f"📋 Ver Recomendações para {dev_recom_selecionado}", expanded=False):
-                                    for rec in recomendacoes:
-                                        if rec['prioridade'] == 'ALTA':
-                                            cor_card = "warning-card"
-                                            emoji = "🔴"
-                                        elif rec['prioridade'] == 'MÉDIA':
-                                            cor_card = "info-card"
-                                            emoji = "🟡"
-                                        else:
-                                            cor_card = "performance-card"
-                                            emoji = "🟢"
-                                        
-                                        st.markdown(f"""
-                                        <div class="{cor_card}" style="margin-bottom: 15px;">
-                                            <div style="display: flex; align-items: start; gap: 10px;">
-                                                <span style="font-size: 1.5rem;">{emoji}</span>
-                                                <div>
-                                                    <h4 style="margin: 0;">{rec['titulo']}</h4>
-                                                    <p style="margin: 5px 0; color: #6c757d;">{rec['descricao']}</p>
-                                                    <p style="margin: 0; font-weight: 600;">Ação sugerida: {rec['acao']}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    # Botão para expandir plano de ação
-                                    if st.button("📋 Ver Plano de Ação Completo", key="btn_plano_acao"):
-                                        st.markdown("#### 🚀 Plano de Ação Sugerido")
-                                        acoes = [
-                                            "1. Implementar checklist padronizado antes do envio",
-                                            "2. Realizar code review com desenvolvedores experientes",
-                                            "3. Estabelecer metas de qualidade por desenvolvedor",
-                                            "4. Criar banco de conhecimento com erros comuns",
-                                            "5. Implementar sistema de feedback contínuo com SREs"
-                                        ]
-                                        
-                                        for acao in acoes:
-                                            st.markdown(f"""
-                                            <div style="padding: 10px; margin-bottom: 5px; background: #f8f9fa; border-radius: 5px;">
-                                                {acao}
-                                            </div>
-                                            """, unsafe_allow_html=True)
-                            else:
-                                st.success(f"✅ {dev_recom_selecionado} está com excelente performance! Não há recomendações específicas no momento.")
                 
                 # Mostrar top 10
                 st.markdown(f"### 🏆 Top 10 Desenvolvedores ({ordenar_por})")
