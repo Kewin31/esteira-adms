@@ -1421,7 +1421,7 @@ if st.session_state.df_original is not None:
                 # ============================================
                 # 3. ANÁLISE SEMANAL - GRÁFICO DE BARRA POR DIA
                 # ============================================
-                st.markdown("### 📅 Análise Semanal - Sincronizações por Dia")
+                st.markdown("### 📅 Sincronizações por Dia")
                 
                 # Verificar se existem dados de fevereiro de 2026
                 anos_disponiveis = sorted(df_sincronizados['Criado'].dt.year.unique())
