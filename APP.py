@@ -1064,7 +1064,7 @@ if st.session_state.df_original is not None:
     tab1, tab2, tab3, tab4 = st.tabs([
         "📅 Evolução de Demandas", 
         "📊 Análise de Revisões", 
-        "📈 Sincronizados por Dia",
+        "📈 Chamados Sincronizados por Dia",
         "🏆 Performance dos SREs"
     ])
     
@@ -1292,34 +1292,58 @@ if st.session_state.df_original is not None:
                 st.plotly_chart(fig_revisoes, use_container_width=True)
     
     with tab3:
-        st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA</div>', unsafe_allow_html=True)
         
-        # FILTROS PARA SINCRONIZAÇÃO POR DIA
-        col_sinc_filtro1, col_sinc_filtro2 = st.columns(2)
+        # ============================================
+        # FILTROS AVANÇADOS
+        # ============================================
+        col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
         
-        with col_sinc_filtro1:
+        with col_filtro1:
             # Filtrar por ano
             if 'Ano' in df.columns:
                 anos_sinc = sorted(df['Ano'].dropna().unique().astype(int))
                 anos_opcoes_sinc = ['Todos os Anos'] + list(anos_sinc)
                 ano_sinc = st.selectbox(
-                    "📅 Filtrar por Ano:",
+                    "📅 Ano:",
                     options=anos_opcoes_sinc,
                     key="filtro_ano_sinc"
                 )
         
-        with col_sinc_filtro2:
+        with col_filtro2:
             # Filtrar por mês
             if 'Mês' in df.columns:
                 meses_sinc = sorted(df['Mês'].dropna().unique().astype(int))
                 meses_opcoes_sinc = ['Todos os Meses'] + [str(m) for m in meses_sinc]
                 mes_sinc = st.selectbox(
-                    "📆 Filtrar por Mês:",
+                    "📆 Mês:",
                     options=meses_opcoes_sinc,
                     key="filtro_mes_sinc"
                 )
         
-        # Aplicar filtros
+        with col_filtro3:
+            # Filtrar por SRE
+            if 'SRE' in df.columns:
+                sres_sinc = ['Todos os SREs'] + sorted(df['SRE'].dropna().unique())
+                sre_sinc = st.selectbox(
+                    "🔧 SRE:",
+                    options=sres_sinc,
+                    key="filtro_sre_sinc"
+                )
+        
+        with col_filtro4:
+            # Filtrar por Empresa
+            if 'Empresa' in df.columns:
+                empresas_sinc = ['Todas Empresas'] + sorted(df['Empresa'].dropna().unique())
+                empresa_sinc = st.selectbox(
+                    "🏢 Empresa:",
+                    options=empresas_sinc,
+                    key="filtro_empresa_sinc"
+                )
+        
+        # ============================================
+        # APLICAR FILTROS
+        # ============================================
         df_sinc = df.copy()
         
         if ano_sinc != 'Todos os Anos':
@@ -1328,6 +1352,12 @@ if st.session_state.df_original is not None:
         if mes_sinc != 'Todos os Meses':
             df_sinc = df_sinc[df_sinc['Mês'] == int(mes_sinc)]
         
+        if sre_sinc != 'Todos os SREs':
+            df_sinc = df_sinc[df_sinc['SRE'] == sre_sinc]
+        
+        if empresa_sinc != 'Todas Empresas':
+            df_sinc = df_sinc[df_sinc['Empresa'] == empresa_sinc]
+        
         if 'Status' in df_sinc.columns and 'Criado' in df_sinc.columns:
             # Filtrar apenas chamados sincronizados
             df_sincronizados = df_sinc[df_sinc['Status'] == 'Sincronizado'].copy()
@@ -1335,77 +1365,559 @@ if st.session_state.df_original is not None:
             if not df_sincronizados.empty:
                 # Extrair data sem hora
                 df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
+                df_sincronizados['Ano_Mes'] = df_sincronizados['Criado'].dt.strftime('%Y-%m')
+                df_sincronizados['Dia_Semana'] = df_sincronizados['Criado'].dt.day_name()
+                df_sincronizados['Semana_Ano'] = df_sincronizados['Criado'].dt.isocalendar().week
+                df_sincronizados['Dia_Mes'] = df_sincronizados['Criado'].dt.day
+                
+                # Mapear dias da semana em português
+                dias_semana_map = {
+                    'Monday': 'Segunda',
+                    'Tuesday': 'Terça',
+                    'Wednesday': 'Quarta',
+                    'Thursday': 'Quinta',
+                    'Friday': 'Sexta',
+                    'Saturday': 'Sábado',
+                    'Sunday': 'Domingo'
+                }
+                df_sincronizados['Dia_Semana_PT'] = df_sincronizados['Dia_Semana'].map(dias_semana_map)
+                
+                # Ordenar por data
+                df_sincronizados = df_sincronizados.sort_values('Criado')
                 
                 # Agrupar por data
                 sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
                 sincronizados_por_dia.columns = ['Data', 'Quantidade']
-                
-                # Ordenar por data
                 sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
                 
+                # ============================================
+                # 1. INDICADORES PRINCIPAIS (KPIs)
+                # ============================================
+                st.markdown("### 📊 Indicadores Principais")
+                
+                total_sincronizados = int(sincronizados_por_dia['Quantidade'].sum())
+                media_diaria = sincronizados_por_dia['Quantidade'].mean()
+                max_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmax()]
+                min_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmin()]
+                dias_com_zero = len(sincronizados_por_dia[sincronizados_por_dia['Quantidade'] == 0])
+                dias_trabalhados = len(sincronizados_por_dia)
+                
+                # Calcular variação vs período anterior (se aplicável)
+                variacao = 0
+                if len(sincronizados_por_dia) > 1:
+                    primeiro_valor = sincronizados_por_dia['Quantidade'].iloc[0]
+                    ultimo_valor = sincronizados_por_dia['Quantidade'].iloc[-1]
+                    if primeiro_valor > 0:
+                        variacao = ((ultimo_valor - primeiro_valor) / primeiro_valor) * 100
+                
+                # Exibir KPIs em colunas
+                col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+                
+                with col_kpi1:
+                    st.metric(
+                        "✅ Total Sincronizado",
+                        f"{total_sincronizados:,}",
+                        f"{variacao:+.1f}%" if variacao != 0 else None,
+                        delta_color="normal" if variacao >= 0 else "inverse"
+                    )
+                
+                with col_kpi2:
+                    st.metric(
+                        "📊 Média Diária",
+                        f"{media_diaria:.1f}",
+                        f"Dias: {dias_trabalhados}"
+                    )
+                
+                with col_kpi3:
+                    st.metric(
+                        "📈 Dia com Mais Sinc.",
+                        f"{int(max_dia['Quantidade']):,}",
+                        f"{max_dia['Data'].strftime('%d/%m')}"
+                    )
+                
+                with col_kpi4:
+                    st.metric(
+                        "⚠️ Dias sem Sinc.",
+                        f"{dias_com_zero}",
+                        f"{min_dia['Data'].strftime('%d/%m')}: {int(min_dia['Quantidade']):,}"
+                    )
+                
+                # ============================================
+                # 2. HEATMAP SEMANAL (DIAS x SEMANAS)
+                # ============================================
+                st.markdown("### 📅 Heatmap Semanal")
+                
+                # Preparar dados para heatmap
+                df_heatmap = df_sincronizados.copy()
+                df_heatmap['Semana_Num'] = df_heatmap['Criado'].dt.isocalendar().week
+                df_heatmap['Ano_Semana'] = df_heatmap['Criado'].dt.strftime('%Y-%W')
+                
+                # Agrupar por dia da semana e semana
+                heatmap_data = df_heatmap.groupby(['Dia_Semana_PT', 'Ano_Semana']).size().reset_index()
+                heatmap_data.columns = ['Dia_Semana', 'Semana', 'Quantidade']
+                
+                # Ordenar dias da semana corretamente
+                ordem_dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+                heatmap_data['Dia_Semana'] = pd.Categorical(
+                    heatmap_data['Dia_Semana'], 
+                    categories=ordem_dias, 
+                    ordered=True
+                )
+                
+                # Ordenar semanas
+                semanas_ordenadas = sorted(heatmap_data['Semana'].unique())
+                heatmap_data['Semana'] = pd.Categorical(
+                    heatmap_data['Semana'], 
+                    categories=semanas_ordenadas, 
+                    ordered=True
+                )
+                
+                # Criar pivot table para heatmap
+                pivot_table = heatmap_data.pivot_table(
+                    index='Dia_Semana',
+                    columns='Semana',
+                    values='Quantidade',
+                    aggfunc='sum',
+                    fill_value=0
+                )
+                
+                # Criar heatmap
+                fig_heatmap = go.Figure(data=go.Heatmap(
+                    z=pivot_table.values,
+                    x=pivot_table.columns,
+                    y=pivot_table.index,
+                    colorscale='Viridis',
+                    text=pivot_table.values,
+                    texttemplate='%{text}',
+                    textfont={"size": 10},
+                    hovertemplate='<b>%{y}</b><br>Semana: %{x}<br>Sincronizações: %{z}<extra></extra>'
+                ))
+                
+                fig_heatmap.update_layout(
+                    title='Heatmap Semanal - Sincronizações por Dia',
+                    height=400,
+                    xaxis_title="Semana (Ano-Semana)",
+                    yaxis_title="Dia da Semana",
+                    margin=dict(t=50, b=50, l=50, r=50)
+                )
+                
+                st.plotly_chart(fig_heatmap, use_container_width=True)
+                
+                # ============================================
+                # 3. SINCRONIZAÇÕES POR SRE (STACKED BAR)
+                # ============================================
+                st.markdown("### 👥 Sincronizações por SRE")
+                
+                if 'SRE' in df_sincronizados.columns:
+                    # Agrupar por data e SRE
+                    sre_por_dia = df_sincronizados.groupby(['Data', 'SRE']).size().reset_index()
+                    sre_por_dia.columns = ['Data', 'SRE', 'Quantidade']
+                    
+                    # Pivot para ter SREs como colunas
+                    pivot_sre = sre_por_dia.pivot_table(
+                        index='Data',
+                        columns='SRE',
+                        values='Quantidade',
+                        aggfunc='sum',
+                        fill_value=0
+                    ).reset_index()
+                    
+                    # Criar gráfico stacked bar
+                    fig_sre = go.Figure()
+                    
+                    # Adicionar uma barra para cada SRE
+                    for sre in pivot_sre.columns[1:]:  # Pular a coluna Data
+                        fig_sre.add_trace(go.Bar(
+                            x=pivot_sre['Data'],
+                            y=pivot_sre[sre],
+                            name=sre,
+                            hovertemplate='Data: %{x|%d/%m/%Y}<br>SRE: ' + sre + '<br>Quantidade: %{y}<extra></extra>'
+                        ))
+                    
+                    fig_sre.update_layout(
+                        title='Sincronizações por SRE (Stacked)',
+                        barmode='stack',
+                        height=400,
+                        xaxis_title="Data",
+                        yaxis_title="Quantidade de Sincronizações",
+                        xaxis=dict(
+                            tickformat='%d/%m',
+                            tickangle=45
+                        ),
+                        showlegend=True,
+                        legend=dict(
+                            orientation="h",
+                            yanchor="bottom",
+                            y=1.02,
+                            xanchor="right",
+                            x=1
+                        )
+                    )
+                    
+                    st.plotly_chart(fig_sre, use_container_width=True)
+                
+                # ============================================
+                # 4. SINCRONIZAÇÕES POR TIPO DE CHAMADO
+                # ============================================
+                st.markdown("### 📝 Sincronizações por Tipo de Chamado")
+                
+                if 'Tipo_Chamado' in df_sincronizados.columns:
+                    col_tipo1, col_tipo2 = st.columns([2, 1])
+                    
+                    with col_tipo1:
+                        # Agrupar por tipo de chamado e data
+                        tipo_por_dia = df_sincronizados.groupby(['Data', 'Tipo_Chamado']).size().reset_index()
+                        tipo_por_dia.columns = ['Data', 'Tipo', 'Quantidade']
+                        
+                        # Pivot para gráfico de linha
+                        pivot_tipo = tipo_por_dia.pivot_table(
+                            index='Data',
+                            columns='Tipo',
+                            values='Quantidade',
+                            aggfunc='sum',
+                            fill_value=0
+                        ).reset_index()
+                        
+                        fig_tipo = go.Figure()
+                        
+                        # Adicionar linha para cada tipo (top 5 tipos)
+                        top_tipos = df_sincronizados['Tipo_Chamado'].value_counts().head(5).index.tolist()
+                        
+                        for tipo in top_tipos:
+                            if tipo in pivot_tipo.columns:
+                                fig_tipo.add_trace(go.Scatter(
+                                    x=pivot_tipo['Data'],
+                                    y=pivot_tipo[tipo],
+                                    mode='lines+markers',
+                                    name=tipo,
+                                    hovertemplate='Data: %{x|%d/%m/%Y}<br>Tipo: ' + tipo + '<br>Quantidade: %{y}<extra></extra>'
+                                ))
+                        
+                        fig_tipo.update_layout(
+                            title='Evolução dos 5 Tipos Mais Frequentes',
+                            height=350,
+                            xaxis_title="Data",
+                            yaxis_title="Quantidade",
+                            xaxis=dict(
+                                tickformat='%d/%m',
+                                tickangle=45
+                            ),
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig_tipo, use_container_width=True)
+                    
+                    with col_tipo2:
+                        # Distribuição percentual por tipo
+                        tipo_dist = df_sincronizados['Tipo_Chamado'].value_counts().reset_index()
+                        tipo_dist.columns = ['Tipo', 'Quantidade']
+                        tipo_dist['Percentual'] = (tipo_dist['Quantidade'] / total_sincronizados * 100).round(1)
+                        
+                        st.markdown("**📊 Distribuição por Tipo:**")
+                        for idx, row in tipo_dist.head(5).iterrows():
+                            st.markdown(f"""
+                            <div style="padding: 8px; margin-bottom: 5px; background: #f8f9fa; border-radius: 5px;">
+                                <strong>{row['Tipo']}</strong><br>
+                                <small>{row['Quantidade']} ({row['Percentual']}%)</small>
+                            </div>
+                            """, unsafe_allow_html=True)
+                
+                # ============================================
+                # 5. SINCRONIZAÇÕES POR EMPRESA
+                # ============================================
+                st.markdown("### 🏢 Sincronizações por Empresa")
+                
+                if 'Empresa' in df_sincronizados.columns:
+                    col_empresa1, col_empresa2 = st.columns([2, 1])
+                    
+                    with col_empresa1:
+                        # Agrupar por empresa e data
+                        empresa_por_dia = df_sincronizados.groupby(['Data', 'Empresa']).size().reset_index()
+                        empresa_por_dia.columns = ['Data', 'Empresa', 'Quantidade']
+                        
+                        # Pivot para gráfico de área
+                        pivot_empresa = empresa_por_dia.pivot_table(
+                            index='Data',
+                            columns='Empresa',
+                            values='Quantidade',
+                            aggfunc='sum',
+                            fill_value=0
+                        ).reset_index()
+                        
+                        fig_empresa = go.Figure()
+                        
+                        # Adicionar área para cada empresa (top 5)
+                        top_empresas = df_sincronizados['Empresa'].value_counts().head(5).index.tolist()
+                        
+                        for empresa in top_empresas:
+                            if empresa in pivot_empresa.columns:
+                                fig_empresa.add_trace(go.Scatter(
+                                    x=pivot_empresa['Data'],
+                                    y=pivot_empresa[empresa],
+                                    mode='lines',
+                                    name=empresa,
+                                    stackgroup='one',
+                                    hovertemplate='Data: %{x|%d/%m/%Y}<br>Empresa: ' + empresa + '<br>Quantidade: %{y}<extra></extra>'
+                                ))
+                        
+                        fig_empresa.update_layout(
+                            title='Sincronizações por Empresa (Top 5) - Gráfico de Área Empilhado',
+                            height=350,
+                            xaxis_title="Data",
+                            yaxis_title="Quantidade",
+                            xaxis=dict(
+                                tickformat='%d/%m',
+                                tickangle=45
+                            ),
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig_empresa, use_container_width=True)
+                    
+                    with col_empresa2:
+                        # Ranking de empresas
+                        empresa_rank = df_sincronizados['Empresa'].value_counts().reset_index()
+                        empresa_rank.columns = ['Empresa', 'Quantidade']
+                        empresa_rank['Percentual'] = (empresa_rank['Quantidade'] / total_sincronizados * 100).round(1)
+                        
+                        st.markdown("**🏆 Ranking Empresas:**")
+                        for idx, row in empresa_rank.head(5).iterrows():
+                            medal = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][idx]
+                            st.markdown(f"""
+                            <div style="padding: 8px; margin-bottom: 5px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid #{'1e3799' if idx==0 else '28a745' if idx==1 else 'ffc107' if idx==2 else '6c757d'}">
+                                <strong>{medal} {row['Empresa']}</strong><br>
+                                <small>{row['Quantidade']} ({row['Percentual']}%)</small>
+                            </div>
+                            """, unsafe_allow_html=True)
+                
+                # ============================================
+                # 6. ALERTAS E ANÁLISES CRÍTICAS
+                # ============================================
+                st.markdown("### ⚠️ Alertas e Análises Críticas")
+                
+                col_alerta1, col_alerta2 = st.columns(2)
+                
+                with col_alerta1:
+                    # Dias com zero sincronizações (alerta)
+                    if dias_com_zero > 0:
+                        dias_zero_list = sincronizados_por_dia[sincronizados_por_dia['Quantidade'] == 0]['Data'].tolist()
+                        dias_zero_formatados = [d.strftime('%d/%m/%Y') for d in dias_zero_list]
+                        
+                        st.markdown(f"""
+                        <div class="warning-card">
+                            <h4>🔴 Dias com Zero Sincronizações</h4>
+                            <p><strong>{dias_com_zero} dias</strong> sem nenhuma sincronização</p>
+                            <small>Dias: {', '.join(dias_zero_formatados[:5])}{'...' if len(dias_zero_formatados) > 5 else ''}</small>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                        <div class="performance-card">
+                            <h4>✅ Excelente!</h4>
+                            <p>Todos os dias tiveram sincronizações</p>
+                            <small>Nenhum dia com zero sincronizações</small>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                with col_alerta2:
+                    # Quebra de sequência de dias com sincronizações
+                    sequencia_atual = 0
+                    maior_sequencia = 0
+                    sequencia_atual_temp = 0
+                    
+                    for qtd in sincronizados_por_dia['Quantidade']:
+                        if qtd > 0:
+                            sequencia_atual_temp += 1
+                            maior_sequencia = max(maior_sequencia, sequencia_atual_temp)
+                        else:
+                            sequencia_atual_temp = 0
+                    
+                    sequencia_atual = sequencia_atual_temp
+                    
+                    st.markdown(f"""
+                    <div class="info-card">
+                        <h4>📊 Sequência Atual</h4>
+                        <p><strong>{sequencia_atual} dias</strong> consecutivos com sincronizações</p>
+                        <small>Maior sequência: {maior_sequencia} dias</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # ============================================
+                # 7. RECORDES (MELHOR DIA, PIOR DIA)
+                # ============================================
+                st.markdown("### 🏆 Recordes Históricos")
+                
+                col_recorde1, col_recorde2, col_recorde3 = st.columns(3)
+                
+                with col_recorde1:
+                    # Melhor dia (mais sincronizações)
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); 
+                              padding: 1rem; border-radius: 10px; border-left: 4px solid #28a745;">
+                        <h4 style="color: #155724; margin: 0 0 10px 0;">🥇 Melhor Dia</h4>
+                        <p style="font-size: 1.5rem; font-weight: bold; color: #155724; margin: 0;">
+                        {int(max_dia['Quantidade']):,}
+                        </p>
+                        <p style="color: #0c5460; margin: 5px 0 0 0;">
+                        {max_dia['Data'].strftime('%d/%m/%Y')} ({dias_semana_map.get(max_dia['Data'].strftime('%A'), '')})
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col_recorde2:
+                    # Pior dia (menos sincronizações, excluindo zeros)
+                    dias_com_sinc = sincronizados_por_dia[sincronizados_por_dia['Quantidade'] > 0]
+                    if not dias_com_sinc.empty:
+                        pior_dia_nao_zero = dias_com_sinc.loc[dias_com_sinc['Quantidade'].idxmin()]
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); 
+                                  padding: 1rem; border-radius: 10px; border-left: 4px solid #dc3545;">
+                            <h4 style="color: #721c24; margin: 0 0 10px 0;">📉 Pior Dia (com sinc.)</h4>
+                            <p style="font-size: 1.5rem; font-weight: bold; color: #721c24; margin: 0;">
+                            {int(pior_dia_nao_zero['Quantidade']):,}
+                            </p>
+                            <p style="color: #721c24; margin: 5px 0 0 0;">
+                            {pior_dia_nao_zero['Data'].strftime('%d/%m/%Y')}
+                            </p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 10px;">
+                            <h4>📉 Pior Dia</h4>
+                            <p>Nenhum dia com sincronizações</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                with col_recorde3:
+                    # Média vs Melhor dia
+                    diferenca_percentual = ((max_dia['Quantidade'] - media_diaria) / media_diaria * 100) if media_diaria > 0 else 0
+                    
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #cce5ff 0%, #b8daff 100%); 
+                              padding: 1rem; border-radius: 10px; border-left: 4px solid #007bff;">
+                        <h4 style="color: #004085; margin: 0 0 10px 0;">📊 Comparativo</h4>
+                        <p style="margin: 0;">Melhor dia vs Média:</p>
+                        <p style="font-size: 1.5rem; font-weight: bold; color: #004085; margin: 5px 0;">
+                        {diferenca_percentual:+.1f}%
+                        </p>
+                        <p style="color: #0c5460; margin: 5px 0 0 0;">
+                        {int(max_dia['Quantidade']):,} vs {media_diaria:.1f}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # ============================================
+                # 8. VISUALIZAÇÃO DETALHADA POR DIA
+                # ============================================
+                with st.expander("📋 Visualização Detalhada por Dia", expanded=False):
+                    # Adicionar mais informações à tabela
+                    sincronizados_por_dia['Dia_Semana'] = sincronizados_por_dia['Data'].apply(lambda x: x.strftime('%A'))
+                    sincronizados_por_dia['Dia_Semana_PT'] = sincronizados_por_dia['Dia_Semana'].map(dias_semana_map)
+                    
+                    # Calcular diferença do dia anterior
+                    sincronizados_por_dia['Diferenca'] = sincronizados_por_dia['Quantidade'].diff()
+                    sincronizados_por_dia['Variacao_%'] = (sincronizados_por_dia['Diferenca'] / sincronizados_por_dia['Quantidade'].shift(1) * 100).round(1)
+                    
+                    # Adicionar média móvel
+                    sincronizados_por_dia['Media_Movel_7'] = sincronizados_por_dia['Quantidade'].rolling(window=7, min_periods=1).mean().round(1)
+                    
+                    # Preparar tabela para exibição
+                    tabela_detalhada = sincronizados_por_dia.copy()
+                    tabela_detalhada['Data_Formatada'] = tabela_detalhada['Data'].apply(lambda x: x.strftime('%d/%m/%Y'))
+                    
+                    # Ordenar do mais recente para o mais antigo
+                    tabela_detalhada = tabela_detalhada.sort_values('Data', ascending=False)
+                    
+                    # Selecionar colunas para exibição
+                    colunas_exibir = ['Data_Formatada', 'Dia_Semana_PT', 'Quantidade', 
+                                    'Diferenca', 'Variacao_%', 'Media_Movel_7']
+                    
+                    st.dataframe(
+                        tabela_detalhada[colunas_exibir],
+                        use_container_width=True,
+                        column_config={
+                            "Data_Formatada": st.column_config.TextColumn("Data"),
+                            "Dia_Semana_PT": st.column_config.TextColumn("Dia Semana"),
+                            "Quantidade": st.column_config.NumberColumn("Sinc. do Dia", format="%d"),
+                            "Diferenca": st.column_config.NumberColumn("Δ vs Dia Anterior", format="%+d"),
+                            "Variacao_%": st.column_config.NumberColumn("Variação %", format="%+.1f%%"),
+                            "Media_Movel_7": st.column_config.NumberColumn("Média 7 dias", format="%.1f")
+                        }
+                    )
+                
+                # ============================================
+                # 9. RESUMO DO PERÍODO
+                # ============================================
+                st.markdown("### 📌 Resumo do Período")
+                
                 # Criar título dinâmico
-                titulo_sinc = 'Evolução Diária de Chamados Sincronizados'
+                periodo_str = ""
                 if ano_sinc != 'Todos os Anos':
-                    titulo_sinc += f' - {ano_sinc}'
+                    periodo_str += f"Ano: {ano_sinc}"
                 if mes_sinc != 'Todos os Meses':
                     meses_nomes = {
                         1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
                         5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
                         9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
                     }
-                    titulo_sinc += f' - {meses_nomes[int(mes_sinc)]}'
+                    periodo_str += f" | Mês: {meses_nomes[int(mes_sinc)]}"
+                if sre_sinc != 'Todos os SREs':
+                    periodo_str += f" | SRE: {sre_sinc}"
+                if empresa_sinc != 'Todas Empresas':
+                    periodo_str += f" | Empresa: {empresa_sinc}"
                 
-                # Criar gráfico de linha com área
-                fig_dia = go.Figure()
+                col_resumo1, col_resumo2, col_resumo3 = st.columns(3)
                 
-                fig_dia.add_trace(go.Scatter(
-                    x=sincronizados_por_dia['Data'],
-                    y=sincronizados_por_dia['Quantidade'],
-                    mode='lines+markers',
-                    name='Chamados Sincronizados',
-                    line=dict(color='#28a745', width=3),
-                    marker=dict(size=8, color='#218838'),
-                    fill='tozeroy',
-                    fillcolor='rgba(40, 167, 69, 0.2)'
-                ))
+                with col_resumo1:
+                    st.markdown(f"""
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 10px;">
+                        <h4 style="color: #495057; margin: 0 0 10px 0;">📅 Período Analisado</h4>
+                        <p style="margin: 0;">{periodo_str}</p>
+                        <p style="margin: 5px 0 0 0; color: #6c757d;">
+                        De {sincronizados_por_dia['Data'].min().strftime('%d/%m/%Y')} 
+                        a {sincronizados_por_dia['Data'].max().strftime('%d/%m/%Y')}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-                # Adicionar média móvel de 7 dias
-                sincronizados_por_dia['Media_Movel'] = sincronizados_por_dia['Quantidade'].rolling(window=7, min_periods=1).mean()
+                with col_resumo2:
+                    # Estatísticas de consistência
+                    desvio_padrao = sincronizados_por_dia['Quantidade'].std()
+                    coeficiente_variacao = (desvio_padrao / media_diaria * 100) if media_diaria > 0 else 0
+                    
+                    st.markdown(f"""
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 10px;">
+                        <h4 style="color: #495057; margin: 0 0 10px 0;">📈 Consistência</h4>
+                        <p style="margin: 0;">Desvio Padrão: {desvio_padrao:.1f}</p>
+                        <p style="margin: 5px 0 0 0; color: #6c757d;">
+                        Coef. Variação: {coeficiente_variacao:.1f}%
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-                fig_dia.add_trace(go.Scatter(
-                    x=sincronizados_por_dia['Data'],
-                    y=sincronizados_por_dia['Media_Movel'],
-                    mode='lines',
-                    name='Média Móvel (7 dias)',
-                    line=dict(color='#dc3545', width=2, dash='dash')
-                ))
-                
-                fig_dia.update_layout(
-                    title=titulo_sinc,
-                    xaxis_title='Data',
-                    yaxis_title='Número de Chamados Sincronizados',
-                    plot_bgcolor='white',
-                    height=500,
-                    showlegend=True,
-                    legend=dict(
-                        orientation="h",
-                        yanchor="bottom",
-                        y=1.02,
-                        xanchor="right",
-                        x=1
-                    ),
-                    margin=dict(t=50, b=50, l=50, r=50),
-                    xaxis=dict(
-                        gridcolor='rgba(0,0,0,0.05)',
-                        showgrid=True
-                    ),
-                    yaxis=dict(
-                        gridcolor='rgba(0,0,0,0.05)',
-                        rangemode='tozero'
-                    )
-                )
-                
-                st.plotly_chart(fig_dia, use_container_width=True)
+                with col_resumo3:
+                    # Mediana e Moda
+                    mediana = sincronizados_por_dia['Quantidade'].median()
+                    try:
+                        moda = sincronizados_por_dia['Quantidade'].mode()[0]
+                    except:
+                        moda = 0
+                    
+                    st.markdown(f"""
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 10px;">
+                        <h4 style="color: #495057; margin: 0 0 10px 0;">📊 Estatísticas</h4>
+                        <p style="margin: 0;">Mediana: {mediana:.1f}</p>
+                        <p style="margin: 5px 0 0 0; color: #6c757d;">
+                        Moda: {moda:.0f}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            else:
+                st.warning("⚠️ Nenhum chamado sincronizado encontrado com os filtros aplicados.")
+        else:
+            st.info("ℹ️ Selecione filtros para visualizar os dados de sincronização por dia.")
     
     with tab4:
         st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
