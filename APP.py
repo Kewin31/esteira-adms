@@ -3071,7 +3071,7 @@ if st.session_state.df_original is not None:
                 st.markdown("### 🔍 Análise de Tipos de Erro")
                 
                 # Distribuição por tipo
-                tipos_erro = df_diag['Tipo_Chamado'].value_counts().resetindex()
+                tipos_erro = df_diag['Tipo_Chamado'].value_counts().reset_index()
                 tipos_erro.columns = ['Tipo', 'Frequência']
                 tipos_erro['Percentual'] = (tipos_erro['Frequência'] / len(df_diag) * 100).round(1)
                 
