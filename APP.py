@@ -1419,9 +1419,9 @@ if st.session_state.df_original is not None:
                     )
                 
                 # ============================================
-                # 3. ANÁLISE SEMANAL - GRÁFICO DE BARRA POR DIA DA SEMANA
+                # 3. ANÁLISE SEMANAL - GRÁFICO DE BARRA POR DIA
                 # ============================================
-                st.markdown("### 📅 Análise Semanal - Sincronizações por Dia da Semana")
+                st.markdown("### 📅 Análise Semanal - Sincronizações por Dia")
                 
                 # Verificar se existem dados de fevereiro de 2026
                 anos_disponiveis = sorted(df_sincronizados['Criado'].dt.year.unique())
@@ -1433,25 +1433,34 @@ if st.session_state.df_original is not None:
                 if 2026 not in anos_disponiveis:
                     df_semanal_real = df_semanal_real[df_semanal_real['Criado'].dt.year != 2026]
                 
-                # Agrupar por dia da semana
-                dias_semana_ordem = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+                # Agrupar por dia específico (data)
+                df_semanal_real['Data_Formatada'] = df_semanal_real['Criado'].dt.strftime('%d/%m/%Y')
                 
-                # Contar sincronizações por dia da semana
-                sinc_por_dia_semana = df_semanal_real['Dia_Semana_PT'].value_counts().reindex(dias_semana_ordem).reset_index()
-                sinc_por_dia_semana.columns = ['Dia_Semana', 'Quantidade']
+                # Contar sincronizações por dia
+                sinc_por_dia = df_semanal_real.groupby('Data').size().reset_index()
+                sinc_por_dia.columns = ['Data', 'Quantidade']
                 
-                # Preencher valores faltantes com 0
-                sinc_por_dia_semana['Quantidade'] = sinc_por_dia_semana['Quantidade'].fillna(0).astype(int)
+                # Ordenar por data
+                sinc_por_dia = sinc_por_dia.sort_values('Data')
+                
+                # Limitar para mostrar um período razoável (últimos 30 dias ou todos se menos)
+                if len(sinc_por_dia) > 30:
+                    sinc_por_dia_recente = sinc_por_dia.tail(30)
+                else:
+                    sinc_por_dia_recente = sinc_por_dia.copy()
+                
+                # Formatar datas para o eixo X
+                sinc_por_dia_recente['Data_Formatada'] = sinc_por_dia_recente['Data'].apply(lambda x: x.strftime('%d/%m'))
                 
                 # Criar gráfico de barras
-                fig_dias_semana = go.Figure()
+                fig_dias = go.Figure()
                 
                 # Calcular cores baseadas no valor (azul escuro para maior, azul claro para menor)
-                max_quant = sinc_por_dia_semana['Quantidade'].max()
-                min_quant = sinc_por_dia_semana['Quantidade'].min()
+                max_quant = sinc_por_dia_recente['Quantidade'].max()
+                min_quant = sinc_por_dia_recente['Quantidade'].min()
                 
                 colors = []
-                for valor in sinc_por_dia_semana['Quantidade']:
+                for valor in sinc_por_dia_recente['Quantidade']:
                     if max_quant == min_quant:
                         colors.append('#1e3799')  # Azul escuro se todos forem iguais
                     else:
@@ -1462,11 +1471,11 @@ if st.session_state.df_original is not None:
                         blue = int(153 * normalized + 189 * (1 - normalized))
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
-                fig_dias_semana.add_trace(go.Bar(
-                    x=sinc_por_dia_semana['Dia_Semana'],
-                    y=sinc_por_dia_semana['Quantidade'],
+                fig_dias.add_trace(go.Bar(
+                    x=sinc_por_dia_recente['Data_Formatada'],
+                    y=sinc_por_dia_recente['Quantidade'],
                     name='Sincronizações',
-                    text=sinc_por_dia_semana['Quantidade'],
+                    text=sinc_por_dia_recente['Quantidade'],
                     textposition='outside',
                     marker_color=colors,
                     marker_line_color='#0c2461',
@@ -1474,16 +1483,17 @@ if st.session_state.df_original is not None:
                     opacity=0.8
                 ))
                 
-                fig_dias_semana.update_layout(
-                    title='Sincronizações por Dia da Semana',
-                    xaxis_title='Dia da Semana',
+                fig_dias.update_layout(
+                    title='Sincronizações por Dia (Período Recente)' if len(sinc_por_dia) > 30 else 'Sincronizações por Dia',
+                    xaxis_title='Data (Dia/Mês)',
                     yaxis_title='Quantidade de Sincronizações',
                     height=400,
                     plot_bgcolor='white',
                     showlegend=False,
                     margin=dict(t=50, b=50, l=50, r=50),
                     xaxis=dict(
-                        gridcolor='rgba(0,0,0,0.05)'
+                        gridcolor='rgba(0,0,0,0.05)',
+                        tickangle=45
                     ),
                     yaxis=dict(
                         gridcolor='rgba(0,0,0,0.05)',
@@ -1491,27 +1501,27 @@ if st.session_state.df_original is not None:
                     )
                 )
                 
-                st.plotly_chart(fig_dias_semana, use_container_width=True)
+                st.plotly_chart(fig_dias, use_container_width=True)
                 
-                # Estatísticas por dia da semana
+                # Estatísticas por dia
                 col_dia1, col_dia2, col_dia3 = st.columns(3)
                 
                 with col_dia1:
-                    dia_max = sinc_por_dia_semana.loc[sinc_por_dia_semana['Quantidade'].idxmax()]
+                    dia_max = sinc_por_dia.loc[sinc_por_dia['Quantidade'].idxmax()]
                     st.metric("📈 Melhor Dia", 
-                             dia_max['Dia_Semana'], 
+                             dia_max['Data'].strftime('%d/%m/%Y'), 
                              f"{int(dia_max['Quantidade'])} sinc.")
                 
                 with col_dia2:
-                    dia_min = sinc_por_dia_semana.loc[sinc_por_dia_semana['Quantidade'].idxmin()]
+                    dia_min = sinc_por_dia.loc[sinc_por_dia['Quantidade'].idxmin()]
                     st.metric("📉 Pior Dia", 
-                             dia_min['Dia_Semana'], 
+                             dia_min['Data'].strftime('%d/%m/%Y'), 
                              f"{int(dia_min['Quantidade'])} sinc.")
                 
                 with col_dia3:
-                    media_dia_semana = sinc_por_dia_semana['Quantidade'].mean()
+                    media_dia_total = sinc_por_dia['Quantidade'].mean()
                     st.metric("📊 Média por Dia", 
-                             f"{media_dia_semana:.1f}")
+                             f"{media_dia_total:.1f}")
                 
                 # ============================================
                 # 4. SINCRONIZAÇÕES POR SRE (STACKED BAR)
