@@ -672,9 +672,82 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     
     # Ordenar por data
     dados_mes = dados_mes.sort_values('Mes_Ano')
-    
     return dados_mes
 
+# ============================================
+# FUNÇÕES PARA INTERPRETAÇÃO DE SCORES
+# ============================================
+
+def interpretar_score(score, total_chamados):
+    """Interpreta o score de qualidade com base em faixas"""
+    if total_chamados < 5:
+        return "📊 Amostra Insuficiente"
+    elif score >= 90:
+        return "🏆 Excelente"
+    elif score >= 80:
+        return "✅ Bom"
+    elif score >= 70:
+        return "⚠️ Regular"
+    elif score >= 60:
+        return "🔍 Atenção"
+    else:
+        return "🚨 Crítico"
+
+
+def criar_tabela_interpretacao_scores(df_dev_metrics):
+    """Cria tabela visual com interpretação dos scores"""
+    interpretacoes = []
+    
+    for idx, row in df_dev_metrics.iterrows():
+        score = row['Score Qualidade']
+        total = row['Total Chamados']
+        sem_rev = row['Sem Revisão']
+        
+        # Determinar ícone e cor
+        if total < 5:
+            icone = "📊"
+            cor = "#6c757d"
+            status = "Amostra Insuficiente"
+        elif score >= 90:
+            icone = "🏆"
+            cor = "#28a745"
+            status = "Excelente"
+        elif score >= 80:
+            icone = "✅"
+            cor = "#20c997"
+            status = "Bom"
+        elif score >= 70:
+            icone = "⚠️"
+            cor = "#ffc107"
+            status = "Regular"
+        elif score >= 60:
+            icone = "🔍"
+            cor = "#fd7e14"
+            status = "Atenção"
+        else:
+            icone = "🚨"
+            cor = "#dc3545"
+            status = "Crítico"
+        
+        # Calcular taxa de revisão
+        taxa_revisao = ((total - sem_rev) / total * 100) if total > 0 else 0
+        
+        interpretacoes.append({
+            'Desenvolvedor': row['Desenvolvedor'],
+            'Ícone': icone,
+            'Status': status,
+            'Score': f"{score}%",
+            'Total': total,
+            'Aprovados 1ª': sem_rev,
+            'Taxa Revisão': f"{taxa_revisao:.1f}%",
+            'Cor': cor
+        })
+    
+    return pd.DataFrame(interpretacoes)
+
+# ============================================
+# SIDEBAR - FILTROS E CONTROLES (REORGANIZADO)
+# ============================================
 
 # ============================================
 # FUNÇÕES PARA INTERPRETAÇÃO DE SCORES
