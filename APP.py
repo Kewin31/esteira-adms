@@ -966,31 +966,24 @@ if st.session_state.df_original is not None:
         data_min = df['Criado'].min()
         data_max = df['Criado'].max()
         
-        # Obter informações do arquivo (se disponível) - VERSÃO CORRIGIDA
+        # Versão simplificada e segura
 info_arquivo = ""
 if st.session_state.arquivo_atual:
     arquivo_atual = st.session_state.arquivo_atual
     
     try:
-        # Verificar se é um caminho de arquivo válido e existe
         if isinstance(arquivo_atual, str) and os.path.exists(arquivo_atual):
-            # Data de modificação do arquivo
             mod_timestamp = os.path.getmtime(arquivo_atual)
             data_modificacao = datetime.fromtimestamp(mod_timestamp)
-            
-            # Tamanho do arquivo
             tamanho_bytes = os.path.getsize(arquivo_atual)
             tamanho_mb = tamanho_bytes / (1024 * 1024)
             
-            info_arquivo = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo: {os.path.basename(arquivo_atual)} | Modificado: {data_modificacao.strftime('%d/%m/%Y às %H:%M')} | Tamanho: {tamanho_mb:.2f} MB</p>"
+            info_arquivo = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo: {os.path.basename(arquivo_atual)} • Modificado: {data_modificacao.strftime('%d/%m/%Y %H:%M')} • Tamanho: {tamanho_mb:.2f} MB</p>"
         else:
-            # Para arquivos enviados por upload (não locais)
-            nome_arquivo = str(arquivo_atual).split('/')[-1] if '/' in str(arquivo_atual) else str(arquivo_atual)
+            nome_arquivo = os.path.basename(str(arquivo_atual))
             info_arquivo = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo: {nome_arquivo}</p>"
-    except Exception:
-        # Em caso de erro, mostrar apenas o nome básico
-        nome_arquivo = str(arquivo_atual)[:50] + "..." if len(str(arquivo_atual)) > 50 else str(arquivo_atual)
-        info_arquivo = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo: {nome_arquivo}</p>"
+    except:
+        info_arquivo = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo: {str(arquivo_atual)}</p>"
     
     # ============================================
     # INDICADORES PRINCIPAIS SIMPLES (APENAS 3)
