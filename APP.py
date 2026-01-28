@@ -769,6 +769,53 @@ def interpretar_score(score, total_chamados):
         return "🚨 Crítico"
 
 
+def analisar_tendencia_mensal_sre(df, sre_nome):
+    """Analisa tendência mensal de sincronizações de um SRE"""
+    df_sre = df[df['SRE'] == sre_nome].copy()
+    
+    if len(df_sre) == 0 or 'Criado' not in df_sre.columns:
+        return None
+    
+    # Agrupar por mês
+    df_sre['Mes_Ano'] = df_sre['Criado'].dt.strftime('%Y-%m')
+    
+    # Sincronizados por mês
+    sinc_mes = df_sre[df_sre['Status'] == 'Sincronizado'].groupby('Mes_Ano').size().reset_index()
+    sinc_mes.columns = ['Mes_Ano', 'Sincronizados']
+    
+    # Total por mês
+    total_mes = df_sre.groupby('Mes_Ano').size().reset_index()
+    total_mes.columns = ['Mes_Ano', 'Total']
+    
+    # Combinar
+    dados_mes = pd.merge(total_mes, sinc_mes, on='Mes_Ano', how='left').fillna(0)
+    
+    # Ordenar por data
+    dados_mes = dados_mes.sort_values('Mes_Ano')
+    
+    return dados_mes
+
+
+# ============================================
+# FUNÇÕES PARA INTERPRETAÇÃO DE SCORES
+# ============================================
+
+def interpretar_score(score, total_chamados):
+    """Interpreta o score de qualidade com base em faixas"""
+    if total_chamados < 5:
+        return "📊 Amostra Insuficiente"
+    elif score >= 90:
+        return "🏆 Excelente"
+    elif score >= 80:
+        return "✅ Bom"
+    elif score >= 70:
+        return "⚠️ Regular"
+    elif score >= 60:
+        return "🔍 Atenção"
+    else:
+        return "🚨 Crítico"
+
+
 def criar_tabela_interpretacao_scores(df_dev_metrics):
     """Cria tabela visual com interpretação dos scores"""
     interpretacoes = []
@@ -825,6 +872,17 @@ def criar_tabela_interpretacao_scores(df_dev_metrics):
 # SIDEBAR - FILTROS E CONTROLES (REORGANIZADO)
 # ============================================
 with st.sidebar:
+    # Logo e título
+    st.markdown("""
+    <div style="text-align: center; padding: 1rem 0;">
+        <h3 style="color: #1e3799; margin: 0;">⚙️ Painel de Controle</h3>
+        <p style="color: #6c757d; margin: 0; font-size: 0.9rem;">Filtros e Configurações</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # ... O RESTO DO SEU CÓDIGO DO SIDEBAR CONTINUA AQUI ...
     # ... resto do código continua normalmente ...
     # Logo e título
     st.markdown("""
@@ -2254,6 +2312,24 @@ if st.session_state.df_original is not None:
                     # Adiciona interpretação do score
 interpretacao = interpretar_score(score_qualidade, total_chamados)
 
+# PROCURE POR:
+dev_metrics.append({
+    'Desenvolvedor': dev,
+    'Total Chamados': total_chamados,
+    'Sem Revisão': sem_revisao,
+    'Score Qualidade': round(score_qualidade, 1),
+    'Sincronizados': sincronizados,
+    'Eficiência': round(eficiencia, 1),
+    'Produtividade': round(produtividade, 1),
+    'Classificação': classificacao
+})
+
+# SUBSTITUA POR:
+interpretacao = interpretar_score(score_qualidade, total_chamados)
+
+# SUBSTITUA POR:
+interpretacao = interpretar_score(score_qualidade, total_chamados)
+
 dev_metrics.append({
     'Desenvolvedor': dev,
     'Total Chamados': total_chamados,
@@ -2513,6 +2589,41 @@ st.markdown("""
 # ============================================
 # TOP 10 DESENVOLVEDORES
 # ============================================
+st.markdown("""
+<div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+    <h4 style="margin-top: 0; color: #1e3799;">📈 Legenda de Interpretação - Score de Qualidade</h4>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+        <div style="background: #28a74515; padding: 10px; border-radius: 5px; border-left: 4px solid #28a745;">
+            <strong>🏆 90-100%: Excelente</strong><br>
+            <small>Quase sempre acerta na primeira entrega</small>
+        </div>
+        <div style="background: #20c99715; padding: 10px; border-radius: 5px; border-left: 4px solid #20c997;">
+            <strong>✅ 80-89%: Bom</strong><br>
+            <small>Raramente precisa de ajustes</small>
+        </div>
+        <div style="background: #ffc10715; padding: 10px; border-radius: 5px; border-left: 4px solid #ffc107;">
+            <strong>⚠️ 70-79%: Regular</strong><br>
+            <small>Alguns retornos para correção</small>
+        </div>
+        <div style="background: #fd7e1415; padding: 10px; border-radius: 5px; border-left: 4px solid #fd7e14;">
+            <strong>🔍 60-69%: Atenção</strong><br>
+            <small>Muitos ajustes necessários</small>
+        </div>
+        <div style="background: #dc354515; padding: 10px; border-radius: 5px; border-left: 4px solid #dc3545;">
+            <strong>🚨 0-59%: Crítico</strong><br>
+            <small>Maioria precisa de revisão</small>
+        </div>
+        <div style="background: #6c757d15; padding: 10px; border-radius: 5px; border-left: 4px solid #6c757d;">
+            <strong>📊 < 5 chamados: Amostra Insuficiente</strong><br>
+            <small>Volume muito baixo para análise confiável</small>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ============================================
+# TOP 10 DESENVOLVEDORES
+# ============================================
 st.markdown(f"### 🏆 Top 10 Desenvolvedores ({ordenar_por})")
 
 if ordenar_por == "Score de Qualidade":
@@ -2598,6 +2709,54 @@ if ordenar_por == "Score de Qualidade":
     )
     
     st.plotly_chart(fig_score, use_container_width=True)
+    
+else:
+    # PARA OUTRAS ORDENAÇÕES (mantido original)
+    top10_other = df_dev_metrics.head(10)
+    
+    if ordenar_por == "Total de Chamados":
+        col_ordenada = 'Total Chamados'
+        color_scale = 'Blues'
+        titulo = 'Top 10 - Total de Chamados'
+    elif ordenar_por == "Eficiência":
+        col_ordenada = 'Eficiência'
+        color_scale = 'Greens'
+        titulo = 'Top 10 - Eficiência (%)'
+    else:  # Produtividade
+        col_ordenada = 'Produtividade'
+        color_scale = 'Purples'
+        titulo = 'Top 10 - Produtividade (Chamados/Mês)'
+    
+    fig_other = px.bar(
+        top10_other,
+        x='Desenvolvedor',
+        y=col_ordenada,
+        title=titulo,
+        text=col_ordenada,
+        color=col_ordenada,
+        color_continuous_scale=color_scale
+    )
+    
+    if ordenar_por in ["Eficiência"]:
+        fig_other.update_traces(texttemplate='%{text:.1f}%')
+    else:
+        fig_other.update_traces(texttemplate='%{text:.0f}' if ordenar_por == "Total de Chamados" else '%{text:.1f}')
+    
+    fig_other.update_traces(
+        textposition='outside',
+        marker_line_color='black',
+        marker_line_width=0.5
+    )
+    
+    fig_other.update_layout(
+        height=500,
+        plot_bgcolor='white',
+        xaxis_title="Desenvolvedor",
+        yaxis_title=ordenar_por,
+        xaxis_tickangle=45
+    )
+    
+    st.plotly_chart(fig_other, use_container_width=True)
     
 else:
     # PARA OUTRAS ORDENAÇÕES (mantido original)
