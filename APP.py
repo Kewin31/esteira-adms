@@ -115,7 +115,7 @@ st.markdown("""
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         border: 1px solid #dee2e6;
     }
     
@@ -145,7 +145,7 @@ st.markdown("""
         border-radius: 8px;
         border-left: 4px solid #1e3799;
         margin-bottom: 0.5rem;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
     
     .sre-rank {
@@ -172,7 +172,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #28a745;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     
     .warning-card {
@@ -181,7 +181,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #dc3545;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     
     .info-card {
@@ -190,7 +190,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #17a2b8;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     
     .trend-up {
@@ -215,13 +215,13 @@ st.markdown("""
         border-radius: 10px;
         border: 1px solid #dee2e6;
         margin-bottom: 1rem;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.08);
         transition: all 0.3s ease;
     }
     
     .sre-comparison-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
     
     .sre-performance-badge {
@@ -264,7 +264,7 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #1e3799;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     
     .matrix-quadrant {
@@ -365,7 +365,7 @@ def calcular_hash_arquivo(conteudo):
     """Calcula hash do conteúdo do arquivo para detectar mudanças"""
     return hashlib.md5(conteudo).hexdigest()
 
-@st.cache_data
+@st.cache_data(ttl=300)  # Cache expira em 5 minutos
 def carregar_dados(uploaded_file=None, caminho_arquivo=None):
     """Carrega e processa os dados"""
     try:
@@ -457,7 +457,10 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         # Calcular hash do conteúdo
         hash_conteudo = calcular_hash_arquivo(conteudo_bytes)
         
-        return df, "✅ Dados carregados com sucesso", hash_conteudo
+        # Adicionar timestamp para evitar cache
+        timestamp = time.time()
+        
+        return df, "✅ Dados carregados com sucesso", f"{hash_conteudo}_{timestamp}"
     
     except Exception as e:
         return None, f"Erro: {str(e)}", None
@@ -489,6 +492,38 @@ def verificar_atualizacao_arquivo():
         if modificacao_atual > st.session_state.ultima_modificacao:
             st.session_state.ultima_modificacao = modificacao_atual
             return True
+    
+    return False
+
+def verificar_e_atualizar_arquivo():
+    """Verifica se o arquivo local foi modificado e atualiza se necessário"""
+    caminho_arquivo = encontrar_arquivo_dados()
+    
+    if caminho_arquivo and os.path.exists(caminho_arquivo):
+        # Inicializar session state se não existir
+        if 'ultima_modificacao' not in st.session_state:
+            st.session_state.ultima_modificacao = os.path.getmtime(caminho_arquivo)
+            return False
+        
+        # Verificar se o arquivo foi modificado
+        modificacao_atual = os.path.getmtime(caminho_arquivo)
+        
+        # Se o arquivo foi modificado E temos dados carregados
+        if (modificacao_atual > st.session_state.ultima_modificacao and 
+            st.session_state.df_original is not None):
+            
+            # Calcular hash atual para verificar se realmente mudou
+            with open(caminho_arquivo, 'rb') as f:
+                conteudo_atual = f.read()
+            hash_atual = calcular_hash_arquivo(conteudo_atual)
+            
+            # Comparar com hash anterior
+            if 'file_hash' not in st.session_state or hash_atual != st.session_state.file_hash:
+                # Atualizar timestamp
+                st.session_state.ultima_modificacao = modificacao_atual
+                return True
+        
+        st.session_state.ultima_modificacao = modificacao_atual
     
     return False
 
@@ -757,8 +792,8 @@ with st.sidebar:
                 """, unsafe_allow_html=True)
                 
                 # Verificar se o arquivo foi modificado
-                if verificar_atualizacao_arquivo():
-                    st.warning("⚠️ O arquivo local foi modificado!")
+                if verificar_e_atualizar_arquivo():
+                    st.warning("⚠️ O arquivo local foi modificado! Clique em 'Recarregar Local' para atualizar.")
             
             # Botões de ação
             col_btn1, col_btn2 = st.columns(2)
@@ -775,13 +810,14 @@ with st.sidebar:
                     if caminho_atual and os.path.exists(caminho_atual):
                         with st.spinner('Recarregando dados do arquivo local...'):
                             try:
-                                # Limpar cache desta função
+                                # Forçar recarregamento limpando o cache
                                 carregar_dados.clear()
                                 
                                 # Recarregar dados
                                 df_atualizado, status, hash_conteudo = carregar_dados(caminho_arquivo=caminho_atual)
                                 
                                 if df_atualizado is not None:
+                                    # Atualizar session state
                                     st.session_state.df_original = df_atualizado
                                     st.session_state.df_filtrado = df_atualizado.copy()
                                     st.session_state.arquivo_atual = caminho_atual
@@ -820,7 +856,7 @@ with st.sidebar:
             
             st.markdown("---")
         
-        # UPLOAD DE ARQUIVO (MOVIDO PARA O FINAL)
+        # UPLOAD DE ARQUIVO
         st.markdown("**📤 Importar Dados**")
         
         # Mostrar status atual
@@ -847,10 +883,15 @@ with st.sidebar:
             # Verificar se é um arquivo diferente do atual
             current_hash = calcular_hash_arquivo(uploaded_file.getvalue())
             
-            if ('file_hash' not in st.session_state or 
-                current_hash != st.session_state.file_hash or
-                uploaded_file.name != st.session_state.uploaded_file_name):
-                
+            file_details = {
+                "Nome": uploaded_file.name,
+                "Tamanho": f"{uploaded_file.size / 1024:.1f} KB"
+            }
+            
+            st.write("📄 Detalhes do arquivo:")
+            st.json(file_details)
+            
+            if st.button("📥 Processar Arquivo", use_container_width=True, type="primary", key="btn_processar"):
                 with st.spinner('Processando novo arquivo...'):
                     # Salvar temporariamente
                     temp_path = f"temp_{uploaded_file.name}"
@@ -877,15 +918,14 @@ with st.sidebar:
                         st.success(f"✅ {len(df_novo):,} registros carregados!")
                         
                         # Forçar recarregamento da página
+                        time.sleep(1)
                         st.rerun()
                     else:
                         st.error(f"❌ {status}")
-            else:
-                st.info("ℹ️ Este arquivo já está carregado.")
         
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # CARREGAMENTO AUTOMÁTICO DO ARQUIVO LOCAL
+    # CARREGAMENTO AUTOMÁTICO DO ARQUIVO LOCAL - REORGANIZADO
     if st.session_state.df_original is None:
         caminho_encontrado = encontrar_arquivo_dados()
         
@@ -933,6 +973,14 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# ============================================
+# VERIFICAÇÃO AUTOMÁTICA DE ATUALIZAÇÕES
+# ============================================
+if st.session_state.df_original is not None:
+    # Verificar se o arquivo foi atualizado
+    if verificar_e_atualizar_arquivo():
+        st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
