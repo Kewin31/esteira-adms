@@ -951,7 +951,7 @@ if st.session_state.df_original is not None:
         
         st.markdown(f"""
         <div class="info-base">
-            <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
+            <p style="margin: 0; font-weight: 600;">📅 Base carregada em: {get_horario_brasilia()}</p>
             <p style="margin: 0.3rem 0 0 0; color: #6c757d;">
             Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
             Total de registros: {len(df):,}
