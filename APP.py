@@ -120,29 +120,12 @@ st.markdown("""
     }
     
     /* Informações da base */
-    .info-base-melhorada {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fcff 100%);
-        padding: 1.2rem;
-        border-radius: 10px;
+    .info-base {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1rem;
+        border-radius: 8px;
         border-left: 4px solid #1e3799;
         margin-bottom: 1.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-    
-    .info-dashboard {
-        background: linear-gradient(135deg, #f0f8ff 0%, #e6f2ff 100%);
-        padding: 0.8rem;
-        border-radius: 8px;
-        border: 1px solid #cce5ff;
-        margin-bottom: 0.5rem;
-    }
-    
-    .info-dados {
-        background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%);
-        padding: 0.8rem;
-        border-radius: 8px;
-        border: 1px solid #d4edda;
-        margin-bottom: 0.5rem;
     }
     
     /* Rodapé */
@@ -958,52 +941,23 @@ if st.session_state.df_original is not None:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
     
     # ============================================
-# INFORMAÇÕES DA BASE DE DADOS (VERSÃO SIMPLIFICADA)
-# ============================================
-st.markdown("## 📊 Informações da Base de Dados")
-
-if 'Criado' in df.columns and not df.empty:
-    data_min = df['Criado'].min()
-    data_max = df['Criado'].max()
+    # INFORMAÇÕES DA BASE DE DADOS (SIMPLIFICADO)
+    # ============================================
+    st.markdown("## 📊 Informações da Base de Dados")
     
-    # Informação básica do arquivo
-    info_arquivo_html = ""
-    if st.session_state.arquivo_atual:
-        arquivo_atual = st.session_state.arquivo_atual
+    if 'Criado' in df.columns and not df.empty:
+        data_min = df['Criado'].min()
+        data_max = df['Criado'].max()
         
-        # Extrair apenas o nome do arquivo
-        if isinstance(arquivo_atual, str):
-            nome_arquivo = os.path.basename(arquivo_atual)
-        else:
-            nome_arquivo = str(arquivo_atual)
-        
-        info_arquivo_html = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo em uso: {nome_arquivo}</p>"
-    
-    st.markdown(f"""
-    <div class="info-base-melhorada">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
-            <div class="info-dashboard" style="flex: 1; margin-right: 0.5rem;">
-                <p style="margin: 0; font-weight: 600; color: #1e3799;">📊 Dashboard Carregado</p>
-                <p style="margin: 0.2rem 0 0 0; font-size: 0.95rem; color: #495057;">
-                🕐 {get_horario_brasilia()}
-                </p>
-            </div>
-            <div class="info-dados" style="flex: 1; margin-left: 0.5rem;">
-                <p style="margin: 0; font-weight: 600; color: #28a745;">📈 Dados Analisados</p>
-                <p style="margin: 0.2rem 0 0 0; font-size: 0.95rem; color: #495057;">
-                {len(df):,} registros
-                </p>
-            </div>
-        </div>
-        
-        <div style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #dee2e6;">
-            <p style="margin: 0 0 0.5rem 0; color: #495057; font-weight: 500;">
-            📅 <strong>Período dos dados:</strong> {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')}
+        st.markdown(f"""
+        <div class="info-base">
+            <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
+            <p style="margin: 0.3rem 0 0 0; color: #6c757d;">
+            Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
+            Total de registros: {len(df):,}
             </p>
-            {info_arquivo_html}
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     # ============================================
     # INDICADORES PRINCIPAIS SIMPLES (APENAS 3)
@@ -2416,7 +2370,7 @@ if 'Criado' in df.columns and not df.empty:
             **📅 Padrões por Dia da Semana:**
             - Identifica quais dias têm mais/menos demandas
             - Mostra taxa de sincronização por dia
-            - Útil para planning de recursos
+            - Útil para planejamento de recursos
             
             **🕐 Demandas por Hora do Dia:**
             - Identifica horários de pico de criação de chamados
@@ -2646,7 +2600,7 @@ if 'Criado' in df.columns and not df.empty:
                     pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
                     pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
                     
-                    # Formatar hora corretamente
+                    # ADJUSTED: Formatar hora corretamente
                     hora_pico_demanda = f"{int(pico_demanda['Hora'])}:00h"
                     hora_pico_sinc = f"{int(pico_sinc['Hora'])}:00h"
                     
@@ -2685,12 +2639,13 @@ if 'Criado' in df.columns and not df.empty:
                 
                 st.plotly_chart(fig_horas, use_container_width=True)
                 
-                # Estatísticas de pico
+                # Estatísticas de pico - ADJUSTED: Formatar hora corretamente
                 if not dados_hora.empty:
                     col_hora_stats1, col_hora_stats2, col_hora_stats3 = st.columns(3)
                     
                     with col_hora_stats1:
                         hora_pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
+                        # ADJUSTED: Formatar hora corretamente
                         hora_formatada = f"{int(hora_pico_demanda['Hora'])}:00h"
                         st.metric("🕐 Pico de Demandas", 
                                  hora_formatada, 
@@ -2698,6 +2653,7 @@ if 'Criado' in df.columns and not df.empty:
                     
                     with col_hora_stats2:
                         hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
+                        # ADJUSTED: Formatar hora corretamente
                         hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
                         st.metric("✅ Pico de Sincronizações", 
                                  hora_sinc_formatada, 
@@ -2705,6 +2661,7 @@ if 'Criado' in df.columns and not df.empty:
                     
                     with col_hora_stats3:
                         melhor_taxa_hora = dados_hora.loc[dados_hora['Taxa_Sinc'].idxmax()]
+                        # ADJUSTED: Formatar hora corretamente
                         hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
                         st.metric("🏆 Melhor Taxa Sinc.", 
                                  hora_taxa_formatada, 
