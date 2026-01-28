@@ -557,8 +557,8 @@ def interpretar_score(score, total_chamados):
     elif score >= 60:
         return "🔍 Atenção"
     else:
-        return "🚨 Crítico"
-
+        return "🚨r Cítico"
+        
 def criar_tabela_interpretacao_scores(df_dev_metrics):
     """Cria tabela visual com interpretação dos scores"""
     interpretacoes = []
