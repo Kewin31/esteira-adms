@@ -958,32 +958,52 @@ if st.session_state.df_original is not None:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
     
     # ============================================
-    # INFORMAÇÕES DA BASE DE DADOS (MELHORADA E CORRIGIDA)
-    # ============================================
-    st.markdown("## 📊 Informações da Base de Dados")
+# INFORMAÇÕES DA BASE DE DADOS (VERSÃO SIMPLIFICADA)
+# ============================================
+st.markdown("## 📊 Informações da Base de Dados")
+
+if 'Criado' in df.columns and not df.empty:
+    data_min = df['Criado'].min()
+    data_max = df['Criado'].max()
     
-    if 'Criado' in df.columns and not df.empty:
-        data_min = df['Criado'].min()
-        data_max = df['Criado'].max()
+    # Informação básica do arquivo
+    info_arquivo_html = ""
+    if st.session_state.arquivo_atual:
+        arquivo_atual = st.session_state.arquivo_atual
         
-        # Versão simplificada e segura
-info_arquivo = ""
-if st.session_state.arquivo_atual:
-    arquivo_atual = st.session_state.arquivo_atual
-    
-    try:
-        if isinstance(arquivo_atual, str) and os.path.exists(arquivo_atual):
-            mod_timestamp = os.path.getmtime(arquivo_atual)
-            data_modificacao = datetime.fromtimestamp(mod_timestamp)
-            tamanho_bytes = os.path.getsize(arquivo_atual)
-            tamanho_mb = tamanho_bytes / (1024 * 1024)
-            
-            info_arquivo = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo: {os.path.basename(arquivo_atual)} • Modificado: {data_modificacao.strftime('%d/%m/%Y %H:%M')} • Tamanho: {tamanho_mb:.2f} MB</p>"
+        # Extrair apenas o nome do arquivo
+        if isinstance(arquivo_atual, str):
+            nome_arquivo = os.path.basename(arquivo_atual)
         else:
-            nome_arquivo = os.path.basename(str(arquivo_atual))
-            info_arquivo = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo: {nome_arquivo}</p>"
-    except:
-        info_arquivo = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo: {str(arquivo_atual)}</p>"
+            nome_arquivo = str(arquivo_atual)
+        
+        info_arquivo_html = f"<p style='margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;'>📄 Arquivo em uso: {nome_arquivo}</p>"
+    
+    st.markdown(f"""
+    <div class="info-base-melhorada">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+            <div class="info-dashboard" style="flex: 1; margin-right: 0.5rem;">
+                <p style="margin: 0; font-weight: 600; color: #1e3799;">📊 Dashboard Carregado</p>
+                <p style="margin: 0.2rem 0 0 0; font-size: 0.95rem; color: #495057;">
+                🕐 {get_horario_brasilia()}
+                </p>
+            </div>
+            <div class="info-dados" style="flex: 1; margin-left: 0.5rem;">
+                <p style="margin: 0; font-weight: 600; color: #28a745;">📈 Dados Analisados</p>
+                <p style="margin: 0.2rem 0 0 0; font-size: 0.95rem; color: #495057;">
+                {len(df):,} registros
+                </p>
+            </div>
+        </div>
+        
+        <div style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #dee2e6;">
+            <p style="margin: 0 0 0.5rem 0; color: #495057; font-weight: 500;">
+            📅 <strong>Período dos dados:</strong> {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')}
+            </p>
+            {info_arquivo_html}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # ============================================
     # INDICADORES PRINCIPAIS SIMPLES (APENAS 3)
