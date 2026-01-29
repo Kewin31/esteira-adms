@@ -1757,11 +1757,6 @@ if st.session_state.df_original is not None:
                                 <small>{row['Quantidade']} ({row['Percentual']}%)</small>
                             </div>
                             """, unsafe_allow_html=True)
-                
-                # ============================================
-                # 7. ALERTAS E ANÁLISES CRÍTICAS - REMOVIDO
-                # ============================================
-                # REMOVIDO CONFORME SOLICITADO
             
             else:
                 st.warning("⚠️ Nenhum chamado sincronizado encontrado com os filtros aplicados.")
@@ -2695,25 +2690,80 @@ if st.session_state.df_original is not None:
                         hora_pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
                         # ADJUSTED: Formatar hora corretamente
                         hora_formatada = f"{int(hora_pico_demanda['Hora'])}:00h"
-                        st.metric("🕐 Pico de Demandas", 
-                                 hora_formatada, 
-                                 f"{int(hora_pico_demanda['Total_Demandas'])} demandas")
+                        st.metric(
+                            "🕐 Pico de Demandas", 
+                            hora_formatada, 
+                            f"{int(hora_pico_demanda['Total_Demandas'])} demandas"
+                        )
                     
                     with col_hora_stats2:
-                        hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
-                        # ADJUSTED: Formatar hora corretamente
-                        hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
-                        st.metric("✅ Pico de Sincronizações", 
-                                 hora_sinc_formatada, 
-                                 f"{int(hora_pico_sinc['Sincronizados'])} sinc.")
+                        # CORREÇÃO APLICADA: Filtrar apenas horários de sincronismo
+                        HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
+                        
+                        # Filtrar apenas horários de sincronismo para pico
+                        dados_sinc_pico = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)].copy()
+                        
+                        if not dados_sinc_pico.empty:
+                            hora_pico_sinc = dados_sinc_pico.loc[dados_sinc_pico['Sincronizados'].idxmax()]
+                            hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
+                            st.metric(
+                                "✅ Pico de Sincronizações", 
+                                hora_sinc_formatada, 
+                                f"{int(hora_pico_sinc['Sincronizados'])} sinc."
+                            )
+                        else:
+                            # Fallback para todos os dados se não houver nos horários específicos
+                            hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
+                            hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
+                            st.metric(
+                                "✅ Pico de Sincronizações", 
+                                hora_sinc_formatada, 
+                                f"{int(hora_pico_sinc['Sincronizados'])} sinc.",
+                                help="Pico calculado fora dos horários de sincronismo"
+                            )
                     
                     with col_hora_stats3:
-                        melhor_taxa_hora = dados_hora.loc[dados_hora['Taxa_Sinc'].idxmax()]
-                        # ADJUSTED: Formatar hora corretamente
-                        hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
-                        st.metric("🏆 Melhor Taxa Sinc.", 
-                                 hora_taxa_formatada, 
-                                 f"{melhor_taxa_hora['Taxa_Sinc']}%")
+                        # CORREÇÃO APLICADA: "🏆 Melhor Taxa Sinc." considerando apenas horários de sincronismo
+                        # HORÁRIOS VÁLIDOS DE SINCRONISMO (conforme informado)
+                        HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
+                        MINIMO_CHAMADOS = 2  # Mínimo de chamados para considerar estatística válida
+                        
+                        # Filtrar APENAS horários de sincronismo válidos
+                        dados_hora_validos = dados_hora[
+                            dados_hora['Hora'].isin(HORARIOS_SINCRONISMO) &
+                            (dados_hora['Total_Demandas'] >= MINIMO_CHAMADOS)
+                        ]
+                        
+                        if not dados_hora_validos.empty:
+                            # Encontrar a melhor taxa entre os horários válidos
+                            melhor_taxa_hora = dados_hora_validos.loc[dados_hora_validos['Taxa_Sinc'].idxmax()]
+                            hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
+                            
+                            st.metric(
+                                "🏆 Melhor Taxa Sinc.", 
+                                hora_taxa_formatada, 
+                                f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%"
+                            )
+                        else:
+                            # Se não houver dados válidos, usar todos os dados dos horários de sincronismo
+                            dados_fallback = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)]
+                            
+                            if not dados_fallback.empty:
+                                melhor_taxa_hora = dados_fallback.loc[dados_fallback['Taxa_Sinc'].idxmax()]
+                                hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
+                                st.metric(
+                                    "🏆 Melhor Taxa Sinc.", 
+                                    hora_taxa_formatada, 
+                                    f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%",
+                                    help="Taxa calculada com volume baixo de dados"
+                                )
+                            else:
+                                # Se não houver dados em nenhum horário de sincronismo
+                                st.metric(
+                                    "🏆 Melhor Taxa Sinc.", 
+                                    "N/A",
+                                    "Sem dados nos horários 8-12,14-16h"
+                                )
             
             # ============================================
             # SAZONALIDADE MENSAL - CORRIGIDA PARA MOSTRAR DEZEMBRO
@@ -2987,7 +3037,7 @@ if st.session_state.df_original is not None:
                     # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
-                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     # Top 5 tipos para análise
