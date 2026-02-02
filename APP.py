@@ -3238,143 +3238,147 @@ if st.session_state.df_original is not None:
                                 )
             
             # ============================================
-            # SAZONALIDADE MENSAL - CORRIGIDA PARA MOSTRAR DEZEMBRO
-            # ============================================
-            st.markdown("### 📈 Sazonalidade Mensal")
-            
-            # Filtro simples para sazonalidade mensal
-            col_saz_mes1, col_saz_mes2 = st.columns(2)
-            
-            with col_saz_mes1:
-                anos_saz_mes = sorted(df['Ano'].dropna().unique().astype(int))
-                anos_opcoes_saz_mes = ['Todos os Anos'] + list(anos_saz_mes)
-                ano_saz_mes = st.selectbox(
-                    "Selecionar Ano para análise mensal:",
-                    options=anos_opcoes_saz_mes,
-                    index=len(anos_opcoes_saz_mes)-1,
-                    key="ano_saz_mes"
-                )
-            
-            with col_saz_mes2:
-                # Apenas mostra o ano selecionado
-                if ano_saz_mes != 'Todos os Anos':
-                    st.markdown(f"**Ano selecionado:** {ano_saz_mes}")
-                else:
-                    st.markdown("**Todos os anos**")
-            
-            # Aplicar filtro para análise mensal
-            if ano_saz_mes != 'Todos os Anos':
-                df_saz_mes = df[df['Ano'] == int(ano_saz_mes)].copy()
-            else:
-                df_saz_mes = df.copy()
-            
-            if not df_saz_mes.empty:
-                # Ordem dos meses abreviados em português (incluindo Dezembro)
-                meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-                meses_nomes_completos = {
-                    'Jan': 'Janeiro', 'Fev': 'Fevereiro', 'Mar': 'Março', 'Abr': 'Abril',
-                    'Mai': 'Maio', 'Jun': 'Junho', 'Jul': 'Julho', 'Ago': 'Agosto',
-                    'Set': 'Setembro', 'Out': 'Outubro', 'Nov': 'Novembro', 'Dez': 'Dezembro'
-                }
-                
-                # Usar o mês abreviado já criado na função carregar_dados
-                if 'Nome_Mês' in df_saz_mes.columns:
-                    # Garantir que estamos usando a abreviação correta
-                    df_saz_mes['Mês_Abrev'] = df_saz_mes['Nome_Mês']
-                else:
-                    # Se não existir, criar a partir da data
-                    df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.month.map({
-                        1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
-                        5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
-                        9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
-                    })
-                
-                # Dados mensais para o ano selecionado
-                demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().resetindex()
-                demanda_mes.columns = ['Mês', 'Total']
-                
-                # Reindex para garantir todos os 12 meses aparecem
-                demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).resetindex()
-                demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
-                
-                sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().resetindex()
-                sinc_mes.columns = ['Mês', 'Sincronizados']
-                
-                # Reindex para garantir todos os 12 meses aparecem
-                sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).resetindex()
-                sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
-                
-                dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
-                dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).where(dados_mes['Total'] > 0, 0).round(1)
-                
-                # Criar título dinâmico
-                titulo_grafico = f'Distribuição Mensal'
-                if ano_saz_mes != 'Todos os Anos':
-                    titulo_grafico += f' - {ano_saz_mes}'
-                
-                fig_mes_saz = go.Figure()
-                
-                fig_mes_saz.add_trace(go.Bar(
-                    x=dados_mes['Mês'],
-                    y=dados_mes['Total'],
-                    name='Total Demandas',
-                    marker_color='#1e3799',
-                    text=dados_mes['Total'],
-                    textposition='auto'
-                ))
-                
-                fig_mes_saz.add_trace(go.Bar(
-                    x=dados_mes['Mês'],
-                    y=dados_mes['Sincronizados'],
-                    name='Sincronizados',
-                    marker_color='#28a745',
-                    text=dados_mes['Sincronizados'],
-                    textposition='auto'
-                ))
-                
-                fig_mes_saz.add_trace(go.Scatter(
-                    x=dados_mes['Mês'],
-                    y=dados_mes['Taxa_Sinc'],
-                    name='Taxa Sinc (%)',
-                    yaxis='y2',
-                    mode='lines+markers',
-                    line=dict(color='#dc3545', width=3),
-                    marker=dict(size=8)
-                ))
-                
-                fig_mes_saz.update_layout(
-                    title=titulo_grafico,
-                    barmode='group',
-                    yaxis=dict(title='Quantidade'),
-                    yaxis2=dict(
-                        title='Taxa Sinc (%)',
-                        overlaying='y',
-                        side='right',
-                        range=[0, 100]
-                    ),
-                    height=400,
-                    showlegend=True
-                )
-                
-                st.plotly_chart(fig_mes_saz, use_container_width=True)
-                
-                # Estatísticas de pico
-                col_pico1, col_pico2, col_pico3 = st.columns(3)
-                
-                with col_pico1:
-                    mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
-                    st.metric("📈 Mês com mais demandas", 
-                             f"{meses_nomes_completos.get(mes_maior_demanda['Mês'], mes_maior_demanda['Mês'])}: {int(mes_maior_demanda['Total'])}")
-                
-                with col_pico2:
-                    mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
-                    st.metric("✅ Mês com mais sincronizações", 
-                             f"{meses_nomes_completos.get(mes_maior_sinc['Mês'], mes_maior_sinc['Mês'])}: {int(mes_maior_sinc['Sincronizados'])}")
-                
-                with col_pico3:
-                    melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
-                    st.metric("🏆 Melhor taxa de sincronização", 
-                             f"{meses_nomes_completos.get(melhor_taxa['Mês'], melhor_taxa['Mês'])}: {melhor_taxa['Taxa_Sinc']}%")
+# SAZONALIDADE MENSAL - CORRIGIDA PARA MOSTRAR DEZEMBRO
+# ============================================
+st.markdown("### 📈 Sazonalidade Mensal")
+
+# Filtro simples para sazonalidade mensal
+col_saz_mes1, col_saz_mes2 = st.columns(2)
+
+with col_saz_mes1:
+    anos_saz_mes = sorted(df['Ano'].dropna().unique().astype(int))
+    anos_opcoes_saz_mes = ['Todos os Anos'] + list(anos_saz_mes)
+    ano_saz_mes = st.selectbox(
+        "Selecionar Ano para análise mensal:",
+        options=anos_opcoes_saz_mes,
+        index=len(anos_opcoes_saz_mes)-1,
+        key="ano_saz_mes"
+    )
+
+with col_saz_mes2:
+    # Apenas mostra o ano selecionado
+    if ano_saz_mes != 'Todos os Anos':
+        st.markdown(f"**Ano selecionado:** {ano_saz_mes}")
+    else:
+        st.markdown("**Todos os anos**")
+
+# Aplicar filtro para análise mensal
+if ano_saz_mes != 'Todos os Anos':
+    df_saz_mes = df[df['Ano'] == int(ano_saz_mes)].copy()
+else:
+    df_saz_mes = df.copy()
+
+if not df_saz_mes.empty:
+    # Ordem dos meses abreviados em português (incluindo Dezembro)
+    meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    meses_nomes_completos = {
+        'Jan': 'Janeiro', 'Fev': 'Fevereiro', 'Mar': 'Março', 'Abr': 'Abril',
+        'Mai': 'Maio', 'Jun': 'Junho', 'Jul': 'Julho', 'Ago': 'Agosto',
+        'Set': 'Setembro', 'Out': 'Outubro', 'Nov': 'Novembro', 'Dez': 'Dezembro'
+    }
+    
+    # CORREÇÃO: Criar coluna Mês_Abrev se não existir
+    if 'Nome_Mês' in df_saz_mes.columns:
+        # Usar a coluna Nome_Mês que já existe
+        df_saz_mes['Mês_Abrev'] = df_saz_mes['Nome_Mês']
+    else:
+        # Se não existir Nome_Mês, criar Mês_Abrev a partir do mês numérico
+        df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.month.map({
+            1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+            5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+            9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+        })
+    
+    # Dados mensais para o ano selecionado
+    # CORREÇÃO: Verificar se a coluna Mês_Abrev existe antes de agrupar
+    if 'Mês_Abrev' in df_saz_mes.columns:
+        demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reset_index()
+        demanda_mes.columns = ['Mês', 'Total']
+        
+        # Reindex para garantir todos os 12 meses aparecem
+        demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+        demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
+        
+        sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reset_index()
+        sinc_mes.columns = ['Mês', 'Sincronizados']
+        
+        # Reindex para garantir todos os 12 meses aparecem
+        sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+        sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
+        
+        dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
+        dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).where(dados_mes['Total'] > 0, 0).round(1)
+        
+        # Criar título dinâmico
+        titulo_grafico = f'Distribuição Mensal'
+        if ano_saz_mes != 'Todos os Anos':
+            titulo_grafico += f' - {ano_saz_mes}'
+        
+        fig_mes_saz = go.Figure()
+        
+        fig_mes_saz.add_trace(go.Bar(
+            x=dados_mes['Mês'],
+            y=dados_mes['Total'],
+            name='Total Demandas',
+            marker_color='#1e3799',
+            text=dados_mes['Total'],
+            textposition='auto'
+        ))
+        
+        fig_mes_saz.add_trace(go.Bar(
+            x=dados_mes['Mês'],
+            y=dados_mes['Sincronizados'],
+            name='Sincronizados',
+            marker_color='#28a745',
+            text=dados_mes['Sincronizados'],
+            textposition='auto'
+        ))
+        
+        fig_mes_saz.add_trace(go.Scatter(
+            x=dados_mes['Mês'],
+            y=dados_mes['Taxa_Sinc'],
+            name='Taxa Sinc (%)',
+            yaxis='y2',
+            mode='lines+markers',
+            line=dict(color='#dc3545', width=3),
+            marker=dict(size=8)
+        ))
+        
+        fig_mes_saz.update_layout(
+            title=titulo_grafico,
+            barmode='group',
+            yaxis=dict(title='Quantidade'),
+            yaxis2=dict(
+                title='Taxa Sinc (%)',
+                overlaying='y',
+                side='right',
+                range=[0, 100]
+            ),
+            height=400,
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig_mes_saz, use_container_width=True)
+        
+        # Estatísticas de pico
+        col_pico1, col_pico2, col_pico3 = st.columns(3)
+        
+        with col_pico1:
+            mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
+            st.metric("📈 Mês com mais demandas", 
+                     f"{meses_nomes_completos.get(mes_maior_demanda['Mês'], mes_maior_demanda['Mês'])}: {int(mes_maior_demanda['Total'])}")
+        
+        with col_pico2:
+            mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
+            st.metric("✅ Mês com mais sincronizações", 
+                     f"{meses_nomes_completos.get(mes_maior_sinc['Mês'], mes_maior_sinc['Mês'])}: {int(mes_maior_sinc['Sincronizados'])}")
+        
+        with col_pico3:
+            melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
+            st.metric("🏆 Melhor taxa de sincronização", 
+                     f"{meses_nomes_completos.get(melhor_taxa['Mês'], melhor_taxa['Mês'])}: {melhor_taxa['Taxa_Sinc']}%")
+    else:
+        st.warning("Não foi possível criar a análise mensal. A coluna 'Mês_Abrev' não pôde ser criada.")
     
     # ABA 3: DIAGNÓSTICO DE ERROS - SURPREENDENTE
     with tab_extra3:
