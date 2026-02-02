@@ -1094,7 +1094,7 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     sinc_mes.columns = ['Mes_Ano', 'Sincronizados']
     
     # Total por mês
-    total_mes = df_sre.groupby('Mes_Ano').size().resetindex()
+    total_mes = df_sre.groupby('Mes_Ano').size().reset_index()
     total_mes.columns = ['Mes_Ano', 'Total']
     
     # Combinar
