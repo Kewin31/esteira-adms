@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 # VARIÁVEIS GLOBAIS DE CONFIGURAÇÃO
 # ============================================
 # CONFIGURE AQUI O CAMINHO DO SEU ARQUIVO
-CAMINHO_ARQUIVO_PRINCIPAL = "esteira_demandas.csv"  # ? ALTERE AQUI!
+CAMINHO_ARQUIVO_PRINCIPAL = "esteira_demandas.csv"  # ← ALTERE AQUI!
 # Possíveis caminhos alternativos
 CAMINHOS_ALTERNATIVOS = [
     "data/esteira_demandas.csv",
@@ -31,7 +31,7 @@ CAMINHOS_ALTERNATIVOS = [
 # ============================================
 st.set_page_config(
     page_title="Esteira ADMS - Dashboard",
-    page_icon="??",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -341,7 +341,7 @@ def formatar_nome_responsavel(nome):
     # Se já for nome, apenas formatar
     return nome_str.title()
 
-def criar_card_indicador_simples(valor, label, icone="??"):
+def criar_card_indicador_simples(valor, label, icone="📊"):
     """Cria card de indicador SIMPLES - sem delta"""
     # Verificar se o valor é numérico para formatar com vírgula
     if isinstance(valor, (int, float)):
@@ -460,7 +460,7 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         # Adicionar timestamp para evitar cache
         timestamp = time.time()
         
-        return df, "? Dados carregados com sucesso", f"{hash_conteudo}_{timestamp}"
+        return df, "✅ Dados carregados com sucesso", f"{hash_conteudo}_{timestamp}"
     
     except Exception as e:
         return None, f"Erro: {str(e)}", None
@@ -647,7 +647,7 @@ with st.sidebar:
     # Logo e título
     st.markdown("""
     <div style="text-align: center; padding: 1rem 0;">
-        <h3 style="color: #1e3799; margin: 0;">?? Painel de Controle</h3>
+        <h3 style="color: #1e3799; margin: 0;">⚙️ Painel de Controle</h3>
         <p style="color: #6c757d; margin: 0; font-size: 0.9rem;">Filtros e Configurações</p>
     </div>
     """, unsafe_allow_html=True)
@@ -667,7 +667,7 @@ with st.sidebar:
     if st.session_state.df_original is not None:
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-            st.markdown("**?? Filtros de Análise**")
+            st.markdown("**🔍 Filtros de Análise**")
             
             df = st.session_state.df_original.copy()
             
@@ -677,7 +677,7 @@ with st.sidebar:
                 if anos_disponiveis:
                     anos_opcoes = ['Todos os Anos'] + list(anos_disponiveis)
                     ano_selecionado = st.selectbox(
-                        "?? Ano",
+                        "📅 Ano",
                         options=anos_opcoes,
                         key="filtro_ano"
                     )
@@ -690,7 +690,7 @@ with st.sidebar:
                 if meses_disponiveis:
                     meses_opcoes = ['Todos os Meses'] + [str(m) for m in meses_disponiveis]
                     mes_selecionado = st.selectbox(
-                        "?? Mês",
+                        "📆 Mês",
                         options=meses_opcoes,
                         key="filtro_mes"
                     )
@@ -701,7 +701,7 @@ with st.sidebar:
             if 'Responsável_Formatado' in df.columns:
                 responsaveis = ['Todos'] + sorted(df['Responsável_Formatado'].dropna().unique())
                 responsavel_selecionado = st.selectbox(
-                    "?? Responsável",
+                    "👤 Responsável",
                     options=responsaveis,
                     key="filtro_responsavel"
                 )
@@ -710,7 +710,7 @@ with st.sidebar:
             
             # BUSCA POR CHAMADO
             busca_chamado = st.text_input(
-                "?? Buscar Chamado",
+                "🔎 Buscar Chamado",
                 placeholder="Digite número do chamado...",
                 key="busca_chamado"
             )
@@ -721,7 +721,7 @@ with st.sidebar:
             if 'Status' in df.columns:
                 status_opcoes = ['Todos'] + sorted(df['Status'].dropna().unique())
                 status_selecionado = st.selectbox(
-                    "?? Status",
+                    "📊 Status",
                     options=status_opcoes,
                     key="filtro_status"
                 )
@@ -732,7 +732,7 @@ with st.sidebar:
             if 'Tipo_Chamado' in df.columns:
                 tipos = ['Todos'] + sorted(df['Tipo_Chamado'].dropna().unique())
                 tipo_selecionado = st.selectbox(
-                    "?? Tipo de Chamado",
+                    "📝 Tipo de Chamado",
                     options=tipos,
                     key="filtro_tipo"
                 )
@@ -743,7 +743,7 @@ with st.sidebar:
             if 'Empresa' in df.columns:
                 empresas = ['Todas'] + sorted(df['Empresa'].dropna().unique())
                 empresa_selecionada = st.selectbox(
-                    "?? Empresa",
+                    "🏢 Empresa",
                     options=empresas,
                     key="filtro_empresa"
                 )
@@ -754,7 +754,7 @@ with st.sidebar:
             if 'SRE' in df.columns:
                 sres = ['Todos'] + sorted(df['SRE'].dropna().unique())
                 sre_selecionado = st.selectbox(
-                    "?? SRE Responsável",
+                    "🔧 SRE Responsável",
                     options=sres,
                     key="filtro_sre"
                 )
@@ -764,13 +764,13 @@ with st.sidebar:
             # Atualizar dados filtrados
             st.session_state.df_filtrado = df
             
-            st.markdown(f"**?? Registros filtrados:** {len(df):,}")
+            st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
             st.markdown('</div>', unsafe_allow_html=True)
     
     # CONTROLES DE ATUALIZAÇÃO (SEMPRE VISÍVEL)
     with st.container():
         st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-        st.markdown("**?? Controles de Atualização**")
+        st.markdown("**🔄 Controles de Atualização**")
         
         # Verificar se há dados carregados
         if st.session_state.df_original is not None:
@@ -783,23 +783,23 @@ with st.sidebar:
                 
                 st.markdown(f"""
                 <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.3rem 0; font-weight: 600;">?? Arquivo atual:</p>
+                    <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
                     <p style="margin: 0; font-size: 0.9rem; color: #495057;">{os.path.basename(arquivo_atual)}</p>
                     <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #6c757d;">
-                    ?? {tamanho_kb:.1f} KB | ?? {ultima_mod.strftime('%d/%m/%Y %H:%M')}
+                    📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
                 
                 # Verificar se o arquivo foi modificado
                 if verificar_e_atualizar_arquivo():
-                    st.warning("?? O arquivo local foi modificado! Clique em 'Recarregar Local' para atualizar.")
+                    st.warning("⚠️ O arquivo local foi modificado! Clique em 'Recarregar Local' para atualizar.")
             
             # Botões de ação
             col_btn1, col_btn2 = st.columns(2)
             
             with col_btn1:
-                if st.button("?? Recarregar Local", 
+                if st.button("🔄 Recarregar Local", 
                            use_container_width=True,
                            type="primary",
                            help="Recarrega os dados do arquivo local",
@@ -827,18 +827,18 @@ with st.sidebar:
                                     # Atualizar timestamp da última modificação
                                     st.session_state.ultima_modificacao = os.path.getmtime(caminho_atual)
                                     
-                                    st.success(f"? Dados atualizados! {len(df_atualizado):,} registros")
+                                    st.success(f"✅ Dados atualizados! {len(df_atualizado):,} registros")
                                     time.sleep(1)
                                     st.rerun()
                                 else:
-                                    st.error(f"? Erro ao recarregar: {status}")
+                                    st.error(f"❌ Erro ao recarregar: {status}")
                             except Exception as e:
-                                st.error(f"? Erro: {str(e)}")
+                                st.error(f"❌ Erro: {str(e)}")
                     else:
-                        st.error("? Arquivo local não encontrado.")
+                        st.error("❌ Arquivo local não encontrado.")
             
             with col_btn2:
-                if st.button("??? Limpar Tudo", 
+                if st.button("🗑️ Limpar Tudo", 
                            use_container_width=True,
                            type="secondary",
                            help="Limpa todos os dados e cache",
@@ -850,21 +850,21 @@ with st.sidebar:
                     # Limpar session state
                     limpar_sessao_dados()
                     
-                    st.success("? Dados e cache limpos!")
+                    st.success("✅ Dados e cache limpos!")
                     time.sleep(1)
                     st.rerun()
             
             st.markdown("---")
         
         # UPLOAD DE ARQUIVO
-        st.markdown("**?? Importar Dados**")
+        st.markdown("**📤 Importar Dados**")
         
         # Mostrar status atual
         if st.session_state.df_original is not None:
             ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
             st.markdown(f"""
             <div class="status-box status-success">
-                <strong>?? Status atual:</strong><br>
+                <strong>📊 Status atual:</strong><br>
                 <small>Registros: {len(st.session_state.df_original):,}</small><br>
                 <small>Atualizado: {ultima_atualizacao}</small>
             </div>
@@ -888,10 +888,10 @@ with st.sidebar:
                 "Tamanho": f"{uploaded_file.size / 1024:.1f} KB"
             }
             
-            st.write("?? Detalhes do arquivo:")
+            st.write("📄 Detalhes do arquivo:")
             st.json(file_details)
             
-            if st.button("?? Processar Arquivo", use_container_width=True, type="primary", key="btn_processar"):
+            if st.button("📥 Processar Arquivo", use_container_width=True, type="primary", key="btn_processar"):
                 with st.spinner('Processando novo arquivo...'):
                     # Salvar temporariamente
                     temp_path = f"temp_{uploaded_file.name}"
@@ -915,13 +915,13 @@ with st.sidebar:
                         if 'filtros_aplicados' in st.session_state:
                             del st.session_state.filtros_aplicados
                         
-                        st.success(f"? {len(df_novo):,} registros carregados!")
+                        st.success(f"✅ {len(df_novo):,} registros carregados!")
                         
                         # Forçar recarregamento da página
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error(f"? {status}")
+                        st.error(f"❌ {status}")
         
         st.markdown('</div>', unsafe_allow_html=True)
     
@@ -943,7 +943,7 @@ with st.sidebar:
                         st.session_state.ultima_modificacao = os.path.getmtime(caminho_encontrado)
                     st.rerun()
                 else:
-                    st.error(f"? {status}")
+                    st.error(f"❌ {status}")
 
 # ============================================
 # CONTEÚDO PRINCIPAL
@@ -954,7 +954,7 @@ st.markdown("""
 <div class="main-header">
     <div style="display: flex; align-items: center; justify-content: space-between;">
         <div>
-            <h1 style="color: white; margin: 0; font-size: 1.8rem; font-weight: 700;">?? ESTEIRA ADMS</h1>
+            <h1 style="color: white; margin: 0; font-size: 1.8rem; font-weight: 700;">📊 ESTEIRA ADMS</h1>
             <p style="color: rgba(255,255,255,0.9); margin: 0.3rem 0 0 0; font-size: 1rem;">
             Sistema de Análise de Chamados | SRE
             </p>
@@ -980,7 +980,7 @@ st.markdown("""
 if st.session_state.df_original is not None:
     # Verificar se o arquivo foi atualizado
     if verificar_e_atualizar_arquivo():
-        st.info("?? O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
+        st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
@@ -991,7 +991,7 @@ if st.session_state.df_original is not None:
     # ============================================
     # INFORMAÇÕES DA BASE DE DADOS (SIMPLIFICADO)
     # ============================================
-    st.markdown("## ?? Informações da Base de Dados")
+    st.markdown("## 📊 Informações da Base de Dados")
     
     if 'Criado' in df.columns and not df.empty:
         data_min = df['Criado'].min()
@@ -999,7 +999,7 @@ if st.session_state.df_original is not None:
         
         st.markdown(f"""
         <div class="info-base">
-            <p style="margin: 0; font-weight: 600;">?? Base atualizada em: {get_horario_brasilia()}</p>
+            <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
             <p style="margin: 0.3rem 0 0 0; color: #6c757d;">
             Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
             Total de registros: {len(df):,}
@@ -1010,7 +1010,7 @@ if st.session_state.df_original is not None:
     # ============================================
     # INDICADORES PRINCIPAIS SIMPLES (APENAS 3)
     # ============================================
-    st.markdown("## ?? INDICADORES PRINCIPAIS")
+    st.markdown("## 📈 INDICADORES PRINCIPAIS")
     
     col1, col2, col3 = st.columns(3)
     
@@ -1019,7 +1019,7 @@ if st.session_state.df_original is not None:
         st.markdown(criar_card_indicador_simples(
             total_atual, 
             "Total de Demandas", 
-            "??"
+            "📋"
         ), unsafe_allow_html=True)
     
     with col2:
@@ -1028,7 +1028,7 @@ if st.session_state.df_original is not None:
             st.markdown(criar_card_indicador_simples(
                 sincronizados,
                 "Sincronizados",
-                "?"
+                "✅"
             ), unsafe_allow_html=True)
     
     with col3:
@@ -1037,7 +1037,7 @@ if st.session_state.df_original is not None:
             st.markdown(criar_card_indicador_simples(
                 total_revisoes,
                 "Total de Revisões",
-                "??"
+                "📝"
             ), unsafe_allow_html=True)
     
     # ============================================
@@ -1047,10 +1047,10 @@ if st.session_state.df_original is not None:
     
     # Definir 4 abas principais
     tab1, tab2, tab3, tab4 = st.tabs([
-        "?? Evolução de Demandas", 
-        "?? Análise de Revisões", 
-        "?? Chamados Sincronizados por Dia",
-        "?? Performance dos SREs"
+        "📅 Evolução de Demandas", 
+        "📊 Análise de Revisões", 
+        "📈 Chamados Sincronizados por Dia",
+        "🏆 Performance dos SREs"
     ])
     
     with tab1:
@@ -1058,7 +1058,7 @@ if st.session_state.df_original is not None:
         col_titulo, col_seletor = st.columns([3, 1])
         
         with col_titulo:
-            st.markdown('<div class="section-title-exec">?? EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
         
         with col_seletor:
             if 'Ano' in df.columns:
@@ -1150,18 +1150,18 @@ if st.session_state.df_original is not None:
                 col_stats1, col_stats2, col_stats3 = st.columns(3)
                 with col_stats1:
                     mes_max = demandas_completas.loc[demandas_completas['Quantidade'].idxmax()]
-                    st.metric("?? Mês com mais demandas", f"{mes_max['Nome_Mês']}: {int(mes_max['Quantidade']):,}")
+                    st.metric("📈 Mês com mais demandas", f"{mes_max['Nome_Mês']}: {int(mes_max['Quantidade']):,}")
                 
                 with col_stats2:
                     mes_min = demandas_completas.loc[demandas_completas['Quantidade'].idxmin()]
-                    st.metric("?? Mês com menos demandas", f"{mes_min['Nome_Mês']}: {int(mes_min['Quantidade']):,}")
+                    st.metric("📉 Mês com menos demandas", f"{mes_min['Nome_Mês']}: {int(mes_min['Quantidade']):,}")
                 
                 with col_stats3:
                     media_mensal = int(demandas_completas['Quantidade'].mean())
-                    st.metric("?? Média mensal", f"{media_mensal:,}")
+                    st.metric("📊 Média mensal", f"{media_mensal:,}")
     
     with tab2:
-        st.markdown('<div class="section-title-exec">?? REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title-exec">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
         
         # FILTROS PARA ANÁLISE DE REVISÕES
         col_rev_filtro1, col_rev_filtro2 = st.columns(2)
@@ -1172,7 +1172,7 @@ if st.session_state.df_original is not None:
                 anos_rev = sorted(df['Ano'].dropna().unique().astype(int))
                 anos_opcoes_rev = ['Todos os Anos'] + list(anos_rev)
                 ano_rev = st.selectbox(
-                    "?? Filtrar por Ano:",
+                    "📅 Filtrar por Ano:",
                     options=anos_opcoes_rev,
                     key="filtro_ano_revisoes"
                 )
@@ -1183,7 +1183,7 @@ if st.session_state.df_original is not None:
                 meses_rev = sorted(df['Mês'].dropna().unique().astype(int))
                 meses_opcoes_rev = ['Todos os Meses'] + [str(m) for m in meses_rev]
                 mes_rev = st.selectbox(
-                    "?? Filtrar por Mês:",
+                    "📆 Filtrar por Mês:",
                     options=meses_opcoes_rev,
                     key="filtro_mes_revisoes"
                 )
@@ -1277,7 +1277,7 @@ if st.session_state.df_original is not None:
                 st.plotly_chart(fig_revisoes, use_container_width=True)
     
     with tab3:
-        st.markdown('<div class="section-title-exec">?? CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA</div>', unsafe_allow_html=True)
         
         # ============================================
         # FILTROS AVANÇADOS
@@ -1290,7 +1290,7 @@ if st.session_state.df_original is not None:
                 anos_sinc = sorted(df['Ano'].dropna().unique().astype(int))
                 anos_opcoes_sinc = ['Todos os Anos'] + list(anos_sinc)
                 ano_sinc = st.selectbox(
-                    "?? Ano:",
+                    "📅 Ano:",
                     options=anos_opcoes_sinc,
                     key="filtro_ano_sinc"
                 )
@@ -1301,7 +1301,7 @@ if st.session_state.df_original is not None:
                 meses_sinc = sorted(df['Mês'].dropna().unique().astype(int))
                 meses_opcoes_sinc = ['Todos os Meses'] + [str(m) for m in meses_sinc]
                 mes_sinc = st.selectbox(
-                    "?? Mês:",
+                    "📆 Mês:",
                     options=meses_opcoes_sinc,
                     key="filtro_mes_sinc"
                 )
@@ -1311,7 +1311,7 @@ if st.session_state.df_original is not None:
             if 'SRE' in df.columns:
                 sres_sinc = ['Todos os SREs'] + sorted(df['SRE'].dropna().unique())
                 sre_sinc = st.selectbox(
-                    "?? SRE:",
+                    "🔧 SRE:",
                     options=sres_sinc,
                     key="filtro_sre_sinc"
                 )
@@ -1321,7 +1321,7 @@ if st.session_state.df_original is not None:
             if 'Empresa' in df.columns:
                 empresas_sinc = ['Todas Empresas'] + sorted(df['Empresa'].dropna().unique())
                 empresa_sinc = st.selectbox(
-                    "?? Empresa:",
+                    "🏢 Empresa:",
                     options=empresas_sinc,
                     key="filtro_empresa_sinc"
                 )
@@ -1378,7 +1378,7 @@ if st.session_state.df_original is not None:
                 # ============================================
                 # 1. INDICADORES PRINCIPAIS (KPIs)
                 # ============================================
-                st.markdown("### ?? Indicadores Principais")
+                st.markdown("### 📊 Indicadores Principais")
                 
                 total_sincronizados = int(sincronizados_por_dia['Quantidade'].sum())
                 media_diaria = sincronizados_por_dia['Quantidade'].mean()
@@ -1400,7 +1400,7 @@ if st.session_state.df_original is not None:
                 
                 with col_kpi1:
                     st.metric(
-                        "? Total Sincronizado",
+                        "✅ Total Sincronizado",
                         f"{total_sincronizados:,}",
                         f"{variacao:+.1f}%" if variacao != 0 else None,
                         delta_color="normal" if variacao >= 0 else "inverse"
@@ -1408,21 +1408,21 @@ if st.session_state.df_original is not None:
                 
                 with col_kpi2:
                     st.metric(
-                        "?? Média Diária",
+                        "📊 Média Diária",
                         f"{media_diaria:.1f}",
                         f"Dias: {dias_trabalhados}"
                     )
                 
                 with col_kpi3:
                     st.metric(
-                        "?? Dia com Mais Sinc.",
+                        "📈 Dia com Mais Sinc.",
                         f"{int(max_dia['Quantidade']):,}",
                         f"{max_dia['Data'].strftime('%d/%m')}"
                     )
                 
                 with col_kpi4:
                     st.metric(
-                        "?? Dias sem Sinc.",
+                        "⚠️ Dias sem Sinc.",
                         f"{dias_com_zero}",
                         f"{min_dia['Data'].strftime('%d/%m')}: {int(min_dia['Quantidade']):,}"
                     )
@@ -1430,7 +1430,7 @@ if st.session_state.df_original is not None:
                 # ============================================
                 # 2. VISUALIZAÇÃO DETALHADA POR DIA (MOVIDA PARA CIMA)
                 # ============================================
-                with st.expander("?? Visualização Detalhada por Dia", expanded=False):
+                with st.expander("📋 Visualização Detalhada por Dia", expanded=False):
                     # Adicionar mais informações à tabela
                     sincronizados_por_dia['Dia_Semana'] = sincronizados_por_dia['Data'].apply(lambda x: x.strftime('%A'))
                     sincronizados_por_dia['Dia_Semana_PT'] = sincronizados_por_dia['Dia_Semana'].map(dias_semana_map)
@@ -1460,7 +1460,7 @@ if st.session_state.df_original is not None:
                             "Data_Formatada": st.column_config.TextColumn("Data"),
                             "Dia_Semana_PT": st.column_config.TextColumn("Dia Semana"),
                             "Quantidade": st.column_config.NumberColumn("Sinc. do Dia", format="%d"),
-                            "Diferenca": st.column_config.NumberColumn("? vs Dia Anterior", format="%+d"),
+                            "Diferenca": st.column_config.NumberColumn("Δ vs Dia Anterior", format="%+d"),
                             "Variacao_%": st.column_config.NumberColumn("Variação %", format="%+.1f%%"),
                             "Media_Movel_7": st.column_config.NumberColumn("Média 7 dias", format="%.1f")
                         }
@@ -1469,7 +1469,7 @@ if st.session_state.df_original is not None:
                 # ============================================
                 # 3. ANÁLISE SEMANAL - GRÁFICO DE BARRA POR DIA
                 # ============================================
-                st.markdown("### ?? Sincronizações por Dia")
+                st.markdown("### 📅 Sincronizações por Dia")
                 
                 # Verificar se existem dados de fevereiro de 2026
                 anos_disponiveis = sorted(df_sincronizados['Criado'].dt.year.unique())
@@ -1556,25 +1556,25 @@ if st.session_state.df_original is not None:
                 
                 with col_dia1:
                     dia_max = sinc_por_dia.loc[sinc_por_dia['Quantidade'].idxmax()]
-                    st.metric("?? Melhor Dia", 
+                    st.metric("📈 Melhor Dia", 
                              dia_max['Data'].strftime('%d/%m/%Y'), 
                              f"{int(dia_max['Quantidade'])} sinc.")
                 
                 with col_dia2:
                     dia_min = sinc_por_dia.loc[sinc_por_dia['Quantidade'].idxmin()]
-                    st.metric("?? Pior Dia", 
+                    st.metric("📉 Pior Dia", 
                              dia_min['Data'].strftime('%d/%m/%Y'), 
                              f"{int(dia_min['Quantidade'])} sinc.")
                 
                 with col_dia3:
                     media_dia_total = sinc_por_dia['Quantidade'].mean()
-                    st.metric("?? Média por Dia", 
+                    st.metric("📊 Média por Dia", 
                              f"{media_dia_total:.1f}")
                 
                 # ============================================
                 # 4. SINCRONIZAÇÕES POR SRE (STACKED BAR)
                 # ============================================
-                st.markdown("### ?? Sincronizações por SRE")
+                st.markdown("### 👥 Sincronizações por SRE")
                 
                 if 'SRE' in df_sincronizados.columns:
                     # Agrupar por data e SRE
@@ -1627,7 +1627,7 @@ if st.session_state.df_original is not None:
                 # ============================================
                 # 5. SINCRONIZAÇÕES POR TIPO DE CHAMADO
                 # ============================================
-                st.markdown("### ?? Sincronizações por Tipo de Chamado")
+                st.markdown("### 📝 Sincronizações por Tipo de Chamado")
                 
                 if 'Tipo_Chamado' in df_sincronizados.columns:
                     col_tipo1, col_tipo2 = st.columns([2, 1])
@@ -1681,7 +1681,7 @@ if st.session_state.df_original is not None:
                         tipo_dist.columns = ['Tipo', 'Quantidade']
                         tipo_dist['Percentual'] = (tipo_dist['Quantidade'] / total_sincronizados * 100).round(1)
                         
-                        st.markdown("**?? Distribuição por Tipo:**")
+                        st.markdown("**📊 Distribuição por Tipo:**")
                         for idx, row in tipo_dist.head(5).iterrows():
                             st.markdown(f"""
                             <div style="padding: 8px; margin-bottom: 5px; background: #f8f9fa; border-radius: 5px;">
@@ -1693,7 +1693,7 @@ if st.session_state.df_original is not None:
                 # ============================================
                 # 6. SINCRONIZAÇÕES POR EMPRESA
                 # ============================================
-                st.markdown("### ?? Sincronizações por Empresa")
+                st.markdown("### 🏢 Sincronizações por Empresa")
                 
                 if 'Empresa' in df_sincronizados.columns:
                     col_empresa1, col_empresa2 = st.columns([2, 1])
@@ -1748,9 +1748,9 @@ if st.session_state.df_original is not None:
                         empresa_rank.columns = ['Empresa', 'Quantidade']
                         empresa_rank['Percentual'] = (empresa_rank['Quantidade'] / total_sincronizados * 100).round(1)
                         
-                        st.markdown("**?? Ranking Empresas:**")
+                        st.markdown("**🏆 Ranking Empresas:**")
                         for idx, row in empresa_rank.head(5).iterrows():
-                            medal = ["??", "??", "??", "4??", "5??"][idx]
+                            medal = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][idx]
                             st.markdown(f"""
                             <div style="padding: 8px; margin-bottom: 5px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid #{'1e3799' if idx==0 else '28a745' if idx==1 else 'ffc107' if idx==2 else '6c757d'}">
                                 <strong>{medal} {row['Empresa']}</strong><br>
@@ -1759,12 +1759,12 @@ if st.session_state.df_original is not None:
                             """, unsafe_allow_html=True)
             
             else:
-                st.warning("?? Nenhum chamado sincronizado encontrado com os filtros aplicados.")
+                st.warning("⚠️ Nenhum chamado sincronizado encontrado com os filtros aplicados.")
         else:
-            st.info("?? Selecione filtros para visualizar os dados de sincronização por dia.")
+            st.info("ℹ️ Selecione filtros para visualizar os dados de sincronização por dia.")
     
     with tab4:
-        st.markdown('<div class="section-title-exec">?? PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
         
         if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
             # Filtros específicos para esta aba
@@ -1776,7 +1776,7 @@ if st.session_state.df_original is not None:
                     anos_sre = sorted(df['Ano'].dropna().unique().astype(int))
                     anos_opcoes_sre = ['Todos'] + list(anos_sre)
                     ano_sre = st.selectbox(
-                        "?? Filtrar por Ano:",
+                        "📅 Filtrar por Ano:",
                         options=anos_opcoes_sre,
                         key="filtro_ano_sre"
                     )
@@ -1787,7 +1787,7 @@ if st.session_state.df_original is not None:
                     meses_sre = sorted(df['Mês'].dropna().unique().astype(int))
                     meses_opcoes_sre = ['Todos'] + [str(m) for m in meses_sre]
                     mes_sre = st.selectbox(
-                        "?? Filtrar por Mês:",
+                        "📆 Filtrar por Mês:",
                         options=meses_opcoes_sre,
                         key="filtro_mes_sre"
                     )
@@ -1827,7 +1827,7 @@ if st.session_state.df_original is not None:
                 # ============================================
                 # 1. SINCRONIZADOS POR SRE (GRÁFICO DE BARRAS)
                 # ============================================
-                st.markdown("### ?? Sincronizados por SRE")
+                st.markdown("### 📈 Sincronizados por SRE")
                 
                 # Calcular sincronizados por SRE
                 sinc_por_sre = df_sincronizados.groupby('SRE').size().reset_index()
@@ -1916,26 +1916,26 @@ if st.session_state.df_original is not None:
                 if len(sinc_por_sre_nome) >= 1:
                     with col_top1:
                         sre1 = sinc_por_sre_nome.iloc[0]
-                        st.metric("?? 1º Lugar Sincronizados", 
+                        st.metric("🥇 1º Lugar Sincronizados", 
                                  f"{sre1['SRE_Nome']}", 
                                  f"{sre1['Sincronizados']} sinc.")
                 
                 if len(sinc_por_sre_nome) >= 2:
                     with col_top2:
                         sre2 = sinc_por_sre_nome.iloc[1]
-                        st.metric("?? 2º Lugar Sincronizados", 
+                        st.metric("🥈 2º Lugar Sincronizados", 
                                  f"{sre2['SRE_Nome']}", 
                                  f"{sre2['Sincronizados']} sinc.")
                 
                 if len(sinc_por_sre_nome) >= 3:
                     with col_top3:
                         sre3 = sinc_por_sre_nome.iloc[2]
-                        st.metric("?? 3º Lugar Sincronizados", 
+                        st.metric("🥉 3º Lugar Sincronizados", 
                                  f"{sre3['SRE_Nome']}", 
                                  f"{sre3['Sincronizados']} sinc.")
                 
                 # Tabela completa
-                st.markdown("### ?? Performance Detalhada dos SREs")
+                st.markdown("### 📋 Performance Detalhada dos SREs")
                 
                 # Calcular métricas adicionais
                 sres_metrics = []
@@ -1990,13 +1990,13 @@ if st.session_state.df_original is not None:
     # ANÁLISES MELHORADAS (COM NOVAS FUNCIONALIDADES)
     # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title-exec">?? ANÁLISES AVANÇADAS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title-exec">🔍 ANÁLISES AVANÇADAS</div>', unsafe_allow_html=True)
     
     # Criar abas para as análises adicionais
     tab_extra1, tab_extra2, tab_extra3 = st.tabs([
-        "?? Performance de Desenvolvedores",
-        "?? Análise de Sazonalidade", 
-        "? Diagnóstico de Erros"
+        "🚀 Performance de Desenvolvedores",
+        "📈 Análise de Sazonalidade", 
+        "⚡ Diagnóstico de Erros"
     ])
     
     # ABA 1: PERFORMANCE DE DESENVOLVEDORES - MELHORADA E DINÂMICA
@@ -2013,7 +2013,7 @@ if st.session_state.df_original is not None:
                     anos_perf = sorted(df['Ano'].dropna().unique().astype(int))
                     anos_opcoes_perf = ['Todos os Anos'] + list(anos_perf)
                     ano_perf = st.selectbox(
-                        "?? Filtrar por Ano:",
+                        "📅 Filtrar por Ano:",
                         options=anos_opcoes_perf,
                         key="filtro_ano_perf"
                     )
@@ -2024,7 +2024,7 @@ if st.session_state.df_original is not None:
                     meses_perf = sorted(df['Mês'].dropna().unique().astype(int))
                     meses_opcoes_perf = ['Todos os Meses'] + [str(m) for m in meses_perf]
                     mes_perf = st.selectbox(
-                        "?? Filtrar por Mês:",
+                        "📆 Filtrar por Mês:",
                         options=meses_opcoes_perf,
                         key="filtro_mes_perf"
                     )
@@ -2071,11 +2071,11 @@ if st.session_state.df_original is not None:
                     
                     # Classificação
                     if score_qualidade >= 80 and produtividade >= 5:
-                        classificacao = "?? Alto"
+                        classificacao = "🟢 Alto"
                     elif score_qualidade >= 60:
-                        classificacao = "?? Médio"
+                        classificacao = "🟡 Médio"
                     else:
-                        classificacao = "?? Baixo"
+                        classificacao = "🔴 Baixo"
                     
                     dev_metrics.append({
                         'Desenvolvedor': dev,
@@ -2105,10 +2105,10 @@ if st.session_state.df_original is not None:
                 # ============================================
                 # MATRIZ DE PERFORMANCE PARA DEVS
                 # ============================================
-                st.markdown("### ?? Matriz de Performance - Desenvolvedores")
+                st.markdown("### 🎯 Matriz de Performance - Desenvolvedores")
                 
                 # Container expansível para explicação da métrica
-                with st.expander("?? **Como é calculada a Matriz de Performance?**", expanded=False):
+                with st.expander("📊 **Como é calculada a Matriz de Performance?**", expanded=False):
                     st.markdown("""
                     **Fórmulas de Cálculo:**
                     
@@ -2122,10 +2122,10 @@ if st.session_state.df_original is not None:
                     - Score composto que balanceia qualidade, eficiência e volume
                     
                     **Classificação por Quadrantes:**
-                    - **? Estrelas**: Alta eficiência + Alta qualidade
-                    - **? Eficientes**: Alta eficiência + Qualidade média/baixa
-                    - **?? Cuidadosos**: Baixa eficiência + Alta qualidade
-                    - **?? Necessita Apoio**: Baixa eficiência + Baixa qualidade
+                    - **⭐ Estrelas**: Alta eficiência + Alta qualidade
+                    - **⚡ Eficientes**: Alta eficiência + Qualidade média/baixa
+                    - **🎯 Cuidadosos**: Baixa eficiência + Alta qualidade
+                    - **🔄 Necessita Apoio**: Baixa eficiência + Baixa qualidade
                     """)
                 
                 # Criar matriz de performance com filtros
@@ -2143,13 +2143,13 @@ if st.session_state.df_original is not None:
                         # Classificar em quadrantes
                         def classificar_quadrante(row):
                             if row['Eficiencia'] >= media_eficiencia and row['Qualidade'] >= media_qualidade:
-                                return "? Estrelas"
+                                return "⭐ Estrelas"
                             elif row['Eficiencia'] >= media_eficiencia and row['Qualidade'] < media_qualidade:
-                                return "? Eficientes"
+                                return "⚡ Eficientes"
                             elif row['Eficiencia'] < media_eficiencia and row['Qualidade'] >= media_qualidade:
-                                return "?? Cuidadosos"
+                                return "🎯 Cuidadosos"
                             else:
-                                return "?? Necessita Apoio"
+                                return "🔄 Necessita Apoio"
                         
                         matriz_filtrada['Quadrante'] = matriz_filtrada.apply(classificar_quadrante, axis=1)
                         
@@ -2212,7 +2212,7 @@ if st.session_state.df_original is not None:
                         fig_matriz.add_annotation(
                             x=media_eficiencia + (matriz_filtrada['Eficiencia'].max() - media_eficiencia) * 0.5,
                             y=media_qualidade + (matriz_filtrada['Qualidade'].max() - media_qualidade) * 0.5,
-                            text="? Estrelas",
+                            text="⭐ Estrelas",
                             showarrow=False,
                             font=dict(size=12, color="#28a745")
                         )
@@ -2220,7 +2220,7 @@ if st.session_state.df_original is not None:
                         fig_matriz.add_annotation(
                             x=media_eficiencia + (matriz_filtrada['Eficiencia'].max() - media_eficiencia) * 0.5,
                             y=media_qualidade - (media_qualidade - matriz_filtrada['Qualidade'].min()) * 0.5,
-                            text="? Eficientes",
+                            text="⚡ Eficientes",
                             showarrow=False,
                             font=dict(size=12, color="#ffc107")
                         )
@@ -2228,7 +2228,7 @@ if st.session_state.df_original is not None:
                         fig_matriz.add_annotation(
                             x=media_eficiencia - (media_eficiencia - matriz_filtrada['Eficiencia'].min()) * 0.5,
                             y=media_qualidade + (matriz_filtrada['Qualidade'].max() - media_qualidade) * 0.5,
-                            text="?? Cuidadosos",
+                            text="🎯 Cuidadosos",
                             showarrow=False,
                             font=dict(size=12, color="#007bff")
                         )
@@ -2236,7 +2236,7 @@ if st.session_state.df_original is not None:
                         fig_matriz.add_annotation(
                             x=media_eficiencia - (media_eficiencia - matriz_filtrada['Eficiencia'].min()) * 0.5,
                             y=media_qualidade - (media_qualidade - matriz_filtrada['Qualidade'].min()) * 0.5,
-                            text="?? Necessita Apoio",
+                            text="🔄 Necessita Apoio",
                             showarrow=False,
                             font=dict(size=12, color="#dc3545")
                         )
@@ -2251,54 +2251,54 @@ if st.session_state.df_original is not None:
                         st.plotly_chart(fig_matriz, use_container_width=True)
                         
                         # Tabela de classificação por quadrante
-                        st.markdown("#### ?? Classificação por Quadrante")
+                        st.markdown("#### 📋 Classificação por Quadrante")
                         
                         col_q1, col_q2, col_q3, col_q4 = st.columns(4)
                         
                         quadrantes_count = matriz_filtrada['Quadrante'].value_counts()
                         
-                        if '? Estrelas' in quadrantes_count:
+                        if '⭐ Estrelas' in quadrantes_count:
                             with col_q1:
-                                count = quadrantes_count['? Estrelas']
+                                count = quadrantes_count['⭐ Estrelas']
                                 st.markdown(f"""
                                 <div class="matrix-quadrant quadrant-stars">
-                                    ? Estrelas<br>
+                                    ⭐ Estrelas<br>
                                     <span style="font-size: 1.5rem;">{count}</span> DEVs
                                 </div>
                                 """, unsafe_allow_html=True)
                         
-                        if '? Eficientes' in quadrantes_count:
+                        if '⚡ Eficientes' in quadrantes_count:
                             with col_q2:
-                                count = quadrantes_count['? Eficientes']
+                                count = quadrantes_count['⚡ Eficientes']
                                 st.markdown(f"""
                                 <div class="matrix-quadrant quadrant-efficient">
-                                    ? Eficientes<br>
+                                    ⚡ Eficientes<br>
                                     <span style="font-size: 1.5rem;">{count}</span> DEVs
                                 </div>
                                 """, unsafe_allow_html=True)
                         
-                        if '?? Cuidadosos' in quadrantes_count:
+                        if '🎯 Cuidadosos' in quadrantes_count:
                             with col_q3:
-                                count = quadrantes_count['?? Cuidadosos']
+                                count = quadrantes_count['🎯 Cuidadosos']
                                 st.markdown(f"""
                                 <div class="matrix-quadrant quadrant-careful">
-                                    ?? Cuidadosos<br>
+                                    🎯 Cuidadosos<br>
                                     <span style="font-size: 1.5rem;">{count}</span> DEVs
                                 </div>
                                 """, unsafe_allow_html=True)
                         
-                        if '?? Necessita Apoio' in quadrantes_count:
+                        if '🔄 Necessita Apoio' in quadrantes_count:
                             with col_q4:
-                                count = quadrantes_count['?? Necessita Apoio']
+                                count = quadrantes_count['🔄 Necessita Apoio']
                                 st.markdown(f"""
                                 <div class="matrix-quadrant quadrant-needs-help">
-                                    ?? Necessita Apoio<br>
+                                    🔄 Necessita Apoio<br>
                                     <span style="font-size: 1.5rem;">{count}</span> DEVs
                                 </div>
                                 """, unsafe_allow_html=True)
                 
                 # Mostrar top 10
-                st.markdown(f"### ?? Top 10 Desenvolvedores ({ordenar_por})")
+                st.markdown(f"### 🏆 Top 10 Desenvolvedores ({ordenar_por})")
                 
                 # Gráfico de barras horizontais para Score de Qualidade
                 if ordenar_por == "Score de Qualidade":
@@ -2383,7 +2383,7 @@ if st.session_state.df_original is not None:
                     st.plotly_chart(fig_other, use_container_width=True)
                 
                 # Tabela completa
-                st.markdown("### ?? Performance Detalhada")
+                st.markdown("### 📋 Performance Detalhada")
                 st.dataframe(
                     df_dev_metrics,
                     use_container_width=True,
@@ -2404,34 +2404,34 @@ if st.session_state.df_original is not None:
     
     # ABA 2: ANÁLISE DE SAZONALIDADE - MELHORADA COM FILTROS
     with tab_extra2:
-        with st.expander("?? **SOBRE ESTA ANÁLISE**", expanded=False):
+        with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
             st.markdown("""
             **Análise de Sazonalidade e Padrões Temporais:**
             
             Esta análise identifica padrões no fluxo de demandas ao longo do tempo:
             
-            **?? Padrões por Dia da Semana:**
+            **📅 Padrões por Dia da Semana:**
             - Identifica quais dias têm mais/menos demandas
             - Mostra taxa de sincronização por dia
             - Útil para planejamento de recursos
             
-            **?? Demandas por Hora do Dia:**
+            **🕐 Demandas por Hora do Dia:**
             - Identifica horários de pico de criação de chamados
             - Mostra horários com maior taxa de sincronização
             - Filtros por ano e mês disponíveis
             
-            **?? Sazonalidade Mensal:**
+            **📈 Sazonalidade Mensal:**
             - Distribuição de demandas ao longo dos meses
             - Identifica meses com maior volume
             - Mostra taxa de sincronização mensal
             - Inclui todos os 12 meses (Janeiro a Dezembro)
             
-            **?? Tipos de Gráficos:**
+            **📊 Tipos de Gráficos:**
             - Gráficos de barras para comparação
             - Gráficos de linha para tendências
             - Taxas de sincronização sobrepostas
             
-            **?? Objetivo:**
+            **🎯 Objetivo:**
             Otimizar alocação de recursos e identificar padrões para melhorar eficiência.
             """)
         
@@ -2478,7 +2478,7 @@ if st.session_state.df_original is not None:
                 df_saz = df_saz[df_saz['Mês'] == int(mes_saz)]
             
             # Análise por dia da semana
-            st.markdown("### ?? Padrões por Dia da Semana")
+            st.markdown("### 📅 Padrões por Dia da Semana")
             
             # Mapear dias da semana
             dias_semana = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -2553,7 +2553,7 @@ if st.session_state.df_original is not None:
                 # ============================================
                 # DEMANDAS POR HORA DO DIA - COM FILTROS DE ANO E MÊS
                 # ============================================
-                st.markdown("### ?? Demandas por Hora do Dia")
+                st.markdown("### 🕐 Demandas por Hora do Dia")
                 
                 # Filtros específicos para análise por hora
                 col_hora_filtro1, col_hora_filtro2 = st.columns(2)
@@ -2691,7 +2691,7 @@ if st.session_state.df_original is not None:
                         # ADJUSTED: Formatar hora corretamente
                         hora_formatada = f"{int(hora_pico_demanda['Hora'])}:00h"
                         st.metric(
-                            "?? Pico de Demandas", 
+                            "🕐 Pico de Demandas", 
                             hora_formatada, 
                             f"{int(hora_pico_demanda['Total_Demandas'])} demandas"
                         )
@@ -2707,7 +2707,7 @@ if st.session_state.df_original is not None:
                             hora_pico_sinc = dados_sinc_pico.loc[dados_sinc_pico['Sincronizados'].idxmax()]
                             hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
                             st.metric(
-                                "? Pico de Sincronizações", 
+                                "✅ Pico de Sincronizações", 
                                 hora_sinc_formatada, 
                                 f"{int(hora_pico_sinc['Sincronizados'])} sinc."
                             )
@@ -2716,14 +2716,14 @@ if st.session_state.df_original is not None:
                             hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
                             hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
                             st.metric(
-                                "? Pico de Sincronizações", 
+                                "✅ Pico de Sincronizações", 
                                 hora_sinc_formatada, 
                                 f"{int(hora_pico_sinc['Sincronizados'])} sinc.",
                                 help="Pico calculado fora dos horários de sincronismo"
                             )
                     
                     with col_hora_stats3:
-                        # CORREÇÃO APLICADA: "?? Melhor Taxa Sinc." considerando apenas horários de sincronismo
+                        # CORREÇÃO APLICADA: "🏆 Melhor Taxa Sinc." considerando apenas horários de sincronismo
                         # HORÁRIOS VÁLIDOS DE SINCRONISMO (conforme informado)
                         HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
                         MINIMO_CHAMADOS = 2  # Mínimo de chamados para considerar estatística válida
@@ -2740,7 +2740,7 @@ if st.session_state.df_original is not None:
                             hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
                             
                             st.metric(
-                                "?? Melhor Taxa Sinc.", 
+                                "🏆 Melhor Taxa Sinc.", 
                                 hora_taxa_formatada, 
                                 f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%"
                             )
@@ -2752,7 +2752,7 @@ if st.session_state.df_original is not None:
                                 melhor_taxa_hora = dados_fallback.loc[dados_fallback['Taxa_Sinc'].idxmax()]
                                 hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
                                 st.metric(
-                                    "?? Melhor Taxa Sinc.", 
+                                    "🏆 Melhor Taxa Sinc.", 
                                     hora_taxa_formatada, 
                                     f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%",
                                     help="Taxa calculada com volume baixo de dados"
@@ -2760,7 +2760,7 @@ if st.session_state.df_original is not None:
                             else:
                                 # Se não houver dados em nenhum horário de sincronismo
                                 st.metric(
-                                    "?? Melhor Taxa Sinc.", 
+                                    "🏆 Melhor Taxa Sinc.", 
                                     "N/A",
                                     "Sem dados nos horários 8-12,14-16h"
                                 )
@@ -2768,7 +2768,7 @@ if st.session_state.df_original is not None:
             # ============================================
             # SAZONALIDADE MENSAL - CORRIGIDA PARA MOSTRAR DEZEMBRO
             # ============================================
-            st.markdown("### ?? Sazonalidade Mensal")
+            st.markdown("### 📈 Sazonalidade Mensal")
             
             # Filtro simples para sazonalidade mensal
             col_saz_mes1, col_saz_mes2 = st.columns(2)
@@ -2891,28 +2891,28 @@ if st.session_state.df_original is not None:
                 
                 with col_pico1:
                     mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
-                    st.metric("?? Mês com mais demandas", 
+                    st.metric("📈 Mês com mais demandas", 
                              f"{meses_nomes_completos.get(mes_maior_demanda['Mês'], mes_maior_demanda['Mês'])}: {int(mes_maior_demanda['Total'])}")
                 
                 with col_pico2:
                     mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
-                    st.metric("? Mês com mais sincronizações", 
+                    st.metric("✅ Mês com mais sincronizações", 
                              f"{meses_nomes_completos.get(mes_maior_sinc['Mês'], mes_maior_sinc['Mês'])}: {int(mes_maior_sinc['Sincronizados'])}")
                 
                 with col_pico3:
                     melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
-                    st.metric("?? Melhor taxa de sincronização", 
+                    st.metric("🏆 Melhor taxa de sincronização", 
                              f"{meses_nomes_completos.get(melhor_taxa['Mês'], melhor_taxa['Mês'])}: {melhor_taxa['Taxa_Sinc']}%")
     
     # ABA 3: DIAGNÓSTICO DE ERROS - SURPREENDENTE
     with tab_extra3:
-        with st.expander("?? **SOBRE ESTA ANÁLISE**", expanded=False):
+        with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
             st.markdown("""
             **Análise Avançada de Erros:**
-            - ?? **Identificação de padrões recorrentes**
-            - ?? **Análise de causas raiz**
-            - ? **Recomendações automáticas**
-            - ?? **Foco em prevenção**
+            - 🔍 **Identificação de padrões recorrentes**
+            - 📊 **Análise de causas raiz**
+            - ⚡ **Recomendações automáticas**
+            - 🎯 **Foco em prevenção**
             """)
         
         if 'Tipo_Chamado' in df.columns:
@@ -2959,7 +2959,7 @@ if st.session_state.df_original is not None:
             
             # Análise principal baseada na seleção
             if tipo_analise_diag == "Tipos de Erro":
-                st.markdown("### ?? Análise de Tipos de Erro")
+                st.markdown("### 🔍 Análise de Tipos de Erro")
                 
                 # Distribuição por tipo
                 tipos_erro = df_diag['Tipo_Chamado'].value_counts().reset_index()
@@ -2988,7 +2988,7 @@ if st.session_state.df_original is not None:
                     st.plotly_chart(fig_pizza, use_container_width=True)
                 
                 with col_tipo2:
-                    st.markdown("### ?? Top 5 Tipos")
+                    st.markdown("### 📊 Top 5 Tipos")
                     
                     for idx, row in tipos_erro.head(5).iterrows():
                         st.markdown(f"""
@@ -3001,7 +3001,7 @@ if st.session_state.df_original is not None:
                 
                 # Análise de severidade (baseada em revisões)
                 if 'Revisões' in df_diag.columns:
-                    st.markdown("### ?? Análise de Severidade")
+                    st.markdown("### ⚠️ Análise de Severidade")
                     
                     severidade = df_diag.groupby('Tipo_Chamado').agg({
                         'Revisões': ['mean', 'max', 'sum'],
@@ -3031,7 +3031,7 @@ if st.session_state.df_original is not None:
                     )
             
             elif tipo_analise_diag == "Tendências Temporais":
-                st.markdown("### ?? Tendências Temporais de Erros")
+                st.markdown("### 📈 Tendências Temporais de Erros")
                 
                 if 'Criado' in df_diag.columns:
                     # Agrupar por mês
@@ -3065,7 +3065,7 @@ if st.session_state.df_original is not None:
                     st.plotly_chart(fig_tendencia, use_container_width=True)
                     
                     # Detecção de tendências
-                    st.markdown("### ?? Detecção de Tendências")
+                    st.markdown("### 🔍 Detecção de Tendências")
                     
                     # Calcular crescimento para cada tipo
                     tendencias = []
@@ -3076,16 +3076,16 @@ if st.session_state.df_original is not None:
                                          tipo_data['Quantidade'].iloc[0] * 100)
                             
                             if crescimento > 20:
-                                status = "?? Crescimento Acelerado"
+                                status = "📈 Crescimento Acelerado"
                                 cor = "danger"
                             elif crescimento > 0:
-                                status = "?? Crescimento Moderado"
+                                status = "↗️ Crescimento Moderado"
                                 cor = "warning"
                             elif crescimento < -20:
-                                status = "?? Redução Significativa"
+                                status = "📉 Redução Significativa"
                                 cor = "success"
                             else:
-                                status = "?? Estável"
+                                status = "➡️ Estável"
                                 cor = "info"
                             
                             tendencias.append({
@@ -3109,7 +3109,7 @@ if st.session_state.df_original is not None:
                         )
             
             elif tipo_analise_diag == "Impacto nos SREs":
-                st.markdown("### ?? Impacto nos SREs")
+                st.markdown("### 👥 Impacto nos SREs")
                 
                 if 'SRE' in df_diag.columns and 'Revisões' in df_diag.columns:
                     # Análise por SRE
@@ -3145,7 +3145,7 @@ if st.session_state.df_original is not None:
                         st.plotly_chart(fig_impacto, use_container_width=True)
                     
                     with col_impacto2:
-                        st.markdown("### ?? Foco de Melhoria")
+                        st.markdown("### 🎯 Foco de Melhoria")
                         
                         # Identificar SREs que precisam de atenção
                         sre_atencao = impacto_sre[
@@ -3157,7 +3157,7 @@ if st.session_state.df_original is not None:
                             for idx, row in sre_atencao.head(3).iterrows():
                                 st.markdown(f"""
                                 <div class="warning-card">
-                                    <strong>?? {idx}</strong><br>
+                                    <strong>⚠️ {idx}</strong><br>
                                     <small>Tipo mais comum: {row['Tipo_Mais_Comum']}</small><br>
                                     <small>Média revisões: {row['Média_Revisões']}</small><br>
                                     <small>Total revisões: {int(row['Total_Revisões'])}</small>
@@ -3174,7 +3174,7 @@ if st.session_state.df_original is not None:
                             for idx, row in sre_melhor.head(3).iterrows():
                                 st.markdown(f"""
                                 <div class="performance-card">
-                                    <strong>? {idx}</strong><br>
+                                    <strong>✅ {idx}</strong><br>
                                     <small>Tipo mais comum: {row['Tipo_Mais_Comum']}</small><br>
                                     <small>Média revisões: {row['Média_Revisões']}</small><br>
                                     <small>Total revisões: {int(row['Total_Revisões'])}</small>
@@ -3182,7 +3182,7 @@ if st.session_state.df_original is not None:
                                 """, unsafe_allow_html=True)
             
             elif tipo_analise_diag == "Recomendações":
-                st.markdown("### ?? Recomendações Inteligentes")
+                st.markdown("### 💡 Recomendações Inteligentes")
                 
                 # Gerar recomendações baseadas nos dados
                 recomendacoes = []
@@ -3192,7 +3192,7 @@ if st.session_state.df_original is not None:
                 for tipo, count in tipos_frequentes.items():
                     if count > len(df_diag) * 0.1:  # Mais de 10% do total
                         recomendacoes.append({
-                            'Prioridade': '?? ALTA',
+                            'Prioridade': '🔴 ALTA',
                             'Recomendação': f'Investigar causa raiz do tipo "{tipo}"',
                             'Justificativa': f'Responsável por {count} ocorrências ({count/len(df_diag)*100:.1f}% do total)'
                         })
@@ -3203,7 +3203,7 @@ if st.session_state.df_original is not None:
                     dia_pico = df_diag['Dia_Semana'].value_counts().index[0]
                     
                     recomendacoes.append({
-                        'Prioridade': '?? MÉDIA',
+                        'Prioridade': '🟡 MÉDIA',
                         'Recomendação': f'Reforçar equipe às {dia_pico}s',
                         'Justificativa': f'Dia com maior volume de chamados'
                     })
@@ -3213,7 +3213,7 @@ if st.session_state.df_original is not None:
                     media_revisoes = df_diag['Revisões'].mean()
                     if media_revisoes > 2:
                         recomendacoes.append({
-                            'Prioridade': '?? ALTA',
+                            'Prioridade': '🔴 ALTA',
                             'Recomendação': 'Implementar revisão de código mais rigorosa',
                             'Justificativa': f'Média de {media_revisoes:.1f} revisões por chamado'
                         })
@@ -3227,7 +3227,7 @@ if st.session_state.df_original is not None:
                         
                         if maior_media > 3:
                             recomendacoes.append({
-                                'Prioridade': '?? MÉDIA',
+                                'Prioridade': '🟡 MÉDIA',
                                 'Recomendação': f'Capacitação específica para {sre_maior_revisao}',
                                 'Justificativa': f'Média de {maior_media:.1f} revisões por chamado'
                             })
@@ -3250,7 +3250,7 @@ if st.session_state.df_original is not None:
                         """, unsafe_allow_html=True)
                     
                     # Ações sugeridas
-                    st.markdown("### ?? Plano de Ação Sugerido")
+                    st.markdown("### 🚀 Plano de Ação Sugerido")
                     
                     acoes = [
                         "1. Priorizar investigação dos tipos de erro mais frequentes",
@@ -3276,7 +3276,7 @@ if st.session_state.df_original is not None:
     col_top, col_dist = st.columns([2, 1])
     
     with col_top:
-        st.markdown('<div class="section-title-exec">?? TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title-exec">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
         
         if 'Responsável_Formatado' in df.columns:
             top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
@@ -3313,7 +3313,7 @@ if st.session_state.df_original is not None:
             st.plotly_chart(fig_top, use_container_width=True)
     
     with col_dist:
-        st.markdown('<div class="section-title-exec">?? DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title-exec">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
         
         if 'Tipo_Chamado' in df.columns:
             # Agrupar por tipo de chamado
@@ -3359,12 +3359,12 @@ if st.session_state.df_original is not None:
     # ÚLTIMAS DEMANDAS REGISTRADAS COM FILTROS (ORIGINAL)
     # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title-exec">?? ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
     
     if 'Criado' in df.columns:
         # FILTRO DE BUSCA POR CHAMADO ESPECÍFICO - MANTIDO
         filtro_chamado_principal = st.text_input(
-            "?? Buscar chamado específico:",
+            "🔎 Buscar chamado específico:",
             placeholder="Digite o número do chamado...",
             key="filtro_chamado_principal"
         )
@@ -3477,7 +3477,7 @@ if st.session_state.df_original is not None:
             # Botão de exportação
             csv = display_data.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
-                label="?? Exportar esta tabela",
+                label="📥 Exportar esta tabela",
                 data=csv,
                 file_name=f"ultimas_demandas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
@@ -3491,12 +3491,12 @@ else:
     # TELA INICIAL
     st.markdown("""
     <div style="text-align: center; padding: 4rem; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
-        <h3 style="color: #495057;">?? Esteira ADMS Dashboard</h3>
+        <h3 style="color: #495057;">📊 Esteira ADMS Dashboard</h3>
         <p style="color: #6c757d; margin-bottom: 2rem;">
             Sistema de análise e monitoramento de chamados - Setor SRE
         </p>
         <div style="margin-top: 2rem; padding: 2rem; background: white; border-radius: 8px; display: inline-block;">
-            <h4 style="color: #1e3799;">?? Para começar:</h4>
+            <h4 style="color: #1e3799;">📋 Para começar:</h4>
             <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
             <p>2. <strong>Use a seção "Importar Dados"</strong> no final da barra lateral</p>
             <p>3. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
@@ -3519,7 +3519,7 @@ st.markdown(f"""
         Desenvolvido por: <span style="color: #1e3799;">Kewin Marcel Ramirez Ferreira | GEAT</span>
         </p>
         <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.85rem;">
-        ?? Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: #1e3799; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
+        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: #1e3799; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
         </p>
     </div>
     <div style="margin-top: 0.5rem;">
