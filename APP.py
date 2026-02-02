@@ -37,7 +37,7 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS PERSONALIZADO ATUALIZADO
+# CSS PERSONALIZADO ATUALIZADO COM POP-UP
 # ============================================
 st.markdown("""
 <style>
@@ -298,6 +298,175 @@ st.markdown("""
         color: #721c24;
         border: 2px solid #dc3545;
     }
+    
+    /* ============================================
+    ESTILOS PARA O BOTÃO FLUTUANTE E POP-UP
+    ============================================ */
+    
+    /* Botão flutuante */
+    .floating-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: linear-gradient(135deg, #1e3799 0%, #0c2461 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 25px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 6px 20px rgba(28, 55, 153, 0.4);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .floating-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(28, 55, 153, 0.6);
+    }
+    
+    /* Overlay do pop-up */
+    .popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9998;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    /* Container do pop-up */
+    .popup-container {
+        background: white;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease;
+        border: 3px solid #1e3799;
+    }
+    
+    /* Cabeçalho do pop-up */
+    .popup-header {
+        background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+        padding: 1.5rem;
+        border-radius: 12px 12px 0 0;
+        color: white;
+        text-align: center;
+    }
+    
+    /* Conteúdo do pop-up */
+    .popup-content {
+        padding: 2rem;
+    }
+    
+    /* Indicadores dentro do pop-up */
+    .popup-metric {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border-left: 4px solid;
+        text-align: center;
+    }
+    
+    .popup-metric-success {
+        border-left-color: #28a745;
+    }
+    
+    .popup-metric-warning {
+        border-left-color: #ffc107;
+    }
+    
+    .popup-metric-danger {
+        border-left-color: #dc3545;
+    }
+    
+    .popup-metric-primary {
+        border-left-color: #1e3799;
+    }
+    
+    /* Valor do indicador */
+    .popup-metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1;
+    }
+    
+    .popup-metric-label {
+        font-size: 1rem;
+        color: #6c757d;
+        margin: 0.5rem 0 0 0;
+        font-weight: 500;
+    }
+    
+    /* Botão de fechar */
+    .popup-close-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 20px;
+        font-size: 1rem;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 1rem;
+        transition: background 0.3s ease;
+    }
+    
+    .popup-close-btn:hover {
+        background: #c82333;
+    }
+    
+    /* Gráfico mini */
+    .popup-chart {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    
+    /* Animações */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from { 
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .popup-container {
+            width: 95%;
+            max-width: 400px;
+        }
+        
+        .popup-metric-value {
+            font-size: 2rem;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -548,6 +717,302 @@ def get_horario_brasilia():
         return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
 # ============================================
+# FUNÇÕES PARA O POP-UP DE INDICADORES
+# ============================================
+
+def calcular_indicadores_mes_atual(df):
+    """Calcula indicadores do mês atual para o pop-up"""
+    if df is None or df.empty:
+        return None
+    
+    try:
+        # Obter mês e ano atual
+        mes_atual = datetime.now().month
+        ano_atual = datetime.now().year
+        
+        # Filtrar dados do mês atual
+        df_mes_atual = df[
+            (df['Criado'].dt.month == mes_atual) & 
+            (df['Criado'].dt.year == ano_atual)
+        ].copy()
+        
+        if df_mes_atual.empty:
+            return None
+        
+        # Calcular indicadores
+        total_cards = len(df_mes_atual)
+        cards_sincronizados = len(df_mes_atual[df_mes_atual['Status'] == 'Sincronizado'])
+        
+        # Cards com retorno (revisões > 0)
+        if 'Revisões' in df_mes_atual.columns:
+            cards_com_retorno = len(df_mes_atual[df_mes_atual['Revisões'] > 0])
+        else:
+            cards_com_retorno = 0
+        
+        # Cards sem retorno
+        cards_sem_retorno = cards_sincronizados - cards_com_retorno
+        
+        # Taxa de sucesso
+        if cards_sincronizados > 0:
+            taxa_sucesso = (cards_sem_retorno / cards_sincronizados * 100)
+        else:
+            taxa_sucesso = 0
+        
+        # Calcular tendência do mês anterior (se disponível)
+        mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
+        ano_mes_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
+        
+        df_mes_anterior = df[
+            (df['Criado'].dt.month == mes_anterior) & 
+            (df['Criado'].dt.year == ano_mes_anterior)
+        ].copy()
+        
+        if not df_mes_anterior.empty:
+            cards_sinc_mes_anterior = len(df_mes_anterior[df_mes_anterior['Status'] == 'Sincronizado'])
+            variacao = ((cards_sincronizados - cards_sinc_mes_anterior) / cards_sinc_mes_anterior * 100) if cards_sinc_mes_anterior > 0 else 0
+        else:
+            variacao = 0
+        
+        return {
+            'total_cards': total_cards,
+            'cards_sincronizados': cards_sincronizados,
+            'cards_com_retorno': cards_com_retorno,
+            'cards_sem_retorno': cards_sem_retorno,
+            'taxa_sucesso': taxa_sucesso,
+            'variacao': variacao,
+            'mes_atual': mes_atual,
+            'ano_atual': ano_atual
+        }
+    
+    except Exception as e:
+        st.error(f"Erro ao calcular indicadores: {str(e)}")
+        return None
+
+def criar_grafico_mini_tendencia(df):
+    """Cria gráfico mini de tendência para o pop-up"""
+    if df is None or df.empty or 'Criado' not in df.columns:
+        return None
+    
+    try:
+        # Últimos 6 meses
+        hoje = datetime.now()
+        meses_data = []
+        
+        for i in range(5, -1, -1):
+            mes_ref = hoje.month - i
+            ano_ref = hoje.year
+            
+            if mes_ref <= 0:
+                mes_ref += 12
+                ano_ref -= 1
+            
+            # Filtrar por mês
+            df_mes = df[
+                (df['Criado'].dt.month == mes_ref) & 
+                (df['Criado'].dt.year == ano_ref)
+            ]
+            
+            # Contar sincronizados
+            sinc_mes = len(df_mes[df_mes['Status'] == 'Sincronizado'])
+            
+            # Nome do mês abreviado
+            nome_mes = df_mes['Criado'].dt.month.map({
+                1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+            }).iloc[0] if not df_mes.empty else ['Jan','Fev','Mar','Abr','Mai','Jun',
+                                                  'Jul','Ago','Set','Out','Nov','Dez'][mes_ref-1]
+            
+            meses_data.append({
+                'mes': nome_mes,
+                'sincronizados': sinc_mes
+            })
+        
+        # Criar DataFrame
+        df_tendencia = pd.DataFrame(meses_data)
+        
+        # Criar gráfico
+        fig = go.Figure()
+        
+        fig.add_trace(go.Scatter(
+            x=df_tendencia['mes'],
+            y=df_tendencia['sincronizados'],
+            mode='lines+markers',
+            name='Sincronizados',
+            line=dict(color='#1e3799', width=3),
+            marker=dict(size=8, color='#0c2461')
+        ))
+        
+        fig.update_layout(
+            title='📈 Tendência (últimos 6 meses)',
+            height=200,
+            margin=dict(t=40, b=20, l=20, r=20),
+            plot_bgcolor='white',
+            showlegend=False,
+            xaxis=dict(
+                gridcolor='rgba(0,0,0,0.05)',
+                title=''
+            ),
+            yaxis=dict(
+                gridcolor='rgba(0,0,0,0.05)',
+                title='Cards Sincronizados'
+            )
+        )
+        
+        return fig
+    
+    except Exception as e:
+        st.error(f"Erro ao criar gráfico de tendência: {str(e)}")
+        return None
+
+def criar_popup_indicadores():
+    """Cria o pop-up com indicadores principais"""
+    if st.session_state.df_original is None:
+        return
+    
+    df = st.session_state.df_original
+    indicadores = calcular_indicadores_mes_atual(df)
+    
+    if indicadores is None:
+        return
+    
+    # HTML para o botão flutuante
+    st.markdown("""
+    <button class="floating-btn" onclick="document.getElementById('popup-overlay').style.display='flex'">
+        📊 Ver Indicadores
+    </button>
+    
+    <div id="popup-overlay" class="popup-overlay" style="display: none;">
+        <div class="popup-container">
+            <div class="popup-header">
+                <h2 style="margin: 0; font-size: 1.5rem;">📈 RESUMO DOS INDICADORES</h2>
+                <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Mês Atual - Sincronizações SRE</p>
+            </div>
+            
+            <div class="popup-content">
+    """, unsafe_allow_html=True)
+    
+    # Informação do período
+    meses = {
+        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+        5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+        9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+    }
+    
+    st.markdown(f"""
+    <div style="text-align: center; margin-bottom: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+        <p style="margin: 0; color: #495057; font-weight: 600;">
+        📅 Período: {meses[indicadores['mes_atual']]} de {indicadores['ano_atual']}
+        </p>
+        <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;">
+        Total de demandas no período: {indicadores['total_cards']:,}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Layout em grid para os indicadores
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Cards Sincronizados
+        st.markdown(f"""
+        <div class="popup-metric popup-metric-primary">
+            <div class="popup-metric-value">{indicadores['cards_sincronizados']:,}</div>
+            <div class="popup-metric-label">Cards Sincronizados</div>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; color: {'#28a745' if indicadores['variacao'] >= 0 else '#dc3545'}">
+                {f"↗️ {indicadores['variacao']:+.1f}% vs mês anterior" if indicadores['variacao'] != 0 else "➡️ Sem variação"}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Cards com Retorno
+        st.markdown(f"""
+        <div class="popup-metric popup-metric-danger">
+            <div class="popup-metric-value">{indicadores['cards_com_retorno']:,}</div>
+            <div class="popup-metric-label">Cards com Retorno</div>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #dc3545;">
+                {f"⚠️ {indicadores['cards_com_retorno']/indicadores['cards_sincronizados']*100:.1f}% dos sincronizados" if indicadores['cards_sincronizados'] > 0 else "Sem dados"}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        # Cards sem Retorno
+        st.markdown(f"""
+        <div class="popup-metric popup-metric-success">
+            <div class="popup-metric-value">{indicadores['cards_sem_retorno']:,}</div>
+            <div class="popup-metric-label">Cards sem Retorno</div>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #28a745;">
+                ✅ Aprovados na primeira tentativa
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Taxa de Sucesso
+        st.markdown(f"""
+        <div class="popup-metric popup-metric-warning">
+            <div class="popup-metric-value">{indicadores['taxa_sucesso']:.1f}%</div>
+            <div class="popup-metric-label">Taxa de Sucesso</div>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; color: {'#28a745' if indicadores['taxa_sucesso'] >= 90 else '#ffc107' if indicadores['taxa_sucesso'] >= 80 else '#dc3545'}">
+                {f"{'🎯 Excelente' if indicadores['taxa_sucesso'] >= 90 else '⚠️ Pode melhorar' if indicadores['taxa_sucesso'] >= 80 else '❌ Necessita atenção'}"}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Texto informativo
+    st.markdown("""
+    <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f7ff; border-radius: 8px; border-left: 4px solid #1e3799;">
+        <p style="margin: 0; color: #495057; font-weight: 600;">📢 INFORMAÇÃO IMPORTANTE</p>
+        <p style="margin: 0.5rem 0 0 0; color: #6c757d;">
+        Este pop-up mostra os <strong>indicadores principais do mês atual</strong> do setor SRE.
+        Os valores são calculados em tempo real com base nos dados carregados.
+        </p>
+        <p style="margin: 0.5rem 0 0 0; color: #6c757d;">
+        <strong>Cards sincronizados:</strong> Demandas validadas e finalizadas pelo SRE.<br>
+        <strong>Cards com retorno:</strong> Demandas que precisaram de ajustes após validação.<br>
+        <strong>Taxa de sucesso:</strong> Porcentagem de aprovação na primeira tentativa.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Gráfico de tendência
+    fig_tendencia = criar_grafico_mini_tendencia(df)
+    if fig_tendencia:
+        st.markdown('<div class="popup-chart">', unsafe_allow_html=True)
+        st.plotly_chart(fig_tendencia, use_container_width=True, config={'displayModeBar': False})
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Botão de fechar
+    st.markdown("""
+    <button class="popup-close-btn" onclick="document.getElementById('popup-overlay').style.display='none'">
+        Fechar Pop-up
+    </button>
+    """, unsafe_allow_html=True)
+    
+    # Fechar divs
+    st.markdown("""
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Fechar pop-up ao clicar fora
+        document.getElementById('popup-overlay').addEventListener('click', function(e) {
+            if (e.target.id === 'popup-overlay') {
+                document.getElementById('popup-overlay').style.display = 'none';
+            }
+        });
+        
+        // Fechar com ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.getElementById('popup-overlay').style.display = 'none';
+            }
+        });
+    </script>
+    """, unsafe_allow_html=True)
+
+# ============================================
 # NOVAS FUNÇÕES PARA ANÁLISE SRE MELHORADA
 # ============================================
 
@@ -629,7 +1094,7 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     sinc_mes.columns = ['Mes_Ano', 'Sincronizados']
     
     # Total por mês
-    total_mes = df_sre.groupby('Mes_Ano').size().reset_index()
+    total_mes = df_sre.groupby('Mes_Ano').size().resetindex()
     total_mes.columns = ['Mes_Ano', 'Total']
     
     # Combinar
@@ -949,7 +1414,7 @@ with st.sidebar:
 # CONTEÚDO PRINCIPAL
 # ============================================
 
-# HEADER ATUALIZADO (removida a data completamente)
+# HEADER ATUALIZADO
 st.markdown("""
 <div class="main-header">
     <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -973,6 +1438,13 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# ============================================
+# CHAMADA DO POP-UP DE INDICADORES
+# ============================================
+# O pop-up será exibido apenas se houver dados carregados
+if st.session_state.df_original is not None:
+    criar_popup_indicadores()
 
 # ============================================
 # VERIFICAÇÃO AUTOMÁTICA DE ATUALIZAÇÕES
@@ -2818,18 +3290,18 @@ if st.session_state.df_original is not None:
                     })
                 
                 # Dados mensais para o ano selecionado
-                demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reset_index()
+                demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().resetindex()
                 demanda_mes.columns = ['Mês', 'Total']
                 
                 # Reindex para garantir todos os 12 meses aparecem
-                demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).resetindex()
                 demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
                 
-                sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reset_index()
+                sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().resetindex()
                 sinc_mes.columns = ['Mês', 'Sincronizados']
                 
                 # Reindex para garantir todos os 12 meses aparecem
-                sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).resetindex()
                 sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
                 
                 dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
@@ -2962,7 +3434,7 @@ if st.session_state.df_original is not None:
                 st.markdown("### 🔍 Análise de Tipos de Erro")
                 
                 # Distribuição por tipo
-                tipos_erro = df_diag['Tipo_Chamado'].value_counts().reset_index()
+                tipos_erro = df_diag['Tipo_Chamado'].value_counts().resetindex()
                 tipos_erro.columns = ['Tipo', 'Frequência']
                 tipos_erro['Percentual'] = (tipos_erro['Frequência'] / len(df_diag) * 100).round(1)
                 
