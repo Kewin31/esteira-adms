@@ -1,4 +1,3 @@
-
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -11,6 +10,7 @@ import hashlib
 import warnings
 from pytz import timezone
 import numpy as np
+import streamlit.components.v1 as components  # NOVO: Importação para o popup
 warnings.filterwarnings('ignore')
 
 # ============================================
@@ -299,6 +299,28 @@ st.markdown("""
         color: #721c24;
         border: 2px solid #dc3545;
     }
+    
+    /* NOVO: Estilos para o botão do popup */
+    .popup-button {
+        background: linear-gradient(135deg, #1e3799, #0c2461);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 10px 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(30, 55, 153, 0.4);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .popup-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(30, 55, 153, 0.6);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -547,6 +569,260 @@ def get_horario_brasilia():
         return datetime.now(tz).strftime('%d/%m/%Y %H:%M:%S')
     except:
         return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
+# ============================================
+# NOVA FUNÇÃO: CRIAR POPUP DE INDICADORES
+# ============================================
+def criar_popup_indicadores(df):
+    """Cria popup modal com indicadores principais"""
+    hoje = datetime.now()
+    mes_atual = hoje.month
+    ano_atual = hoje.year
+    nome_mes = hoje.strftime('%B').capitalize()
+    
+    # Traduzir nome do mês para português
+    meses_pt = {
+        'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
+        'April': 'Abril', 'May': 'Maio', 'June': 'Junho',
+        'July': 'Julho', 'August': 'Agosto', 'September': 'Setembro',
+        'October': 'Outubro', 'November': 'Novembro', 'December': 'Dezembro'
+    }
+    nome_mes_pt = meses_pt.get(nome_mes, nome_mes)
+    
+    # Filtrar dados do mês atual
+    df_mes = df[(df['Criado'].dt.month == mes_atual) & 
+                (df['Criado'].dt.year == ano_atual)].copy()
+    
+    # Calcular indicadores
+    total_cards_mes = len(df_mes)
+    cards_validados = len(df_mes[df_mes['Status'] == 'Sincronizado'])
+    cards_com_erro = len(df_mes[df_mes['Revisões'] > 0])
+    cards_sem_erro = cards_validados - cards_com_erro
+    
+    # Taxas
+    taxa_sucesso = (cards_validados / total_cards_mes * 100) if total_cards_mes > 0 else 0
+    taxa_erro = (cards_com_erro / cards_validados * 100) if cards_validados > 0 else 0
+    
+    # Comparar com mês anterior
+    mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
+    ano_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
+    
+    df_mes_anterior = df[(df['Criado'].dt.month == mes_anterior) & 
+                         (df['Criado'].dt.year == ano_anterior)].copy()
+    
+    cards_validados_anterior = len(df_mes_anterior[df_mes_anterior['Status'] == 'Sincronizado'])
+    
+    # Calcular variação
+    if cards_validados_anterior > 0:
+        variacao = ((cards_validados - cards_validados_anterior) / cards_validados_anterior * 100)
+    else:
+        variacao = 0
+    
+    # Texto narrativo dinâmico
+    if cards_com_erro == 0:
+        texto_principal = f"✅ **PAPEL DO SRE VALIDOU {cards_validados} CARDS SEM RETORNO DE ERRO!**"
+        subtexto = f"Performance excepcional em {nome_mes_pt} - 100% de aprovação direta"
+        emoji_titulo = "🎯"
+        cor_destaque = "#28a745"
+    elif taxa_erro <= 5:
+        texto_principal = f"⚡ **PAPEL DO SRE VALIDOU {cards_validados} CARDS COM APENAS {cards_com_erro} AJUSTES**"
+        subtexto = f"Alta qualidade no mês de {nome_mes_pt} - Taxa de erro de apenas {taxa_erro:.1f}%"
+        emoji_titulo = "🚀"
+        cor_destaque = "#17a2b8"
+    else:
+        texto_principal = f"📊 **PAPEL DO SRE VALIDOU {cards_validados} CARDS, {cards_com_erro} COM RETORNO**"
+        subtexto = f"Análise de {nome_mes_pt} - {taxa_sucesso:.1f}% de taxa de sucesso"
+        emoji_titulo = "📈"
+        cor_destaque = "#ffc107"
+    
+    # Criar HTML do popup
+    popup_html = f'''
+    <div id="popupOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0, 0, 0, 0.7); z-index: 10000; display: flex; 
+                justify-content: center; align-items: center; backdrop-filter: blur(3px);">
+        <div style="background: white; width: 90%; max-width: 900px; max-height: 90vh;
+                    border-radius: 20px; padding: 0; overflow: hidden; 
+                    box-shadow: 0 25px 50px rgba(0,0,0,0.5); animation: slideIn 0.3s ease-out;">
+            
+            <!-- Cabeçalho do popup -->
+            <div style="background: linear-gradient(135deg, #0c2461, #1e3799); 
+                        padding: 1.5rem 2rem; color: white;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.8rem;">{emoji_titulo} MANCHETE DO MÊS</h2>
+                        <p style="margin: 0.3rem 0 0 0; opacity: 0.9; font-size: 1rem;">
+                        {nome_mes_pt} {ano_atual} | Resumo Executivo
+                        </p>
+                    </div>
+                    <button onclick="document.getElementById('popupOverlay').style.display='none'" 
+                            style="background: rgba(255,255,255,0.2); color: white; 
+                                   border: none; width: 40px; height: 40px; 
+                                   border-radius: 50%; font-size: 1.5rem; 
+                                   cursor: pointer; display: flex; align-items: center; 
+                                   justify-content: center;">×</button>
+                </div>
+            </div>
+            
+            <!-- Conteúdo principal -->
+            <div style="padding: 2rem;">
+                <!-- Destaque narrativo -->
+                <div style="background: {cor_destaque}15; padding: 1.5rem; border-radius: 10px; 
+                            border-left: 5px solid {cor_destaque}; margin-bottom: 2rem;">
+                    <h3 style="color: #495057; margin: 0 0 0.5rem 0;">{texto_principal}</h3>
+                    <p style="color: #6c757d; margin: 0; font-size: 1rem;">{subtexto}</p>
+                </div>
+                
+                <!-- Grid de indicadores -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+                    <!-- Card 1: Total de cards -->
+                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid #1e3799;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                            <div style="background: #1e3799; color: white; width: 50px; height: 50px; 
+                                        border-radius: 10px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.5rem;">📋</div>
+                            <div>
+                                <div style="font-size: 2.2rem; font-weight: 800; color: #1e3799;">
+                                    {total_cards_mes}
+                                </div>
+                                <div style="color: #6c757d; font-size: 0.9rem;">TOTAL DE CARDS</div>
+                            </div>
+                        </div>
+                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        Criados no mês de {nome_mes_pt}
+                        </p>
+                    </div>
+                    
+                    <!-- Card 2: Validados pelo SRE -->
+                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid #28a745;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                            <div style="background: #28a745; color: white; width: 50px; height: 50px; 
+                                        border-radius: 10px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.5rem;">✅</div>
+                            <div>
+                                <div style="font-size: 2.2rem; font-weight: 800; color: #28a745;">
+                                    {cards_validados}
+                                </div>
+                                <div style="color: #6c757d; font-size: 0.9rem;">VALIDADOS PELO SRE</div>
+                            </div>
+                        </div>
+                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        {variacao:+.1f}% vs mês anterior
+                        </p>
+                    </div>
+                    
+                    <!-- Card 3: Cards sem erro -->
+                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid #17a2b8;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                            <div style="background: #17a2b8; color: white; width: 50px; height: 50px; 
+                                        border-radius: 10px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.5rem;">🎯</div>
+                            <div>
+                                <div style="font-size: 2.2rem; font-weight: 800; color: #17a2b8;">
+                                    {cards_sem_erro}
+                                </div>
+                                <div style="color: #6c757d; font-size: 0.9rem;">SEM RETORNO DE ERRO</div>
+                            </div>
+                        </div>
+                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        Aprovação direta na primeira validação
+                        </p>
+                    </div>
+                    
+                    <!-- Card 4: Com retorno -->
+                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {'#dc3545' if cards_com_erro > 0 else '#6c757d'}">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                            <div style="background: {'#dc3545' if cards_com_erro > 0 else '#6c757d'}; 
+                                        color: white; width: 50px; height: 50px; 
+                                        border-radius: 10px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.5rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
+                            <div>
+                                <div style="font-size: 2.2rem; font-weight: 800; 
+                                            color: {'#dc3545' if cards_com_erro > 0 else '#6c757d'}">
+                                    {cards_com_erro}
+                                </div>
+                                <div style="color: #6c757d; font-size: 0.9rem;">COM RETORNO DE ERRO</div>
+                            </div>
+                        </div>
+                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        {taxa_erro:.1f}% dos cards validados
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Seção de gráfico e análise -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                    <!-- Mini gráfico -->
+                    <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px;">
+                        <h4 style="color: #495057; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
+                        <div style="height: 200px; display: flex; align-items: end; gap: 20px;">
+                            <div style="text-align: center; flex: 1;">
+                                <div style="background: #6c757d; height: {max(10, min(100, cards_validados_anterior/5))}px; 
+                                            border-radius: 5px 5px 0 0;"></div>
+                                <div style="margin-top: 10px; font-size: 0.9rem; color: #6c757d;">
+                                    {mes_anterior:02d}/{ano_anterior}
+                                </div>
+                                <div style="font-weight: bold; color: #495057;">{cards_validados_anterior}</div>
+                            </div>
+                            <div style="text-align: center; flex: 1;">
+                                <div style="background: #28a745; height: {max(10, min(100, cards_validados/5))}px; 
+                                            border-radius: 5px 5px 0 0;"></div>
+                                <div style="margin-top: 10px; font-size: 0.9rem; color: #6c757d;">
+                                    {mes_atual:02d}/{ano_atual}
+                                </div>
+                                <div style="font-weight: bold; color: #495057;">{cards_validados}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Insights rápidos -->
+                    <div style="background: linear-gradient(135deg, #fff8e1, #fff3cd); 
+                                padding: 1.5rem; border-radius: 10px; border-left: 5px solid #ffc107;">
+                        <h4 style="color: #856404; margin: 0 0 1rem 0;">💡 INSIGHTS</h4>
+                        <ul style="color: #856404; padding-left: 1.2rem; margin: 0;">
+                            <li style="margin-bottom: 0.5rem;">
+                                {f"🎉 Recorde de validações!" if variacao > 20 else "📊 Performance consistente"}
+                            </li>
+                            <li style="margin-bottom: 0.5rem;">
+                                {f"✅ Qualidade excepcional" if cards_com_erro == 0 else f"🎯 {cards_sem_erro} cards perfeitos"}
+                            </li>
+                            <li>
+                                {f"🚀 Meta atingida: {taxa_sucesso:.0f}% de sucesso" if taxa_sucesso >= 90 else f"📈 Oportunidade: melhorar {100-taxa_sucesso:.0f}%"}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Rodapé -->
+            <div style="background: #f8f9fa; padding: 1rem 2rem; border-top: 1px solid #dee2e6;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <p style="color: #6c757d; margin: 0; font-size: 0.9rem;">
+                    📅 Atualizado em {hoje.strftime('%d/%m/%Y %H:%M')}
+                    </p>
+                    <button onclick="document.getElementById('popupOverlay').style.display='none'"
+                            style="background: #6c757d; color: white; border: none; 
+                                   padding: 0.5rem 1.5rem; border-radius: 5px; 
+                                   cursor: pointer; font-weight: 600;">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+    @keyframes slideIn {{
+        from {{ transform: translateY(-50px); opacity: 0; }}
+        to {{ transform: translateY(0); opacity: 1; }}
+    }}
+    </style>
+    '''
+    
+    return popup_html
 
 # ============================================
 # NOVAS FUNÇÕES PARA ANÁLISE SRE MELHORADA
@@ -976,12 +1252,57 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
+# NOVO: BOTÃO PARA ABRIR POPUP DE MANCHETE
+# ============================================
+if st.session_state.df_original is not None:
+    # Inicializar estado do popup
+    if 'show_popup' not in st.session_state:
+        st.session_state.show_popup = False
+    
+    # Container para o botão (discreto, não polui a página)
+    st.markdown("""
+    <div style="display: flex; justify-content: flex-end; margin: -50px 0 20px 0;">
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Botão usando Streamlit (posicionado após o header)
+    col_espaco, col_botao = st.columns([10, 2])
+    
+    with col_botao:
+        if st.button("📰 **VER MANCHETE**", 
+                    help="Clique para ver os principais indicadores do mês",
+                    type="secondary",
+                    use_container_width=True,
+                    key="btn_manchete"):
+            st.session_state.show_popup = True
+
+# ============================================
 # VERIFICAÇÃO AUTOMÁTICA DE ATUALIZAÇÕES
 # ============================================
 if st.session_state.df_original is not None:
     # Verificar se o arquivo foi atualizado
     if verificar_e_atualizar_arquivo():
         st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
+
+# ============================================
+# NOVO: EXIBIR POPUP SE SOLICITADO
+# ============================================
+if st.session_state.df_original is not None and st.session_state.show_popup:
+    df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
+    popup_html = criar_popup_indicadores(df)
+    
+    # Usar components para injetar o HTML do popup
+    components.html(popup_html, height=0, width=0)
+    
+    # Botão de fechamento via Streamlit (backup)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        if st.button("✕ Fechar Manchete", 
+                    use_container_width=True,
+                    type="primary",
+                    key="btn_fechar_popup"):
+            st.session_state.show_popup = False
+            st.rerun()
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
@@ -1635,7 +1956,7 @@ if st.session_state.df_original is not None:
                     
                     with col_tipo1:
                         # Agrupar por tipo de chamado e data
-                        tipo_por_dia = df_sincronizados.groupby(['Data', 'Tipo_Chamado']).size().reset_index()
+                        tipo_por_dia = df_sincronizados.groupby(['Data', 'Tipo_Chamado']).size().resetindex()
                         tipo_por_dia.columns = ['Data', 'Tipo', 'Quantidade']
                         
                         # Pivot para gráfico de linha
@@ -1701,7 +2022,7 @@ if st.session_state.df_original is not None:
                     
                     with col_empresa1:
                         # Agrupar por empresa e data
-                        empresa_por_dia = df_sincronizados.groupby(['Data', 'Empresa']).size().reset_index()
+                        empresa_por_dia = df_sincronizados.groupby(['Data', 'Empresa']).size().resetindex()
                         empresa_por_dia.columns = ['Data', 'Empresa', 'Quantidade']
                         
                         # Pivot para gráfico de área
@@ -1831,7 +2152,7 @@ if st.session_state.df_original is not None:
                 st.markdown("### 📈 Sincronizados por SRE")
                 
                 # Calcular sincronizados por SRE
-                sinc_por_sre = df_sincronizados.groupby('SRE').size().reset_index()
+                sinc_por_sre = df_sincronizados.groupby('SRE').size().resetindex()
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
@@ -1839,7 +2160,7 @@ if st.session_state.df_original is not None:
                 sinc_por_sre['SRE_Nome'] = sinc_por_sre['SRE'].apply(substituir_nome_sre)
                 
                 # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
-                sinc_por_sre_nome = sinc_por_sre.groupby('SRE_Nome')['Sincronizados'].sum().reset_index()
+                sinc_por_sre_nome = sinc_por_sre.groupby('SRE_Nome')['Sincronizados'].sum().resetindex()
                 sinc_por_sre_nome = sinc_por_sre_nome.sort_values('Sincronizados', ascending=False)
                 
                 # Criar gráfico de barras com nomes corrigidos
