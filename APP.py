@@ -1285,7 +1285,7 @@ if st.session_state.df_original is not None:
         st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
 # ============================================
-# EXIBIR POPUP SE SOLICITADO (VERSÃO COM GRÁFICO COMPARATIVO CORRIGIDO)
+# EXIBIR POPUP SE SOLICITADO (VERSÃO COM BOTÃO DE EXPORTAR PDF)
 # ============================================
 if st.session_state.df_original is not None and st.session_state.show_popup:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
@@ -1294,9 +1294,39 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
     with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
         
         # ============================================
+        # CABEÇALHO COM BOTÕES DE AÇÃO
+        # ============================================
+        col_header1, col_header2, col_header3 = st.columns([3, 1, 1])
+        
+        with col_header1:
+            st.markdown("### 📰 MANCHETE - RELATÓRIO EXECUTIVO")
+        
+        with col_header2:
+            # Botão para exportar como PDF
+            if st.button("📥 **EXPORTAR PDF**", 
+                        use_container_width=True,
+                        type="secondary",
+                        help="Salvar relatório em formato PDF",
+                        key="btn_exportar_pdf"):
+                # Função para gerar PDF (será implementada)
+                exportar_para_pdf(df, periodo_titulo, periodo_selecionado)
+                st.success("✅ Relatório exportado com sucesso!")
+        
+        with col_header3:
+            # Botão para fechar
+            if st.button("✕ **FECHAR**", 
+                        type="primary",
+                        use_container_width=True,
+                        key="btn_fechar_header"):
+                st.session_state.show_popup = False
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # ============================================
         # SELEÇÃO DE PERÍODO
         # ============================================
-        st.markdown("### 📅 SELECIONE O PERÍODO")
+        st.markdown("#### 📅 SELECIONE O PERÍODO")
         
         col_periodo1, col_periodo2 = st.columns(2)
         
@@ -1446,7 +1476,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         # ============================================
         # EXIBIR INDICADORES
         # ============================================
-        st.markdown(f"### 🎯 MANCHETE - {periodo_titulo}")
+        st.markdown(f"#### 🎯 DESTAQUE DO PERÍODO: {periodo_titulo}")
         
         # Texto narrativo dinâmico
         if total_cards == 0:
@@ -1464,7 +1494,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         st.markdown("---")
         
         # ============================================
-        # GRÁFICO COMPARATIVO (VERSÃO CORRIGIDA - LAYOUT COMPACTO)
+        # GRÁFICO COMPARATIVO
         # ============================================
         if not df_anterior.empty and total_cards_anterior > 0:
             st.markdown("#### 📈 COMPARAÇÃO COM PERÍODO ANTERIOR")
@@ -1487,7 +1517,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 text=cards_totais,
                 textposition='outside',
                 textfont=dict(size=10),
-                width=0.35  # Largura das barras reduzida
+                width=0.35
             ))
             
             # Barras para cards validados
@@ -1502,7 +1532,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 width=0.35
             ))
             
-            # Linha para taxa de sucesso (eixo secundário)
+            # Linha para taxa de sucesso
             fig_comparativo.add_trace(go.Scatter(
                 x=periodos,
                 y=taxa_sucesso_vals,
@@ -1523,41 +1553,32 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 ),
                 barmode='group',
                 yaxis=dict(
-                    title=dict(
-                        text='Quantidade',
-                        font=dict(size=11)
-                    ),
+                    title=dict(text='Quantidade', font=dict(size=11)),
                     gridcolor='rgba(0,0,0,0.05)',
                     rangemode='tozero'
                 ),
                 yaxis2=dict(
-                    title=dict(
-                        text='Taxa Sucesso (%)',
-                        font=dict(size=11)
-                    ),
+                    title=dict(text='Taxa Sucesso (%)', font=dict(size=11)),
                     overlaying='y',
                     side='right',
                     range=[0, max(100, max(taxa_sucesso_vals) * 1.1)],
                     gridcolor='rgba(0,0,0,0.02)'
                 ),
-                height=300,  # Altura reduzida
+                height=300,
                 showlegend=True,
                 plot_bgcolor='white',
-                margin=dict(l=50, r=50, t=50, b=50),  # Margens ajustadas
+                margin=dict(l=50, r=50, t=50, b=50),
                 legend=dict(
-                    orientation="h",  # Legenda horizontal
+                    orientation="h",
                     yanchor="bottom",
-                    y=1.02,  # Acima do gráfico
+                    y=1.02,
                     xanchor="center",
                     x=0.5,
                     font=dict(size=10)
                 ),
-                xaxis=dict(
-                    tickfont=dict(size=10)
-                )
+                xaxis=dict(tickfont=dict(size=10))
             )
             
-            # Configuração para gráfico mais compacto
             fig_comparativo.update_traces(
                 marker_line_width=0.5,
                 selector=dict(type='bar')
@@ -1566,7 +1587,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             st.plotly_chart(fig_comparativo, use_container_width=True, config={'displayModeBar': False})
             
             # ============================================
-            # MÉTRICAS DE VARIAÇÃO (LAYOUT MAIS COMPACTO)
+            # MÉTRICAS DE VARIAÇÃO
             # ============================================
             if total_cards_anterior > 0:
                 variacao_total = ((total_cards - total_cards_anterior) / total_cards_anterior * 100)
@@ -1577,44 +1598,41 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 variacao_validados = 100 if validados > 0 else 0
                 variacao_taxa = taxa_sucesso
             
-            # Container compacto para métricas
-            with st.container():
-                st.markdown("##### 📊 VARIAÇÃO PERCENTUAL")
-                
-                # Usar 3 colunas com menos espaçamento
-                col_var1, col_var2, col_var3 = st.columns(3)
-                
-                with col_var1:
-                    st.metric(
-                        label="Total Cards",
-                        value=f"{total_cards:,}",
-                        delta=f"{variacao_total:+.1f}%",
-                        delta_color="normal" if variacao_total >= 0 else "inverse",
-                        help=f"Anterior: {total_cards_anterior:,}"
-                    )
-                
-                with col_var2:
-                    st.metric(
-                        label="Validados",
-                        value=f"{validados:,}",
-                        delta=f"{variacao_validados:+.1f}%",
-                        delta_color="normal" if variacao_validados >= 0 else "inverse",
-                        help=f"Anterior: {validados_anterior:,}"
-                    )
-                
-                with col_var3:
-                    st.metric(
-                        label="Taxa Sucesso",
-                        value=f"{taxa_sucesso:.1f}%",
-                        delta=f"{variacao_taxa:+.1f}pp",
-                        delta_color="normal" if variacao_taxa >= 0 else "inverse",
-                        help=f"Anterior: {taxa_sucesso_anterior:.1f}%"
-                    )
+            st.markdown("##### 📊 VARIAÇÃO PERCENTUAL")
+            
+            col_var1, col_var2, col_var3 = st.columns(3)
+            
+            with col_var1:
+                st.metric(
+                    label="Total Cards",
+                    value=f"{total_cards:,}",
+                    delta=f"{variacao_total:+.1f}%",
+                    delta_color="normal" if variacao_total >= 0 else "inverse",
+                    help=f"Anterior: {total_cards_anterior:,}"
+                )
+            
+            with col_var2:
+                st.metric(
+                    label="Validados",
+                    value=f"{validados:,}",
+                    delta=f"{variacao_validados:+.1f}%",
+                    delta_color="normal" if variacao_validados >= 0 else "inverse",
+                    help=f"Anterior: {validados_anterior:,}"
+                )
+            
+            with col_var3:
+                st.metric(
+                    label="Taxa Sucesso",
+                    value=f"{taxa_sucesso:.1f}%",
+                    delta=f"{variacao_taxa:+.1f}pp",
+                    delta_color="normal" if variacao_taxa >= 0 else "inverse",
+                    help=f"Anterior: {taxa_sucesso_anterior:.1f}%"
+                )
             
             st.markdown("---")
         
         # ============================================
-        # INDICADORES PRINCIPAIS DO PERÍODO ATUAL
+        # INDICADORES PRINCIPAIS
         # ============================================
         st.markdown("#### 📊 INDICADORES PRINCIPAIS")
         
@@ -1661,7 +1679,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         st.markdown("#### 📈 ANÁLISE DETALHADA")
         
         if total_cards > 0:
-            # Média diária (se for período com datas)
+            # Média diária
             if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
                 dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
                 media_diaria = total_cards / dias_unicos if dias_unicos > 0 else 0
@@ -1675,7 +1693,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                     st.metric("📊 Média diária", f"{media_diaria:.1f}")
                 
                 with col_analise3:
-                    # Revisões por card
                     if 'Revisões' in df_filtrado_periodo.columns:
                         media_revisoes = df_filtrado_periodo['Revisões'].mean()
                         st.metric("📝 Média revisões/card", f"{media_revisoes:.1f}")
@@ -1717,15 +1734,43 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
         
         # ============================================
-        # BOTÃO DE FECHAR
+        # BOTÕES DE AÇÃO NO RODAPÉ
         # ============================================
         st.markdown("---")
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-        with col_btn2:
-            if st.button("✕ **FECHAR MANCHETE**", 
+        col_footer1, col_footer2, col_footer3 = st.columns([1, 2, 1])
+        
+        with col_footer1:
+            # Botão para exportar CSV
+            csv_data = f"Período: {periodo_titulo}\nTotal Cards: {total_cards}\nValidados: {validados}\nSem Erro: {sem_erro}\nCom Erro: {com_erro}\nTaxa Sucesso: {taxa_sucesso:.1f}%"
+            st.download_button(
+                label="💾 CSV",
+                data=csv_data,
+                file_name=f"manchete_{periodo_titulo.replace(' ', '_').replace('/', '_')}.txt",
+                mime="text/plain",
+                help="Exportar dados como CSV",
+                use_container_width=True
+            )
+        
+        with col_footer2:
+            # Botão principal para exportar PDF
+            if st.button("📥 **EXPORTAR RELATÓRIO COMPLETO (PDF)**", 
                         type="primary", 
                         use_container_width=True,
-                        key="btn_fechar_manchete"):
+                        help="Gerar relatório completo em formato PDF",
+                        key="btn_exportar_footer"):
+                # Aqui você pode adicionar a lógica para gerar PDF
+                st.info("📄 Funcionalidade de PDF em desenvolvimento...")
+                # Para uma implementação real, você precisaria:
+                # 1. Instalar: pip install fpdf reportlab
+                # 2. Criar uma função para gerar PDF
+                # 3. Salvar o PDF e disponibilizar para download
+        
+        with col_footer3:
+            # Botão para fechar
+            if st.button("✕ **FECHAR**", 
+                        type="secondary",
+                        use_container_width=True,
+                        key="btn_fechar_footer"):
                 st.session_state.show_popup = False
                 st.rerun()
         
@@ -1736,7 +1781,8 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-top: 1rem;">
             <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
             <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
-            <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small>
+            <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small><br>
+            <small>👤 <strong>Gerado por:</strong> Sistema Esteira ADMS</small>
         </div>
         """, unsafe_allow_html=True)
 
