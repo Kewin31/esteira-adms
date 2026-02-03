@@ -1718,29 +1718,27 @@ with col_fechar:
         st.rerun()
 
 # ============================================
-# INFORMAÇÕES ADICIONAIS (CORRIGIDO)
+# INFORMAÇÕES ADICIONAIS (VERSÃO SIMPLIFICADA E CORRIGIDA)
 # ============================================
-# Garantir que 'hoje' existe
 from datetime import datetime
 hoje = datetime.now()
 
-# Criar o conteúdo HTML com verificação de variáveis
+# Verificar se as variáveis existem
+periodo_info = periodo_titulo if 'periodo_titulo' in locals() or 'periodo_titulo' in globals() else "Período selecionado"
+total_registros = len(df) if 'df' in locals() or 'df' in globals() else 0
+formato_info = "PDF" if ('fpdf_disponivel' in locals() or 'fpdf_disponivel' in globals()) and fpdf_disponivel else "HTML (instale FPDF para PDF)"
+
+# Criar o conteúdo HTML
 info_html = f"""
 <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-top: 1rem;">
-    <small>📅 <strong>Período analisado:</strong> {periodo_titulo if 'periodo_titulo' in locals() or 'periodo_titulo' in globals() else 'Período não definido'}</small><br>
+    <small>📅 <strong>Período analisado:</strong> {periodo_info}</small><br>
     <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
-    <small>📊 <strong>Base de dados:</strong> {len(df):, if 'df' in locals() or 'df' in globals() else 0:,} registros totais</small><br>
+    <small>📊 <strong>Base de dados:</strong> {total_registros:,} registros totais</small><br>
     <small>👤 <strong>Gerado por:</strong> Sistema Esteira ADMS</small>
     <br>
+    <small>🔄 <strong>Formato disponível:</strong> {formato_info}</small>
+</div>
 """
-
-# Adicionar informação sobre formato PDF se disponível
-if 'fpdf_disponivel' in locals() or 'fpdf_disponivel' in globals():
-    info_html += f"""<small>🔄 <strong>Formato disponível:</strong> {"PDF" if fpdf_disponivel else "HTML (instale FPDF para PDF)"}</small>"""
-else:
-    info_html += """<small>🔄 <strong>Formato disponível:</strong> HTML (instale FPDF para PDF)</small>"""
-
-info_html += "</div>"
 
 st.markdown(info_html, unsafe_allow_html=True)
 
