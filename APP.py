@@ -1287,7 +1287,179 @@ if st.session_state.df_original is not None:
 # ... (código anterior mantido igual até a linha 1098)
 
 # ============================================
-# EXIBIR POPUP SE SOLICITADO (VERSÃO SIMPLIFICADA)
+# FUNÇÃO PARA EXPORTAR PDF (NOVA)
+# ============================================
+def exportar_para_pdf(df_filtrado_periodo, periodo_titulo, indicadores, df_anterior=None):
+    """Exporta a manchete como PDF"""
+    try:
+        from fpdf import FPDF
+        import base64
+        from io import BytesIO
+        import tempfile
+        import os
+        
+        # Criar PDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        
+        # Configurar fonte
+        pdf.set_font('Arial', 'B', 16)
+        
+        # Cabeçalho
+        pdf.cell(0, 10, '📰 RELATÓRIO EXECUTIVO - ESTEIRA ADMS', 0, 1, 'C')
+        pdf.set_font('Arial', '', 12)
+        pdf.cell(0, 10, f'Período analisado: {periodo_titulo}', 0, 1, 'C')
+        pdf.cell(0, 10, f'Data de geração: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 1, 'C')
+        pdf.ln(10)
+        
+        # Linha divisória
+        pdf.set_line_width(0.5)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(10)
+        
+        # Indicadores principais
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, '📊 INDICADORES PRINCIPAIS', 0, 1)
+        pdf.set_font('Arial', '', 12)
+        
+        # Tabela de indicadores
+        col_width = pdf.w / 4.5
+        row_height = 10
+        
+        # Cabeçalho da tabela
+        pdf.set_fill_color(30, 55, 153)  # Azul escuro
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font('Arial', 'B', 12)
+        
+        headers = ['Indicador', 'Valor', 'Taxa', 'Status']
+        for header in headers:
+            pdf.cell(col_width, row_height, header, 1, 0, 'C', True)
+        pdf.ln(row_height)
+        
+        # Dados da tabela
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font('Arial', '', 11)
+        
+        dados = [
+            ['Total Cards', f"{indicadores['total_cards']:,}", '100%', 'Base'],
+            ['Validados', f"{indicadores['validados']:,}", 
+             f"{indicadores['taxa_sucesso']:.1f}%", 
+             '✅' if indicadores['taxa_sucesso'] >= 90 else '⚠️'],
+            ['Sem Erro', f"{indicadores['sem_erro']:,}", 
+             f"{(indicadores['sem_erro']/indicadores['validados']*100) if indicadores['validados']>0 else 0:.1f}%", 
+             '🎯'],
+            ['Com Erro', f"{indicadores['com_erro']:,}", 
+             f"{indicadores['taxa_erro']:.1f}%", 
+             '⚠️' if indicadores['com_erro'] > 0 else '✅']
+        ]
+        
+        fill_color = 0  # Alternar cores
+        for row in dados:
+            pdf.set_fill_color(240, 240, 240) if fill_color % 2 == 0 else pdf.set_fill_color(255, 255, 255)
+            pdf.cell(col_width, row_height, row[0], 1, 0, 'L', True)
+            pdf.cell(col_width, row_height, row[1], 1, 0, 'C', True)
+            pdf.cell(col_width, row_height, row[2], 1, 0, 'C', True)
+            pdf.cell(col_width, row_height, row[3], 1, 0, 'C', True)
+            pdf.ln(row_height)
+            fill_color += 1
+        
+        pdf.ln(10)
+        
+        # Análise textual
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, '📈 ANÁLISE DO PERÍODO', 0, 1)
+        pdf.set_font('Arial', '', 12)
+        
+        # Texto narrativo baseado nos indicadores
+        texto_analise = ""
+        if indicadores['total_cards'] == 0:
+            texto_analise = f"Nenhum dado disponível para o período {periodo_titulo}."
+        elif indicadores['com_erro'] == 0 and indicadores['validados'] > 0:
+            texto_analise = f"✅ Performance excepcional! O papel do SRE validou {indicadores['validados']} cards sem nenhum retorno de erro, demonstrando qualidade 100% na primeira validação."
+        elif indicadores['taxa_erro'] <= 5:
+            texto_analise = f"⚡ Alta qualidade! O SRE validou {indicadores['validados']} cards com apenas {indicadores['com_erro']} ajustes necessários (taxa de erro de {indicadores['taxa_erro']:.1f}%)."
+        else:
+            texto_analise = f"📊 O SRE validou {indicadores['validados']} cards, sendo {indicadores['com_erro']} com retorno para ajustes. Taxa de sucesso de {indicadores['taxa_sucesso']:.1f}%."
+        
+        pdf.multi_cell(0, 8, texto_analise)
+        pdf.ln(5)
+        
+        # Comparação com período anterior (se disponível)
+        if df_anterior is not None and not df_anterior.empty:
+            pdf.set_font('Arial', 'B', 14)
+            pdf.cell(0, 10, '📊 COMPARAÇÃO COM PERÍODO ANTERIOR', 0, 1)
+            pdf.set_font('Arial', '', 12)
+            
+            variacao_total = ((indicadores['total_cards'] - indicadores['total_anterior']) / indicadores['total_anterior'] * 100) if indicadores['total_anterior'] > 0 else 0
+            variacao_validados = ((indicadores['validados'] - indicadores['validados_anterior']) / indicadores['validados_anterior'] * 100) if indicadores['validados_anterior'] > 0 else 0
+            
+            texto_comparacao = f"""
+            Comparativo com período anterior:
+            
+            • Total de cards: {indicadores['total_cards']:,} ({variacao_total:+.1f}%)
+            • Cards validados: {indicadores['validados']:,} ({variacao_validados:+.1f}%)
+            • Taxa de sucesso: {indicadores['taxa_sucesso']:.1f}% ({indicadores['taxa_sucesso'] - indicadores['taxa_sucesso_anterior']:+.1f} pontos percentuais)
+            
+            Período anterior analisado: {indicadores['periodo_anterior_titulo']}
+            """
+            
+            pdf.set_font('Arial', '', 11)
+            pdf.multi_cell(0, 8, texto_comparacao)
+            pdf.ln(5)
+        
+        # Detalhes estatísticos
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, '📋 DETALHES ESTATÍSTICOS', 0, 1)
+        pdf.set_font('Arial', '', 11)
+        
+        if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
+            dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
+            media_diaria = indicadores['total_cards'] / dias_unicos if dias_unicos > 0 else 0
+            
+            detalhes = f"""
+            • Dias com atividade: {dias_unicos}
+            • Média diária de cards: {media_diaria:.1f}
+            • Período coberto: {df_filtrado_periodo['Criado'].min().strftime('%d/%m/%Y')} a {df_filtrado_periodo['Criado'].max().strftime('%d/%m/%Y')}
+            """
+            
+            if 'Revisões' in df_filtrado_periodo.columns:
+                media_revisoes = df_filtrado_periodo['Revisões'].mean()
+                detalhes += f"\n• Média de revisões por card: {media_revisoes:.1f}"
+            
+            pdf.multi_cell(0, 8, detalhes)
+        
+        # Rodapé
+        pdf.ln(15)
+        pdf.set_font('Arial', 'I', 10)
+        pdf.set_text_color(128, 128, 128)
+        pdf.cell(0, 10, 'Relatório gerado automaticamente pelo Sistema Esteira ADMS', 0, 1, 'C')
+        pdf.cell(0, 10, 'Desenvolvido por: Kewin Marcel Ramirez Ferreira | GEAT', 0, 1, 'C')
+        pdf.cell(0, 10, f'© {datetime.now().year} Energisa Group - Sistema proprietário', 0, 1, 'C')
+        
+        # Salvar PDF em arquivo temporário
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            pdf.output(tmp_file.name)
+            
+            # Ler arquivo para bytes
+            with open(tmp_file.name, 'rb') as f:
+                pdf_bytes = f.read()
+            
+            # Limpar arquivo temporário
+            os.unlink(tmp_file.name)
+        
+        return pdf_bytes
+        
+    except ImportError:
+        # Fallback se fpdf não estiver instalado
+        st.warning("⚠️ Biblioteca FPDF não encontrada. Instale com: `pip install fpdf`")
+        return None
+    except Exception as e:
+        st.error(f"❌ Erro ao gerar PDF: {str(e)}")
+        return None
+
+# ============================================
+# EXIBIR POPUP SE SOLICITADO (VERSÃO COM PDF FUNCIONAL)
 # ============================================
 if st.session_state.df_original is not None and st.session_state.show_popup:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
@@ -1450,6 +1622,20 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             validados_anterior = 0
             com_erro_anterior = 0
             taxa_sucesso_anterior = 0
+        
+        # Preparar dicionário de indicadores para exportação
+        indicadores = {
+            'total_cards': total_cards,
+            'validados': validados,
+            'com_erro': com_erro,
+            'sem_erro': sem_erro,
+            'taxa_sucesso': taxa_sucesso,
+            'taxa_erro': taxa_erro,
+            'total_anterior': total_cards_anterior,
+            'validados_anterior': validados_anterior,
+            'taxa_sucesso_anterior': taxa_sucesso_anterior,
+            'periodo_anterior_titulo': periodo_anterior_titulo
+        }
         
         # ============================================
         # EXIBIR INDICADORES
@@ -1712,67 +1898,63 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
         
         # ============================================
-        # RODAPÉ COM AÇÕES SIMPLIFICADAS
+        # RODAPÉ COM AÇÕES E DOWNLOAD DE PDF
         # ============================================
         st.markdown("---")
         
-        # Container para ações
-        st.markdown("""
-        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; border: 1px solid #dee2e6;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <p style="margin: 0; color: #495057; font-weight: 600;">Ações disponíveis</p>
-                    <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;">
-                    Exporte o relatório completo ou feche a manchete
-                    </p>
-                </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button onclick="document.getElementById('exportBtn').click()" 
-                            style="background: linear-gradient(135deg, #28a745, #20c997); 
-                                   color: white; border: none; padding: 0.7rem 1.5rem; 
-                                   border-radius: 5px; cursor: pointer; font-weight: 600;
-                                   display: flex; align-items: center; gap: 8px;">
-                        📥 Exportar PDF
-                    </button>
-                    <button onclick="document.getElementById('closeBtn').click()" 
-                            style="background: #6c757d; color: white; border: none; 
-                                   padding: 0.7rem 1.5rem; border-radius: 5px; 
-                                   cursor: pointer; font-weight: 600; opacity: 0.9;">
-                        ✕ Fechar
-                    </button>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Botões reais (ocultos, mas funcionais)
+        # Botão para gerar e baixar PDF
         col_exportar, col_fechar = st.columns(2)
         
         with col_exportar:
-            if st.button("📥 **EXPORTAR PDF**", 
-                        type="primary", 
+            # Verificar se a biblioteca fpdf está instalada
+            try:
+                import fpdf
+                fpdf_instalado = True
+            except ImportError:
+                fpdf_instalado = False
+            
+            if fpdf_instalado:
+                # Gerar PDF quando o botão for clicado
+                pdf_bytes = exportar_para_pdf(
+                    df_filtrado_periodo, 
+                    periodo_titulo, 
+                    indicadores, 
+                    df_anterior if not df_anterior.empty else None
+                )
+                
+                if pdf_bytes:
+                    # Botão de download do PDF
+                    st.download_button(
+                        label="📥 **EXPORTAR PDF**",
+                        data=pdf_bytes,
+                        file_name=f"manchete_{periodo_titulo.replace(' ', '_').replace('/', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
                         use_container_width=True,
-                        help="Gerar relatório completo em formato PDF",
-                        key="btn_exportar_pdf_final"):
-                # Adicionar lógica para gerar PDF aqui
-                st.info("""
-                📄 **Funcionalidade de PDF em desenvolvimento...**
-                
-                Para uma implementação completa, você pode usar:
-                - `fpdf` ou `reportlab` para gerar PDFs
-                - `weasyprint` para converter HTML para PDF
-                - `pdfkit` (requer wkhtmltopdf)
-                
-                **Exemplo de estrutura:**
-                ```python
-                def exportar_para_pdf(df, periodo):
-                    # 1. Criar template HTML
-                    # 2. Adicionar gráficos como imagens
-                    # 3. Converter para PDF
-                    # 4. Salvar arquivo
-                    # 5. Disponibilizar para download
-                ```
-                """)
+                        type="primary",
+                        help="Clique para baixar o relatório completo em PDF"
+                    )
+                else:
+                    st.error("❌ Não foi possível gerar o PDF")
+            else:
+                # Se fpdf não estiver instalado, mostrar botão com instruções
+                if st.button("📥 **EXPORTAR PDF**", 
+                           use_container_width=True,
+                           type="primary",
+                           help="Instale a biblioteca FPDF para exportar PDFs"):
+                    st.warning("""
+                    **⚠️ Biblioteca FPDF não encontrada!**
+                    
+                    Para exportar PDFs, instale a biblioteca:
+                    
+                    ```bash
+                    pip install fpdf
+                    ```
+                    
+                    **Instruções de instalação:**
+                    1. Abra o terminal/CMD
+                    2. Execute: `pip install fpdf`
+                    3. Reinicie o aplicativo Streamlit
+                    """)
         
         with col_fechar:
             if st.button("✕ **FECHAR**", 
@@ -1794,7 +1976,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         </div>
         """, unsafe_allow_html=True)
 
-# ... (o restante do código permanece igual a partir daqui)
+# ... (o restante do código permanece igual)
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
 # ============================================
