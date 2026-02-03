@@ -1285,7 +1285,7 @@ if st.session_state.df_original is not None:
         st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
 # ============================================
-# EXIBIR POPUP SE SOLICITADO (VERSÃO COM GRÁFICO COMPARATIVO)
+# EXIBIR POPUP SE SOLICITADO (VERSÃO COM GRÁFICO COMPARATIVO CORRIGIDO)
 # ============================================
 if st.session_state.df_original is not None and st.session_state.show_popup:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
@@ -1464,7 +1464,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         st.markdown("---")
         
         # ============================================
-        # GRÁFICO COMPARATIVO (NOVO!)
+        # GRÁFICO COMPARATIVO (VERSÃO CORRIGIDA - LAYOUT COMPACTO)
         # ============================================
         if not df_anterior.empty and total_cards_anterior > 0:
             st.markdown("#### 📈 COMPARAÇÃO COM PERÍODO ANTERIOR")
@@ -1475,62 +1475,99 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             cards_validados = [validados_anterior, validados]
             taxa_sucesso_vals = [taxa_sucesso_anterior, taxa_sucesso]
             
-            # Criar gráfico comparativo
+            # Criar gráfico comparativo com layout melhorado
             fig_comparativo = go.Figure()
             
             # Barras para cards totais
             fig_comparativo.add_trace(go.Bar(
                 x=periodos,
                 y=cards_totais,
-                name='Total de Cards',
+                name='Total Cards',
                 marker_color='#1e3799',
                 text=cards_totais,
-                textposition='auto'
+                textposition='outside',
+                textfont=dict(size=10),
+                width=0.35  # Largura das barras reduzida
             ))
             
             # Barras para cards validados
             fig_comparativo.add_trace(go.Bar(
                 x=periodos,
                 y=cards_validados,
-                name='Validados pelo SRE',
+                name='Validados',
                 marker_color='#28a745',
                 text=cards_validados,
-                textposition='auto'
+                textposition='outside',
+                textfont=dict(size=10),
+                width=0.35
             ))
             
             # Linha para taxa de sucesso (eixo secundário)
             fig_comparativo.add_trace(go.Scatter(
                 x=periodos,
                 y=taxa_sucesso_vals,
-                name='Taxa de Sucesso (%)',
+                name='Taxa Sucesso',
                 yaxis='y2',
                 mode='lines+markers+text',
-                line=dict(color='#dc3545', width=3),
-                marker=dict(size=10, color='#dc3545'),
+                line=dict(color='#dc3545', width=2),
+                marker=dict(size=8, color='#dc3545'),
                 text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
-                textposition='top center'
+                textposition='top center',
+                textfont=dict(size=9)
             ))
             
             fig_comparativo.update_layout(
-                title='Comparativo: Período Atual vs Anterior',
+                title=dict(
+                    text='Comparativo: Período Atual vs Anterior',
+                    font=dict(size=14)
+                ),
                 barmode='group',
-                yaxis=dict(title='Quantidade de Cards'),
+                yaxis=dict(
+                    title=dict(
+                        text='Quantidade',
+                        font=dict(size=11)
+                    ),
+                    gridcolor='rgba(0,0,0,0.05)',
+                    rangemode='tozero'
+                ),
                 yaxis2=dict(
-                    title='Taxa de Sucesso (%)',
+                    title=dict(
+                        text='Taxa Sucesso (%)',
+                        font=dict(size=11)
+                    ),
                     overlaying='y',
                     side='right',
-                    range=[0, 100]
+                    range=[0, max(100, max(taxa_sucesso_vals) * 1.1)],
+                    gridcolor='rgba(0,0,0,0.02)'
                 ),
-                height=350,
+                height=300,  # Altura reduzida
                 showlegend=True,
-                plot_bgcolor='white'
+                plot_bgcolor='white',
+                margin=dict(l=50, r=50, t=50, b=50),  # Margens ajustadas
+                legend=dict(
+                    orientation="h",  # Legenda horizontal
+                    yanchor="bottom",
+                    y=1.02,  # Acima do gráfico
+                    xanchor="center",
+                    x=0.5,
+                    font=dict(size=10)
+                ),
+                xaxis=dict(
+                    tickfont=dict(size=10)
+                )
             )
             
-            st.plotly_chart(fig_comparativo, use_container_width=True)
+            # Configuração para gráfico mais compacto
+            fig_comparativo.update_traces(
+                marker_line_width=0.5,
+                selector=dict(type='bar')
+            )
             
-            # Métricas de variação
-            st.markdown("##### 📊 VARIAÇÃO (%)")
+            st.plotly_chart(fig_comparativo, use_container_width=True, config={'displayModeBar': False})
             
+            # ============================================
+            # MÉTRICAS DE VARIAÇÃO (LAYOUT MAIS COMPACTO)
+            # ============================================
             if total_cards_anterior > 0:
                 variacao_total = ((total_cards - total_cards_anterior) / total_cards_anterior * 100)
                 variacao_validados = ((validados - validados_anterior) / validados_anterior * 100) if validados_anterior > 0 else 0
@@ -1540,31 +1577,39 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 variacao_validados = 100 if validados > 0 else 0
                 variacao_taxa = taxa_sucesso
             
-            col_var1, col_var2, col_var3 = st.columns(3)
-            
-            with col_var1:
-                st.metric(
-                    "Total de Cards",
-                    total_cards,
-                    f"{variacao_total:+.1f}%",
-                    delta_color="normal" if variacao_total >= 0 else "inverse"
-                )
-            
-            with col_var2:
-                st.metric(
-                    "Validados",
-                    validados,
-                    f"{variacao_validados:+.1f}%",
-                    delta_color="normal" if variacao_validados >= 0 else "inverse"
-                )
-            
-            with col_var3:
-                st.metric(
-                    "Taxa de Sucesso",
-                    f"{taxa_sucesso:.1f}%",
-                    f"{variacao_taxa:+.1f}pp",
-                    delta_color="normal" if variacao_taxa >= 0 else "inverse"
-                )
+            # Container compacto para métricas
+            with st.container():
+                st.markdown("##### 📊 VARIAÇÃO PERCENTUAL")
+                
+                # Usar 3 colunas com menos espaçamento
+                col_var1, col_var2, col_var3 = st.columns(3)
+                
+                with col_var1:
+                    st.metric(
+                        label="Total Cards",
+                        value=f"{total_cards:,}",
+                        delta=f"{variacao_total:+.1f}%",
+                        delta_color="normal" if variacao_total >= 0 else "inverse",
+                        help=f"Anterior: {total_cards_anterior:,}"
+                    )
+                
+                with col_var2:
+                    st.metric(
+                        label="Validados",
+                        value=f"{validados:,}",
+                        delta=f"{variacao_validados:+.1f}%",
+                        delta_color="normal" if variacao_validados >= 0 else "inverse",
+                        help=f"Anterior: {validados_anterior:,}"
+                    )
+                
+                with col_var3:
+                    st.metric(
+                        label="Taxa Sucesso",
+                        value=f"{taxa_sucesso:.1f}%",
+                        delta=f"{variacao_taxa:+.1f}pp",
+                        delta_color="normal" if variacao_taxa >= 0 else "inverse",
+                        help=f"Anterior: {taxa_sucesso_anterior:.1f}%"
+                    )
             
             st.markdown("---")
         
