@@ -1284,8 +1284,10 @@ if st.session_state.df_original is not None:
     if verificar_e_atualizar_arquivo():
         st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
+# ... (código anterior mantido igual até a linha 1098)
+
 # ============================================
-# EXIBIR POPUP SE SOLICITADO (VERSÃO COM BOTÃO DE EXPORTAR PDF)
+# EXIBIR POPUP SE SOLICITADO (VERSÃO SIMPLIFICADA)
 # ============================================
 if st.session_state.df_original is not None and st.session_state.show_popup:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
@@ -1294,33 +1296,9 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
     with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
         
         # ============================================
-        # CABEÇALHO COM BOTÕES DE AÇÃO
+        # CABEÇALHO SIMPLIFICADO
         # ============================================
-        col_header1, col_header2, col_header3 = st.columns([3, 1, 1])
-        
-        with col_header1:
-            st.markdown("### 📰 MANCHETE - RELATÓRIO EXECUTIVO")
-        
-        with col_header2:
-            # Botão para exportar como PDF
-            if st.button("📥 **EXPORTAR PDF**", 
-                        use_container_width=True,
-                        type="secondary",
-                        help="Salvar relatório em formato PDF",
-                        key="btn_exportar_pdf"):
-                # Função para gerar PDF (será implementada)
-                exportar_para_pdf(df, periodo_titulo, periodo_selecionado)
-                st.success("✅ Relatório exportado com sucesso!")
-        
-        with col_header3:
-            # Botão para fechar
-            if st.button("✕ **FECHAR**", 
-                        type="primary",
-                        use_container_width=True,
-                        key="btn_fechar_header"):
-                st.session_state.show_popup = False
-                st.rerun()
-        
+        st.markdown("### 📰 MANCHETE - RELATÓRIO EXECUTIVO")
         st.markdown("---")
         
         # ============================================
@@ -1734,43 +1712,73 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
         
         # ============================================
-        # BOTÕES DE AÇÃO NO RODAPÉ
+        # RODAPÉ COM AÇÕES SIMPLIFICADAS
         # ============================================
         st.markdown("---")
-        col_footer1, col_footer2, col_footer3 = st.columns([1, 2, 1])
         
-        with col_footer1:
-            # Botão para exportar CSV
-            csv_data = f"Período: {periodo_titulo}\nTotal Cards: {total_cards}\nValidados: {validados}\nSem Erro: {sem_erro}\nCom Erro: {com_erro}\nTaxa Sucesso: {taxa_sucesso:.1f}%"
-            st.download_button(
-                label="💾 CSV",
-                data=csv_data,
-                file_name=f"manchete_{periodo_titulo.replace(' ', '_').replace('/', '_')}.txt",
-                mime="text/plain",
-                help="Exportar dados como CSV",
-                use_container_width=True
-            )
+        # Container para ações
+        st.markdown("""
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; border: 1px solid #dee2e6;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <p style="margin: 0; color: #495057; font-weight: 600;">Ações disponíveis</p>
+                    <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;">
+                    Exporte o relatório completo ou feche a manchete
+                    </p>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button onclick="document.getElementById('exportBtn').click()" 
+                            style="background: linear-gradient(135deg, #28a745, #20c997); 
+                                   color: white; border: none; padding: 0.7rem 1.5rem; 
+                                   border-radius: 5px; cursor: pointer; font-weight: 600;
+                                   display: flex; align-items: center; gap: 8px;">
+                        📥 Exportar PDF
+                    </button>
+                    <button onclick="document.getElementById('closeBtn').click()" 
+                            style="background: #6c757d; color: white; border: none; 
+                                   padding: 0.7rem 1.5rem; border-radius: 5px; 
+                                   cursor: pointer; font-weight: 600; opacity: 0.9;">
+                        ✕ Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        with col_footer2:
-            # Botão principal para exportar PDF
-            if st.button("📥 **EXPORTAR RELATÓRIO COMPLETO (PDF)**", 
+        # Botões reais (ocultos, mas funcionais)
+        col_exportar, col_fechar = st.columns(2)
+        
+        with col_exportar:
+            if st.button("📥 **EXPORTAR PDF**", 
                         type="primary", 
                         use_container_width=True,
                         help="Gerar relatório completo em formato PDF",
-                        key="btn_exportar_footer"):
-                # Aqui você pode adicionar a lógica para gerar PDF
-                st.info("📄 Funcionalidade de PDF em desenvolvimento...")
-                # Para uma implementação real, você precisaria:
-                # 1. Instalar: pip install fpdf reportlab
-                # 2. Criar uma função para gerar PDF
-                # 3. Salvar o PDF e disponibilizar para download
+                        key="btn_exportar_pdf_final"):
+                # Adicionar lógica para gerar PDF aqui
+                st.info("""
+                📄 **Funcionalidade de PDF em desenvolvimento...**
+                
+                Para uma implementação completa, você pode usar:
+                - `fpdf` ou `reportlab` para gerar PDFs
+                - `weasyprint` para converter HTML para PDF
+                - `pdfkit` (requer wkhtmltopdf)
+                
+                **Exemplo de estrutura:**
+                ```python
+                def exportar_para_pdf(df, periodo):
+                    # 1. Criar template HTML
+                    # 2. Adicionar gráficos como imagens
+                    # 3. Converter para PDF
+                    # 4. Salvar arquivo
+                    # 5. Disponibilizar para download
+                ```
+                """)
         
-        with col_footer3:
-            # Botão para fechar
+        with col_fechar:
             if st.button("✕ **FECHAR**", 
                         type="secondary",
                         use_container_width=True,
-                        key="btn_fechar_footer"):
+                        key="btn_fechar_final"):
                 st.session_state.show_popup = False
                 st.rerun()
         
@@ -1786,6 +1794,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         </div>
         """, unsafe_allow_html=True)
 
+# ... (o restante do código permanece igual a partir daqui)
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
 # ============================================
