@@ -625,12 +625,12 @@ def criar_popup_indicadores(df):
         emoji_titulo = "🎯"
         cor_destaque = "#28a745"
     elif taxa_erro <= 5:
-        texto_principal = f"⚡ **PAPEL DO SRE VALIDOU {cards_validados} CARDS COM APENAS {cards_com_erro} AJUSTES**"
+        texto_principal = f"⚡ **SRE VALIDOU {cards_validados} CARDS COM APENAS {cards_com_erro} AJUSTES**"
         subtexto = f"Alta qualidade no mês de {nome_mes_pt} - Taxa de erro de apenas {taxa_erro:.1f}%"
         emoji_titulo = "🚀"
         cor_destaque = "#17a2b8"
     else:
-        texto_principal = f"📊 **PAPEL DO SRE VALIDOU {cards_validados} CARDS, {cards_com_erro} COM RETORNO**"
+        texto_principal = f"📊 **SRE VALIDOU {cards_validados} CARDS, {cards_com_erro} COM RETORNO**"
         subtexto = f"Análise de {nome_mes_pt} - {taxa_sucesso:.1f}% de taxa de sucesso"
         emoji_titulo = "📈"
         cor_destaque = "#ffc107"
@@ -1460,13 +1460,13 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         if total_cards == 0:
             st.error(f"⚠️ **NENHUM DADO DISPONÍVEL** para {periodo_titulo.lower()}")
         elif com_erro == 0 and validados > 0:
-            st.success(f"**✅ PAPEL DO SRE VALIDOU {validados} CARDS SEM RETORNO DE ERRO!**")
+            st.success(f"**✅ SRE VALIDOU {validados} CARDS SEM RETORNO DE ERRO!**")
             st.info(f"Performance excepcional - 100% de aprovação direta")
         elif taxa_erro <= 5:
-            st.warning(f"**⚡ PAPEL DO SRE VALIDOU {validados} CARDS COM APENAS {com_erro} AJUSTES**")
+            st.warning(f"**⚡ SRE VALIDOU {validados} CARDS COM APENAS {com_erro} AJUSTES**")
             st.info(f"Alta qualidade - Taxa de erro: {taxa_erro:.1f}%")
         else:
-            st.warning(f"**📊 PAPEL DO SRE VALIDOU {validados} CARDS, {com_erro} COM RETORNO**")
+            st.warning(f"**📊 SRE VALIDOU {validados} CARDS, {com_erro} COM RETORNO**")
             st.info(f"Taxa de sucesso: {taxa_sucesso:.1f}% | {sem_erro} cards perfeitos")
         
         st.markdown("---")
