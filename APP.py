@@ -1,3 +1,5 @@
+com manchete.
+
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -1285,460 +1287,84 @@ if st.session_state.df_original is not None:
         st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
 # ============================================
-# EXIBIR POPUP SE SOLICITADO (VERSÃO COM GRÁFICO COMPARATIVO)
+# EXIBIR POPUP SE SOLICITADO (VERSÃO SIMPLIFICADA QUE FUNCIONA)
 # ============================================
 if st.session_state.df_original is not None and st.session_state.show_popup:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
     
-    # Criar um expander que simula popup
-    with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
+    # Criar um expander que simula popup (funciona 100%)
+    with st.expander("📰 MANCHETE DO MÊS - INDICADORES PRINCIPAIS", expanded=True):
         
-        # ============================================
-        # SELEÇÃO DE PERÍODO
-        # ============================================
-        st.markdown("### 📅 SELECIONE O PERÍODO")
-        
-        col_periodo1, col_periodo2 = st.columns(2)
-        
-        with col_periodo1:
-            # Opções de período
-            periodo_opcoes = [
-                "Mês Atual",
-                "Últimos 30 dias", 
-                "Últimos 90 dias",
-                "Este Ano",
-                "Ano Passado",
-                "Todo o Período"
-            ]
-            periodo_selecionado = st.selectbox(
-                "Período de análise:",
-                options=periodo_opcoes,
-                index=0,
-                key="popup_periodo"
-            )
-        
-        with col_periodo2:
-            # Se tiver dados históricos, mostrar ano específico
-            if 'Ano' in df.columns:
-                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
-                if anos_disponiveis:
-                    ano_especifico = st.selectbox(
-                        "Ou selecione um ano:",
-                        options=['Selecionar ano...'] + list(anos_disponiveis),
-                        key="popup_ano"
-                    )
-                else:
-                    ano_especifico = 'Selecionar ano...'
-            else:
-                ano_especifico = 'Selecionar ano...'
-        
-        # ============================================
-        # FILTRAR DADOS CONFORME PERÍODO SELECIONADO
-        # ============================================
+        # Calcular indicadores do mês atual
         hoje = datetime.now()
-        df_filtrado_periodo = df.copy()
-        periodo_titulo = ""
+        mes_atual = hoje.month
+        ano_atual = hoje.year
         
-        if periodo_selecionado == "Mês Atual":
-            mes_atual = hoje.month
-            ano_atual = hoje.year
-            df_filtrado_periodo = df[(df['Criado'].dt.month == mes_atual) & 
-                                    (df['Criado'].dt.year == ano_atual)].copy()
-            periodo_titulo = f"Mês Atual ({mes_atual:02d}/{ano_atual})"
-            
-        elif periodo_selecionado == "Últimos 30 dias":
-            data_limite = hoje - timedelta(days=30)
-            df_filtrado_periodo = df[df['Criado'] >= data_limite].copy()
-            periodo_titulo = "Últimos 30 dias"
-            
-        elif periodo_selecionado == "Últimos 90 dias":
-            data_limite = hoje - timedelta(days=90)
-            df_filtrado_periodo = df[df['Criado'] >= data_limite].copy()
-            periodo_titulo = "Últimos 90 dias"
-            
-        elif periodo_selecionado == "Este Ano":
-            ano_atual = hoje.year
-            df_filtrado_periodo = df[df['Criado'].dt.year == ano_atual].copy()
-            periodo_titulo = f"Este Ano ({ano_atual})"
-            
-        elif periodo_selecionado == "Ano Passado":
-            ano_passado = hoje.year - 1
-            df_filtrado_periodo = df[df['Criado'].dt.year == ano_passado].copy()
-            periodo_titulo = f"Ano Passado ({ano_passado})"
-            
-        elif periodo_selecionado == "Todo o Período":
-            periodo_titulo = "Todo o Período Disponíve"
-            # Já é o df completo
-            
-        elif ano_especifico != 'Selecionar ano...':
-            df_filtrado_periodo = df[df['Criado'].dt.year == int(ano_especifico)].copy()
-            periodo_titulo = f"Ano {ano_especifico}"
+        # Filtrar dados do mês atual
+        df_mes = df[(df['Criado'].dt.month == mes_atual) & 
+                   (df['Criado'].dt.year == ano_atual)].copy()
         
-        # ============================================
-        # CALCULAR INDICADORES PARA O PERÍODO SELECIONADO
-        # ============================================
-        total_cards = len(df_filtrado_periodo)
-        validados = len(df_filtrado_periodo[df_filtrado_periodo['Status'] == 'Sincronizado'])
-        com_erro = len(df_filtrado_periodo[df_filtrado_periodo['Revisões'] > 0])
+        # Calcular indicadores
+        total_cards = len(df_mes)
+        validados = len(df_mes[df_mes['Status'] == 'Sincronizado'])
+        com_erro = len(df_mes[df_mes['Revisões'] > 0])
         sem_erro = validados - com_erro
         
-        # Taxas
+        # Taxa de sucesso
         taxa_sucesso = (validados / total_cards * 100) if total_cards > 0 else 0
-        taxa_erro = (com_erro / validados * 100) if validados > 0 else 0
-        
-        # ============================================
-        # CALCULAR PARA PERÍODO ANTERIOR (COMPARAÇÃO)
-        # ============================================
-        # Para "Mês Atual": comparar com mês anterior
-        # Para "Últimos 30 dias": comparar com os 30 dias anteriores
-        # Para "Este Ano": comparar com ano anterior
-        df_anterior = pd.DataFrame()
-        periodo_anterior_titulo = ""
-        
-        try:
-            if periodo_selecionado == "Mês Atual":
-                mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
-                ano_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
-                df_anterior = df[(df['Criado'].dt.month == mes_anterior) & 
-                                (df['Criado'].dt.year == ano_anterior)].copy()
-                periodo_anterior_titulo = f"{mes_anterior:02d}/{ano_anterior}"
-                
-            elif periodo_selecionado == "Últimos 30 dias":
-                data_inicio_anterior = hoje - timedelta(days=60)
-                data_fim_anterior = hoje - timedelta(days=30)
-                df_anterior = df[(df['Criado'] >= data_inicio_anterior) & 
-                                (df['Criado'] < data_fim_anterior)].copy()
-                periodo_anterior_titulo = "30 dias anteriores"
-                
-            elif periodo_selecionado == "Últimos 90 dias":
-                data_inicio_anterior = hoje - timedelta(days=180)
-                data_fim_anterior = hoje - timedelta(days=90)
-                df_anterior = df[(df['Criado'] >= data_inicio_anterior) & 
-                                (df['Criado'] < data_fim_anterior)].copy()
-                periodo_anterior_titulo = "90 dias anteriores"
-                
-            elif periodo_selecionado == "Este Ano":
-                ano_anterior = ano_atual - 1
-                df_anterior = df[df['Criado'].dt.year == ano_anterior].copy()
-                periodo_anterior_titulo = f"Ano {ano_anterior}"
-                
-            elif periodo_selecionado == "Ano Passado":
-                ano_anterior_2 = ano_passado - 1
-                df_anterior = df[df['Criado'].dt.year == ano_anterior_2].copy()
-                periodo_anterior_titulo = f"Ano {ano_anterior_2}"
-                
-        except Exception as e:
-            # Se houver erro, simplesmente não mostra comparação
-            df_anterior = pd.DataFrame()
-        
-        # Calcular indicadores do período anterior
-        if not df_anterior.empty:
-            total_cards_anterior = len(df_anterior)
-            validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
-            com_erro_anterior = len(df_anterior[df_anterior['Revisões'] > 0])
-            taxa_sucesso_anterior = (validados_anterior / total_cards_anterior * 100) if total_cards_anterior > 0 else 0
-        else:
-            total_cards_anterior = 0
-            validados_anterior = 0
-            com_erro_anterior = 0
-            taxa_sucesso_anterior = 0
-        
-        # ============================================
-        # EXIBIR INDICADORES
-        # ============================================
-        st.markdown(f"### 🎯 MANCHETE - {periodo_titulo}")
         
         # Texto narrativo dinâmico
-        if total_cards == 0:
-            st.error(f"⚠️ **NENHUM DADO DISPONÍVEL** para {periodo_titulo.lower()}")
-        elif com_erro == 0 and validados > 0:
+        st.markdown("### 🎯 DESTAQUE DO MÊS")
+        
+        if com_erro == 0:
             st.success(f"**✅ PAPEL DO SRE VALIDOU {validados} CARDS SEM RETORNO DE ERRO!**")
-            st.info(f"Performance excepcional - 100% de aprovação direta")
-        elif taxa_erro <= 5:
+            st.info(f"Performance excepcional em {mes_atual:02d}/{ano_atual} - 100% de aprovação direta")
+        elif com_erro <= 3:
             st.warning(f"**⚡ PAPEL DO SRE VALIDOU {validados} CARDS COM APENAS {com_erro} AJUSTES**")
-            st.info(f"Alta qualidade - Taxa de erro: {taxa_erro:.1f}%")
+            st.info(f"Alta qualidade - Taxa de sucesso: {taxa_sucesso:.1f}%")
         else:
             st.warning(f"**📊 PAPEL DO SRE VALIDOU {validados} CARDS, {com_erro} COM RETORNO**")
-            st.info(f"Taxa de sucesso: {taxa_sucesso:.1f}% | {sem_erro} cards perfeitos")
+            st.info(f"Análise do mês - {taxa_sucesso:.1f}% de taxa de sucesso")
         
         st.markdown("---")
         
-        # ============================================
-# GRÁFICO COMPARATIVO (VERSÃO CORRIGIDA - LAYOUT COMPACTO)
-# ============================================
-if not df_anterior.empty and total_cards_anterior > 0:
-    st.markdown("#### 📈 COMPARAÇÃO COM PERÍODO ANTERIOR")
-    
-    # Dados para o gráfico
-    periodos = [periodo_anterior_titulo, periodo_titulo]
-    cards_totais = [total_cards_anterior, total_cards]
-    cards_validados = [validados_anterior, validados]
-    taxa_sucesso_vals = [taxa_sucesso_anterior, taxa_sucesso]
-    
-    # Criar gráfico comparativo com layout melhorado
-    fig_comparativo = go.Figure()
-    
-    # Barras para cards totais
-    fig_comparativo.add_trace(go.Bar(
-        x=periodos,
-        y=cards_totais,
-        name='Total Cards',
-        marker_color='#1e3799',
-        text=cards_totais,
-        textposition='outside',
-        textfont=dict(size=10),
-        width=0.35  # Largura das barras reduzida
-    ))
-    
-    # Barras para cards validados
-    fig_comparativo.add_trace(go.Bar(
-        x=periodos,
-        y=cards_validados,
-        name='Validados',
-        marker_color='#28a745',
-        text=cards_validados,
-        textposition='outside',
-        textfont=dict(size=10),
-        width=0.35
-    ))
-    
-    # Linha para taxa de sucesso (eixo secundário)
-    fig_comparativo.add_trace(go.Scatter(
-        x=periodos,
-        y=taxa_sucesso_vals,
-        name='Taxa Sucesso',
-        yaxis='y2',
-        mode='lines+markers+text',
-        line=dict(color='#dc3545', width=2),
-        marker=dict(size=8, color='#dc3545'),
-        text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
-        textposition='top center',
-        textfont=dict(size=9)
-    ))
-    
-    fig_comparativo.update_layout(
-        title=dict(
-            text='Comparativo: Período Atual vs Anterior',
-            font=dict(size=14)
-        ),
-        barmode='group',
-        yaxis=dict(
-            title=dict(
-                text='Quantidade',
-                font=dict(size=11)
-            ),
-            gridcolor='rgba(0,0,0,0.05)',
-            rangemode='tozero'
-        ),
-        yaxis2=dict(
-            title=dict(
-                text='Taxa Sucesso (%)',
-                font=dict(size=11)
-            ),
-            overlaying='y',
-            side='right',
-            range=[0, max(100, max(taxa_sucesso_vals) * 1.1)],
-            gridcolor='rgba(0,0,0,0.02)'
-        ),
-        height=300,  # Altura reduzida
-        showlegend=True,
-        plot_bgcolor='white',
-        margin=dict(l=50, r=50, t=50, b=50),  # Margens ajustadas
-        legend=dict(
-            orientation="h",  # Legenda horizontal
-            yanchor="bottom",
-            y=1.02,  # Acima do gráfico
-            xanchor="center",
-            x=0.5,
-            font=dict(size=10)
-        ),
-        xaxis=dict(
-            tickfont=dict(size=10)
-        )
-    )
-    
-    # Configuração para gráfico mais compacto
-    fig_comparativo.update_traces(
-        marker_line_width=0.5,
-        selector=dict(type='bar')
-    )
-    
-    st.plotly_chart(fig_comparativo, use_container_width=True, config={'displayModeBar': False})
-    
-    # ============================================
-    # MÉTRICAS DE VARIAÇÃO (LAYOUT MAIS COMPACTO)
-    # ============================================
-    if total_cards_anterior > 0:
-        variacao_total = ((total_cards - total_cards_anterior) / total_cards_anterior * 100)
-        variacao_validados = ((validados - validados_anterior) / validados_anterior * 100) if validados_anterior > 0 else 0
-        variacao_taxa = taxa_sucesso - taxa_sucesso_anterior
-    else:
-        variacao_total = 100
-        variacao_validados = 100 if validados > 0 else 0
-        variacao_taxa = taxa_sucesso
-    
-    # Container compacto para métricas
-    with st.container():
-        st.markdown("##### 📊 VARIAÇÃO PERCENTUAL")
-        
-        # Usar 3 colunas com menos espaçamento
-        col_var1, col_var2, col_var3 = st.columns(3)
-        
-        with col_var1:
-            st.metric(
-                label="Total Cards",
-                value=f"{total_cards:,}",
-                delta=f"{variacao_total:+.1f}%",
-                delta_color="normal" if variacao_total >= 0 else "inverse",
-                help=f"Anterior: {total_cards_anterior:,}"
-            )
-        
-        with col_var2:
-            st.metric(
-                label="Validados",
-                value=f"{validados:,}",
-                delta=f"{variacao_validados:+.1f}%",
-                delta_color="normal" if variacao_validados >= 0 else "inverse",
-                help=f"Anterior: {validados_anterior:,}"
-            )
-        
-        with col_var3:
-            st.metric(
-                label="Taxa Sucesso",
-                value=f"{taxa_sucesso:.1f}%",
-                delta=f"{variacao_taxa:+.1f}pp",
-                delta_color="normal" if variacao_taxa >= 0 else "inverse",
-                help=f"Anterior: {taxa_sucesso_anterior:.1f}%"
-            )
-    
-    st.markdown("---")
-        
-        # ============================================
-        # INDICADORES PRINCIPAIS DO PERÍODO ATUAL
-        # ============================================
-        st.markdown("#### 📊 INDICADORES PRINCIPAIS")
-        
+        # Grid de indicadores
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric(
-                "📋 Total Cards", 
-                total_cards,
-                delta=None,
-                help="Total de cards no período"
-            )
+            st.metric("📋 Total Cards", total_cards, "Este mês")
         
         with col2:
-            st.metric(
-                "✅ Validados", 
-                validados,
-                f"{taxa_sucesso:.1f}%",
-                delta_color="normal" if taxa_sucesso >= 90 else "off",
-                help="Cards sincronizados (aprovados)"
-            )
+            st.metric("✅ Validados", validados, "Pelo SRE")
         
         with col3:
-            st.metric(
-                "🎯 Sem Erro", 
-                sem_erro,
-                f"{(sem_erro/validados*100) if validados>0 else 0:.1f}%" if validados > 0 else "0%",
-                help="Aprovação direta na primeira validação"
-            )
+            st.metric("🎯 Sem Erro", sem_erro, "Aprovação direta")
         
         with col4:
-            st.metric(
-                "⚠️ Com Erro", 
-                com_erro,
-                f"{taxa_erro:.1f}%" if validados > 0 else "0%",
-                delta_color="inverse",
-                help="Cards que retornaram para ajuste"
-            )
+            st.metric("⚠️ Com Erro", com_erro, f"{taxa_sucesso:.1f}% sucesso")
         
-        # ============================================
-        # ANÁLISE DETALHADA
-        # ============================================
         st.markdown("---")
-        st.markdown("#### 📈 ANÁLISE DETALHADA")
         
-        if total_cards > 0:
-            # Média diária (se for período com datas)
-            if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
-                dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
-                media_diaria = total_cards / dias_unicos if dias_unicos > 0 else 0
-                
-                col_analise1, col_analise2, col_analise3 = st.columns(3)
-                
-                with col_analise1:
-                    st.metric("📅 Dias com atividade", dias_unicos)
-                
-                with col_analise2:
-                    st.metric("📊 Média diária", f"{media_diaria:.1f}")
-                
-                with col_analise3:
-                    # Revisões por card
-                    if 'Revisões' in df_filtrado_periodo.columns:
-                        media_revisoes = df_filtrado_periodo['Revisões'].mean()
-                        st.metric("📝 Média revisões/card", f"{media_revisoes:.1f}")
-                    else:
-                        st.metric("📝 Revisões", "N/A")
-            
-            # Classificação de performance
-            st.markdown("##### 🏆 CLASSIFICAÇÃO DE PERFORMANCE")
-            
-            if taxa_sucesso >= 95:
-                st.success("""
-                **⭐ EXCELENTE**
-                - Meta de qualidade superada (>95%)
-                - Processos altamente eficientes
-                - Recomendação: Manter padrões atuais
-                """)
-            elif taxa_sucesso >= 85:
-                st.info("""
-                **👍 BOM DESEMPENHO**
-                - Dentro dos padrões esperados (85-94%)
-                - Processos consistentes
-                - Recomendação: Pequenos ajustes pontuais
-                """)
-            elif taxa_sucesso >= 70:
-                st.warning("""
-                **⚠️ OPORTUNIDADE DE MELHORIA**
-                - Abaixo do ideal (70-84%)
-                - Processos precisam de revisão
-                - Recomendação: Identificar causas principais
-                """)
-            else:
-                st.error("""
-                **🚨 ATENÇÃO NECESSÁRIA**
-                - Performance crítica (<70%)
-                - Processos ineficientes
-                - Recomendação: Revisão urgente dos fluxos
-                """)
+        # Mini análise
+        st.markdown("#### 📈 ANÁLISE RÁPIDA")
+        
+        if total_cards == 0:
+            st.info("ℹ️ Nenhum card registrado neste mês")
+        elif taxa_sucesso >= 95:
+            st.success("🏆 **Excelente performance!** Meta de qualidade superada.")
+        elif taxa_sucesso >= 85:
+            st.info("👍 **Bom desempenho** dentro dos padrões esperados.")
         else:
-            st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
+            st.warning("📊 **Oportunidade de melhoria** na taxa de aprovação.")
         
-        # ============================================
-        # BOTÃO DE FECHAR
-        # ============================================
+        # Botão para fechar
         st.markdown("---")
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-        with col_btn2:
-            if st.button("✕ **FECHAR MANCHETE**", 
-                        type="primary", 
-                        use_container_width=True,
-                        key="btn_fechar_manchete"):
-                st.session_state.show_popup = False
-                st.rerun()
-        
-        # ============================================
-        # INFORMAÇÕES ADICIONAIS
-        # ============================================
-        st.markdown(f"""
-        <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-top: 1rem;">
-            <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
-            <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
-            <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small>
-        </div>
-        """, unsafe_allow_html=True)
+        if st.button("✕ **FECHAR MANCHETE**", 
+                    type="primary", 
+                    use_container_width=True,
+                    key="btn_fechar_manchete"):
+            st.session_state.show_popup = False
+            st.rerun()
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
