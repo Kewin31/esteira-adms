@@ -1285,22 +1285,82 @@ if st.session_state.df_original is not None:
         st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
 # ============================================
-# NOVO: EXIBIR POPUP SE SOLICITADO
+# EXIBIR POPUP SE SOLICITADO (VERSÃO SIMPLIFICADA QUE FUNCIONA)
 # ============================================
 if st.session_state.df_original is not None and st.session_state.show_popup:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
-    popup_html = criar_popup_indicadores(df)
     
-    # Usar components para injetar o HTML do popup
-    components.html(popup_html, height=0, width=0)
-    
-    # Botão de fechamento via Streamlit (backup)
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        if st.button("✕ Fechar Manchete", 
+    # Criar um expander que simula popup (funciona 100%)
+    with st.expander("📰 MANCHETE DO MÊS - INDICADORES PRINCIPAIS", expanded=True):
+        
+        # Calcular indicadores do mês atual
+        hoje = datetime.now()
+        mes_atual = hoje.month
+        ano_atual = hoje.year
+        
+        # Filtrar dados do mês atual
+        df_mes = df[(df['Criado'].dt.month == mes_atual) & 
+                   (df['Criado'].dt.year == ano_atual)].copy()
+        
+        # Calcular indicadores
+        total_cards = len(df_mes)
+        validados = len(df_mes[df_mes['Status'] == 'Sincronizado'])
+        com_erro = len(df_mes[df_mes['Revisões'] > 0])
+        sem_erro = validados - com_erro
+        
+        # Taxa de sucesso
+        taxa_sucesso = (validados / total_cards * 100) if total_cards > 0 else 0
+        
+        # Texto narrativo dinâmico
+        st.markdown("### 🎯 DESTAQUE DO MÊS")
+        
+        if com_erro == 0:
+            st.success(f"**✅ PAPEL DO SRE VALIDOU {validados} CARDS SEM RETORNO DE ERRO!**")
+            st.info(f"Performance excepcional em {mes_atual:02d}/{ano_atual} - 100% de aprovação direta")
+        elif com_erro <= 3:
+            st.warning(f"**⚡ PAPEL DO SRE VALIDOU {validados} CARDS COM APENAS {com_erro} AJUSTES**")
+            st.info(f"Alta qualidade - Taxa de sucesso: {taxa_sucesso:.1f}%")
+        else:
+            st.warning(f"**📊 PAPEL DO SRE VALIDOU {validados} CARDS, {com_erro} COM RETORNO**")
+            st.info(f"Análise do mês - {taxa_sucesso:.1f}% de taxa de sucesso")
+        
+        st.markdown("---")
+        
+        # Grid de indicadores
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("📋 Total Cards", total_cards, "Este mês")
+        
+        with col2:
+            st.metric("✅ Validados", validados, "Pelo SRE")
+        
+        with col3:
+            st.metric("🎯 Sem Erro", sem_erro, "Aprovação direta")
+        
+        with col4:
+            st.metric("⚠️ Com Erro", com_erro, f"{taxa_sucesso:.1f}% sucesso")
+        
+        st.markdown("---")
+        
+        # Mini análise
+        st.markdown("#### 📈 ANÁLISE RÁPIDA")
+        
+        if total_cards == 0:
+            st.info("ℹ️ Nenhum card registrado neste mês")
+        elif taxa_sucesso >= 95:
+            st.success("🏆 **Excelente performance!** Meta de qualidade superada.")
+        elif taxa_sucesso >= 85:
+            st.info("👍 **Bom desempenho** dentro dos padrões esperados.")
+        else:
+            st.warning("📊 **Oportunidade de melhoria** na taxa de aprovação.")
+        
+        # Botão para fechar
+        st.markdown("---")
+        if st.button("✕ **FECHAR MANCHETE**", 
+                    type="primary", 
                     use_container_width=True,
-                    type="primary",
-                    key="btn_fechar_popup"):
+                    key="btn_fechar_manchete"):
             st.session_state.show_popup = False
             st.rerun()
 
