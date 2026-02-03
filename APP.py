@@ -1956,7 +1956,7 @@ if st.session_state.df_original is not None:
                     
                     with col_tipo1:
                         # Agrupar por tipo de chamado e data
-                        tipo_por_dia = df_sincronizados.groupby(['Data', 'Tipo_Chamado']).size().resetindex()
+                        tipo_por_dia = df_sincronizados.groupby(['Data', 'Tipo_Chamado']).size().reset_index()
                         tipo_por_dia.columns = ['Data', 'Tipo', 'Quantidade']
                         
                         # Pivot para gráfico de linha
@@ -2022,7 +2022,7 @@ if st.session_state.df_original is not None:
                     
                     with col_empresa1:
                         # Agrupar por empresa e data
-                        empresa_por_dia = df_sincronizados.groupby(['Data', 'Empresa']).size().resetindex()
+                        empresa_por_dia = df_sincronizados.groupby(['Data', 'Empresa']).size().reset_index()
                         empresa_por_dia.columns = ['Data', 'Empresa', 'Quantidade']
                         
                         # Pivot para gráfico de área
@@ -2152,7 +2152,7 @@ if st.session_state.df_original is not None:
                 st.markdown("### 📈 Sincronizados por SRE")
                 
                 # Calcular sincronizados por SRE
-                sinc_por_sre = df_sincronizados.groupby('SRE').size().resetindex()
+                sinc_por_sre = df_sincronizados.groupby('SRE').size().reset_index()
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
@@ -2160,7 +2160,7 @@ if st.session_state.df_original is not None:
                 sinc_por_sre['SRE_Nome'] = sinc_por_sre['SRE'].apply(substituir_nome_sre)
                 
                 # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
-                sinc_por_sre_nome = sinc_por_sre.groupby('SRE_Nome')['Sincronizados'].sum().resetindex()
+                sinc_por_sre_nome = sinc_por_sre.groupby('SRE_Nome')['Sincronizados'].sum().reset_index()
                 sinc_por_sre_nome = sinc_por_sre_nome.sort_values('Sincronizados', ascending=False)
                 
                 # Criar gráfico de barras com nomes corrigidos
@@ -3359,7 +3359,7 @@ if st.session_state.df_original is not None:
                     # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
-                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().resetindex()
+                    evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
                     # Top 5 tipos para análise
