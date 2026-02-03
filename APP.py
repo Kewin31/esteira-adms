@@ -1251,6 +1251,39 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ============================================
+# NOVO: BOTÃO PARA ABRIR POPUP DE MANCHETE
+# ============================================
+if st.session_state.df_original is not None:
+    # Inicializar estado do popup
+    if 'show_popup' not in st.session_state:
+        st.session_state.show_popup = False
+    
+    # Container para o botão (discreto, não polui a página)
+    st.markdown("""
+    <div style="display: flex; justify-content: flex-end; margin: -50px 0 20px 0;">
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Botão usando Streamlit (posicionado após o header)
+    col_espaco, col_botao = st.columns([10, 2])
+    
+    with col_botao:
+        if st.button("📰 **VER MANCHETE**", 
+                    help="Clique para ver os principais indicadores do mês",
+                    type="secondary",
+                    use_container_width=True,
+                    key="btn_manchete"):
+            st.session_state.show_popup = True
+
+# ============================================
+# VERIFICAÇÃO AUTOMÁTICA DE ATUALIZAÇÕES
+# ============================================
+if st.session_state.df_original is not None:
+    # Verificar se o arquivo foi atualizado
+    if verificar_e_atualizar_arquivo():
+        st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
+
 # ... (código anterior mantido igual até a linha 1098)
 
 # ============================================
@@ -1762,6 +1795,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         """, unsafe_allow_html=True)
 
 # ... (o restante do código permanece igual a partir daqui)
+
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
 # ============================================
