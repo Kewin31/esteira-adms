@@ -1251,732 +1251,486 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# PRIMEIRO: ADICIONAR ESTA VERIFICAÇÃO NO INÍCIO DO CÓDIGO
 # ============================================
-# NOVO: BOTÃO PARA ABRIR POPUP DE MANCHETE
+# VERIFICAÇÃO DE DEPENDÊNCIAS PARA PDF
 # ============================================
-if st.session_state.df_original is not None:
-    # Inicializar estado do popup
-    if 'show_popup' not in st.session_state:
-        st.session_state.show_popup = False
-    
-    # Container para o botão (discreto, não polui a página)
-    st.markdown("""
-    <div style="display: flex; justify-content: flex-end; margin: -50px 0 20px 0;">
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Botão usando Streamlit (posicionado após o header)
-    col_espaco, col_botao = st.columns([10, 2])
-    
-    with col_botao:
-        if st.button("📰 **VER MANCHETE**", 
-                    help="Clique para ver os principais indicadores do mês",
-                    type="secondary",
-                    use_container_width=True,
-                    key="btn_manchete"):
-            st.session_state.show_popup = True
+def verificar_dependencias_pdf():
+    """Verifica se as dependências para PDF estão instaladas"""
+    try:
+        import fpdf
+        return True, "✅ FPDF instalado"
+    except ImportError:
+        return False, "❌ FPDF não instalado. Execute: pip install fpdf"
+
+# Chamar a verificação uma vez
+fpdf_disponivel, mensagem_fpdf = verificar_dependencias_pdf()
 
 # ============================================
-# VERIFICAÇÃO AUTOMÁTICA DE ATUALIZAÇÕES
-# ============================================
-if st.session_state.df_original is not None:
-    # Verificar se o arquivo foi atualizado
-    if verificar_e_atualizar_arquivo():
-        st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
-
-# ... (código anterior mantido igual até a linha 1098)
-
-# ============================================
-# FUNÇÃO PARA EXPORTAR PDF (NOVA)
+# FUNÇÃO PARA EXPORTAR PDF (ATUALIZADA COM FALLBACK)
 # ============================================
 def exportar_para_pdf(df_filtrado_periodo, periodo_titulo, indicadores, df_anterior=None):
-    """Exporta a manchete como PDF"""
+    """Exporta a manchete como PDF com fallback para HTML"""
     try:
-        from fpdf import FPDF
-        import base64
-        from io import BytesIO
-        import tempfile
-        import os
-        
-        # Criar PDF
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        
-        # Configurar fonte
-        pdf.set_font('Arial', 'B', 16)
-        
-        # Cabeçalho
-        pdf.cell(0, 10, '📰 RELATÓRIO EXECUTIVO - ESTEIRA ADMS', 0, 1, 'C')
-        pdf.set_font('Arial', '', 12)
-        pdf.cell(0, 10, f'Período analisado: {periodo_titulo}', 0, 1, 'C')
-        pdf.cell(0, 10, f'Data de geração: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 1, 'C')
-        pdf.ln(10)
-        
-        # Linha divisória
-        pdf.set_line_width(0.5)
-        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(10)
-        
-        # Indicadores principais
-        pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, '📊 INDICADORES PRINCIPAIS', 0, 1)
-        pdf.set_font('Arial', '', 12)
-        
-        # Tabela de indicadores
-        col_width = pdf.w / 4.5
-        row_height = 10
-        
-        # Cabeçalho da tabela
-        pdf.set_fill_color(30, 55, 153)  # Azul escuro
-        pdf.set_text_color(255, 255, 255)
-        pdf.set_font('Arial', 'B', 12)
-        
-        headers = ['Indicador', 'Valor', 'Taxa', 'Status']
-        for header in headers:
-            pdf.cell(col_width, row_height, header, 1, 0, 'C', True)
-        pdf.ln(row_height)
-        
-        # Dados da tabela
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Arial', '', 11)
-        
-        dados = [
-            ['Total Cards', f"{indicadores['total_cards']:,}", '100%', 'Base'],
-            ['Validados', f"{indicadores['validados']:,}", 
-             f"{indicadores['taxa_sucesso']:.1f}%", 
-             '✅' if indicadores['taxa_sucesso'] >= 90 else '⚠️'],
-            ['Sem Erro', f"{indicadores['sem_erro']:,}", 
-             f"{(indicadores['sem_erro']/indicadores['validados']*100) if indicadores['validados']>0 else 0:.1f}%", 
-             '🎯'],
-            ['Com Erro', f"{indicadores['com_erro']:,}", 
-             f"{indicadores['taxa_erro']:.1f}%", 
-             '⚠️' if indicadores['com_erro'] > 0 else '✅']
-        ]
-        
-        fill_color = 0  # Alternar cores
-        for row in dados:
-            pdf.set_fill_color(240, 240, 240) if fill_color % 2 == 0 else pdf.set_fill_color(255, 255, 255)
-            pdf.cell(col_width, row_height, row[0], 1, 0, 'L', True)
-            pdf.cell(col_width, row_height, row[1], 1, 0, 'C', True)
-            pdf.cell(col_width, row_height, row[2], 1, 0, 'C', True)
-            pdf.cell(col_width, row_height, row[3], 1, 0, 'C', True)
-            pdf.ln(row_height)
-            fill_color += 1
-        
-        pdf.ln(10)
-        
-        # Análise textual
-        pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, '📈 ANÁLISE DO PERÍODO', 0, 1)
-        pdf.set_font('Arial', '', 12)
-        
-        # Texto narrativo baseado nos indicadores
-        texto_analise = ""
-        if indicadores['total_cards'] == 0:
-            texto_analise = f"Nenhum dado disponível para o período {periodo_titulo}."
-        elif indicadores['com_erro'] == 0 and indicadores['validados'] > 0:
-            texto_analise = f"✅ Performance excepcional! O papel do SRE validou {indicadores['validados']} cards sem nenhum retorno de erro, demonstrando qualidade 100% na primeira validação."
-        elif indicadores['taxa_erro'] <= 5:
-            texto_analise = f"⚡ Alta qualidade! O SRE validou {indicadores['validados']} cards com apenas {indicadores['com_erro']} ajustes necessários (taxa de erro de {indicadores['taxa_erro']:.1f}%)."
-        else:
-            texto_analise = f"📊 O SRE validou {indicadores['validados']} cards, sendo {indicadores['com_erro']} com retorno para ajustes. Taxa de sucesso de {indicadores['taxa_sucesso']:.1f}%."
-        
-        pdf.multi_cell(0, 8, texto_analise)
-        pdf.ln(5)
-        
-        # Comparação com período anterior (se disponível)
-        if df_anterior is not None and not df_anterior.empty:
+        # Tentar usar FPDF (método principal)
+        try:
+            from fpdf import FPDF
+            import tempfile
+            import os
+            
+            # Criar PDF
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+            
+            # Configurar fonte
+            pdf.set_font('Arial', 'B', 16)
+            
+            # Cabeçalho
+            pdf.cell(0, 10, '📰 RELATÓRIO EXECUTIVO - ESTEIRA ADMS', 0, 1, 'C')
+            pdf.set_font('Arial', '', 12)
+            pdf.cell(0, 10, f'Período analisado: {periodo_titulo}', 0, 1, 'C')
+            pdf.cell(0, 10, f'Data de geração: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 1, 'C')
+            pdf.ln(10)
+            
+            # Linha divisória
+            pdf.set_line_width(0.5)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+            pdf.ln(10)
+            
+            # Indicadores principais
             pdf.set_font('Arial', 'B', 14)
-            pdf.cell(0, 10, '📊 COMPARAÇÃO COM PERÍODO ANTERIOR', 0, 1)
+            pdf.cell(0, 10, '📊 INDICADORES PRINCIPAIS', 0, 1)
             pdf.set_font('Arial', '', 12)
             
+            # Tabela de indicadores
+            col_width = pdf.w / 4.5
+            row_height = 10
+            
+            # Cabeçalho da tabela
+            pdf.set_fill_color(30, 55, 153)  # Azul escuro
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font('Arial', 'B', 12)
+            
+            headers = ['Indicador', 'Valor', 'Taxa', 'Status']
+            for header in headers:
+                pdf.cell(col_width, row_height, header, 1, 0, 'C', True)
+            pdf.ln(row_height)
+            
+            # Dados da tabela
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font('Arial', '', 11)
+            
+            dados = [
+                ['Total Cards', f"{indicadores['total_cards']:,}", '100%', 'Base'],
+                ['Validados', f"{indicadores['validados']:,}", 
+                 f"{indicadores['taxa_sucesso']:.1f}%", 
+                 '✅' if indicadores['taxa_sucesso'] >= 90 else '⚠️'],
+                ['Sem Erro', f"{indicadores['sem_erro']:,}", 
+                 f"{(indicadores['sem_erro']/indicadores['validados']*100) if indicadores['validados']>0 else 0:.1f}%", 
+                 '🎯'],
+                ['Com Erro', f"{indicadores['com_erro']:,}", 
+                 f"{indicadores['taxa_erro']:.1f}%", 
+                 '⚠️' if indicadores['com_erro'] > 0 else '✅']
+            ]
+            
+            fill_color = 0  # Alternar cores
+            for row in dados:
+                pdf.set_fill_color(240, 240, 240) if fill_color % 2 == 0 else pdf.set_fill_color(255, 255, 255)
+                pdf.cell(col_width, row_height, row[0], 1, 0, 'L', True)
+                pdf.cell(col_width, row_height, row[1], 1, 0, 'C', True)
+                pdf.cell(col_width, row_height, row[2], 1, 0, 'C', True)
+                pdf.cell(col_width, row_height, row[3], 1, 0, 'C', True)
+                pdf.ln(row_height)
+                fill_color += 1
+            
+            pdf.ln(10)
+            
+            # Análise textual
+            pdf.set_font('Arial', 'B', 14)
+            pdf.cell(0, 10, '📈 ANÁLISE DO PERÍODO', 0, 1)
+            pdf.set_font('Arial', '', 12)
+            
+            # Texto narrativo baseado nos indicadores
+            texto_analise = ""
+            if indicadores['total_cards'] == 0:
+                texto_analise = f"Nenhum dado disponível para o período {periodo_titulo}."
+            elif indicadores['com_erro'] == 0 and indicadores['validados'] > 0:
+                texto_analise = f"✅ Performance excepcional! O papel do SRE validou {indicadores['validados']} cards sem nenhum retorno de erro, demonstrando qualidade 100% na primeira validação."
+            elif indicadores['taxa_erro'] <= 5:
+                texto_analise = f"⚡ Alta qualidade! O SRE validou {indicadores['validados']} cards com apenas {indicadores['com_erro']} ajustes necessários (taxa de erro de {indicadores['taxa_erro']:.1f}%)."
+            else:
+                texto_analise = f"📊 O SRE validou {indicadores['validados']} cards, sendo {indicadores['com_erro']} com retorno para ajustes. Taxa de sucesso de {indicadores['taxa_sucesso']:.1f}%."
+            
+            pdf.multi_cell(0, 8, texto_analise)
+            pdf.ln(5)
+            
+            # Comparação com período anterior (se disponível)
+            if df_anterior is not None and not df_anterior.empty:
+                pdf.set_font('Arial', 'B', 14)
+                pdf.cell(0, 10, '📊 COMPARAÇÃO COM PERÍODO ANTERIOR', 0, 1)
+                pdf.set_font('Arial', '', 12)
+                
+                variacao_total = ((indicadores['total_cards'] - indicadores['total_anterior']) / indicadores['total_anterior'] * 100) if indicadores['total_anterior'] > 0 else 0
+                variacao_validados = ((indicadores['validados'] - indicadores['validados_anterior']) / indicadores['validados_anterior'] * 100) if indicadores['validados_anterior'] > 0 else 0
+                
+                texto_comparacao = f"""
+                Comparativo com período anterior:
+                
+                • Total de cards: {indicadores['total_cards']:,} ({variacao_total:+.1f}%)
+                • Cards validados: {indicadores['validados']:,} ({variacao_validados:+.1f}%)
+                • Taxa de sucesso: {indicadores['taxa_sucesso']:.1f}% ({indicadores['taxa_sucesso'] - indicadores['taxa_sucesso_anterior']:+.1f} pontos percentuais)
+                
+                Período anterior analisado: {indicadores['periodo_anterior_titulo']}
+                """
+                
+                pdf.set_font('Arial', '', 11)
+                pdf.multi_cell(0, 8, texto_comparacao)
+                pdf.ln(5)
+            
+            # Detalhes estatísticos
+            pdf.set_font('Arial', 'B', 14)
+            pdf.cell(0, 10, '📋 DETALHES ESTATÍSTICOS', 0, 1)
+            pdf.set_font('Arial', '', 11)
+            
+            if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
+                dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
+                media_diaria = indicadores['total_cards'] / dias_unicos if dias_unicos > 0 else 0
+                
+                detalhes = f"""
+                • Dias com atividade: {dias_unicos}
+                • Média diária de cards: {media_diaria:.1f}
+                • Período coberto: {df_filtrado_periodo['Criado'].min().strftime('%d/%m/%Y')} a {df_filtrado_periodo['Criado'].max().strftime('%d/%m/%Y')}
+                """
+                
+                if 'Revisões' in df_filtrado_periodo.columns:
+                    media_revisoes = df_filtrado_periodo['Revisões'].mean()
+                    detalhes += f"\n• Média de revisões por card: {media_revisoes:.1f}"
+                
+                pdf.multi_cell(0, 8, detalhes)
+            
+            # Rodapé
+            pdf.ln(15)
+            pdf.set_font('Arial', 'I', 10)
+            pdf.set_text_color(128, 128, 128)
+            pdf.cell(0, 10, 'Relatório gerado automaticamente pelo Sistema Esteira ADMS', 0, 1, 'C')
+            pdf.cell(0, 10, 'Desenvolvido por: Kewin Marcel Ramirez Ferreira | GEAT', 0, 1, 'C')
+            pdf.cell(0, 10, f'© {datetime.now().year} Energisa Group - Sistema proprietário', 0, 1, 'C')
+            
+            # Salvar PDF em arquivo temporário
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                pdf.output(tmp_file.name)
+                
+                # Ler arquivo para bytes
+                with open(tmp_file.name, 'rb') as f:
+                    pdf_bytes = f.read()
+                
+                # Limpar arquivo temporário
+                os.unlink(tmp_file.name)
+            
+            return pdf_bytes
+            
+        except ImportError:
+            # Fallback 1: Se FPDF não estiver disponível, gerar HTML
+            return gerar_html_como_fallback(df_filtrado_periodo, periodo_titulo, indicadores, df_anterior)
+            
+    except Exception as e:
+        st.error(f"❌ Erro ao gerar relatório: {str(e)}")
+        return None
+
+def gerar_html_como_fallback(df_filtrado_periodo, periodo_titulo, indicadores, df_anterior=None):
+    """Gera HTML como fallback quando FPDF não está disponível"""
+    try:
+        hoje = datetime.now()
+        
+        # Criar conteúdo HTML
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Relatório Esteira ADMS - {periodo_titulo}</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 40px;
+                    color: #333;
+                }}
+                .header {{
+                    text-align: center;
+                    border-bottom: 3px solid #1e3799;
+                    padding-bottom: 20px;
+                    margin-bottom: 30px;
+                }}
+                .indicadores {{
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 15px;
+                    margin-bottom: 30px;
+                }}
+                .card {{
+                    background: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    padding: 15px;
+                    text-align: center;
+                }}
+                .valor {{
+                    font-size: 24px;
+                    font-weight: bold;
+                    color: #1e3799;
+                    margin: 10px 0;
+                }}
+                .analise {{
+                    background: #fff;
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin: 20px 0;
+                }}
+                .footer {{
+                    margin-top: 40px;
+                    text-align: center;
+                    color: #6c757d;
+                    font-size: 12px;
+                    border-top: 1px solid #dee2e6;
+                    padding-top: 20px;
+                }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }}
+                th, td {{
+                    border: 1px solid #dee2e6;
+                    padding: 10px;
+                    text-align: left;
+                }}
+                th {{
+                    background-color: #1e3799;
+                    color: white;
+                }}
+                tr:nth-child(even) {{
+                    background-color: #f8f9fa;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>📰 RELATÓRIO EXECUTIVO - ESTEIRA ADMS</h1>
+                <h3>Período analisado: {periodo_titulo}</h3>
+                <p>Data de geração: {hoje.strftime('%d/%m/%Y %H:%M:%S')}</p>
+            </div>
+            
+            <h2>📊 INDICADORES PRINCIPAIS</h2>
+            <div class="indicadores">
+                <div class="card">
+                    <div>📋 Total Cards</div>
+                    <div class="valor">{indicadores['total_cards']:,}</div>
+                    <div>Base do período</div>
+                </div>
+                <div class="card">
+                    <div>✅ Validados</div>
+                    <div class="valor">{indicadores['validados']:,}</div>
+                    <div>{indicadores['taxa_sucesso']:.1f}%</div>
+                </div>
+                <div class="card">
+                    <div>🎯 Sem Erro</div>
+                    <div class="valor">{indicadores['sem_erro']:,}</div>
+                    <div>{(indicadores['sem_erro']/indicadores['validados']*100) if indicadores['validados']>0 else 0:.1f}%</div>
+                </div>
+                <div class="card">
+                    <div>⚠️ Com Erro</div>
+                    <div class="valor">{indicadores['com_erro']:,}</div>
+                    <div>{indicadores['taxa_erro']:.1f}%</div>
+                </div>
+            </div>
+            
+            <div class="analise">
+                <h2>📈 ANÁLISE DO PERÍODO</h2>
+        """
+        
+        # Adicionar texto narrativo
+        if indicadores['total_cards'] == 0:
+            html_content += f"<p>Nenhum dado disponível para o período {periodo_titulo}.</p>"
+        elif indicadores['com_erro'] == 0 and indicadores['validados'] > 0:
+            html_content += f"<p>✅ <strong>Performance excepcional!</strong> O papel do SRE validou {indicadores['validados']} cards sem nenhum retorno de erro, demonstrando qualidade 100% na primeira validação.</p>"
+        elif indicadores['taxa_erro'] <= 5:
+            html_content += f"<p>⚡ <strong>Alta qualidade!</strong> O SRE validou {indicadores['validados']} cards com apenas {indicadores['com_erro']} ajustes necessários (taxa de erro de {indicadores['taxa_erro']:.1f}%).</p>"
+        else:
+            html_content += f"<p>📊 O SRE validou {indicadores['validados']} cards, sendo {indicadores['com_erro']} com retorno para ajustes. Taxa de sucesso de {indicadores['taxa_sucesso']:.1f}%.</p>"
+        
+        # Adicionar comparação se disponível
+        if df_anterior is not None and not df_anterior.empty:
             variacao_total = ((indicadores['total_cards'] - indicadores['total_anterior']) / indicadores['total_anterior'] * 100) if indicadores['total_anterior'] > 0 else 0
             variacao_validados = ((indicadores['validados'] - indicadores['validados_anterior']) / indicadores['validados_anterior'] * 100) if indicadores['validados_anterior'] > 0 else 0
             
-            texto_comparacao = f"""
-            Comparativo com período anterior:
-            
-            • Total de cards: {indicadores['total_cards']:,} ({variacao_total:+.1f}%)
-            • Cards validados: {indicadores['validados']:,} ({variacao_validados:+.1f}%)
-            • Taxa de sucesso: {indicadores['taxa_sucesso']:.1f}% ({indicadores['taxa_sucesso'] - indicadores['taxa_sucesso_anterior']:+.1f} pontos percentuais)
-            
-            Período anterior analisado: {indicadores['periodo_anterior_titulo']}
+            html_content += f"""
+                <h3>📊 COMPARAÇÃO COM PERÍODO ANTERIOR</h3>
+                <p>Período anterior: {indicadores['periodo_anterior_titulo']}</p>
+                <table>
+                    <tr>
+                        <th>Indicador</th>
+                        <th>Período Atual</th>
+                        <th>Período Anterior</th>
+                        <th>Variação</th>
+                    </tr>
+                    <tr>
+                        <td>Total Cards</td>
+                        <td>{indicadores['total_cards']:,}</td>
+                        <td>{indicadores['total_anterior']:,}</td>
+                        <td>{variacao_total:+.1f}%</td>
+                    </tr>
+                    <tr>
+                        <td>Validados</td>
+                        <td>{indicadores['validados']:,}</td>
+                        <td>{indicadores['validados_anterior']:,}</td>
+                        <td>{variacao_validados:+.1f}%</td>
+                    </tr>
+                    <tr>
+                        <td>Taxa Sucesso</td>
+                        <td>{indicadores['taxa_sucesso']:.1f}%</td>
+                        <td>{indicadores['taxa_sucesso_anterior']:.1f}%</td>
+                        <td>{indicadores['taxa_sucesso'] - indicadores['taxa_sucesso_anterior']:+.1f} pp</td>
+                    </tr>
+                </table>
             """
-            
-            pdf.set_font('Arial', '', 11)
-            pdf.multi_cell(0, 8, texto_comparacao)
-            pdf.ln(5)
         
-        # Detalhes estatísticos
-        pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, '📋 DETALHES ESTATÍSTICOS', 0, 1)
-        pdf.set_font('Arial', '', 11)
-        
+        # Adicionar detalhes estatísticos
         if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
             dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
             media_diaria = indicadores['total_cards'] / dias_unicos if dias_unicos > 0 else 0
             
-            detalhes = f"""
-            • Dias com atividade: {dias_unicos}
-            • Média diária de cards: {media_diaria:.1f}
-            • Período coberto: {df_filtrado_periodo['Criado'].min().strftime('%d/%m/%Y')} a {df_filtrado_periodo['Criado'].max().strftime('%d/%m/%Y')}
+            html_content += f"""
+                <h3>📋 DETALHES ESTATÍSTICOS</h3>
+                <ul>
+                    <li>Dias com atividade: {dias_unicos}</li>
+                    <li>Média diária de cards: {media_diaria:.1f}</li>
+                    <li>Período coberto: {df_filtrado_periodo['Criado'].min().strftime('%d/%m/%Y')} a {df_filtrado_periodo['Criado'].max().strftime('%d/%m/%Y')}</li>
             """
             
             if 'Revisões' in df_filtrado_periodo.columns:
                 media_revisoes = df_filtrado_periodo['Revisões'].mean()
-                detalhes += f"\n• Média de revisões por card: {media_revisoes:.1f}"
+                html_content += f"<li>Média de revisões por card: {media_revisoes:.1f}</li>"
             
-            pdf.multi_cell(0, 8, detalhes)
+            html_content += "</ul>"
         
         # Rodapé
-        pdf.ln(15)
-        pdf.set_font('Arial', 'I', 10)
-        pdf.set_text_color(128, 128, 128)
-        pdf.cell(0, 10, 'Relatório gerado automaticamente pelo Sistema Esteira ADMS', 0, 1, 'C')
-        pdf.cell(0, 10, 'Desenvolvido por: Kewin Marcel Ramirez Ferreira | GEAT', 0, 1, 'C')
-        pdf.cell(0, 10, f'© {datetime.now().year} Energisa Group - Sistema proprietário', 0, 1, 'C')
-        
-        # Salvar PDF em arquivo temporário
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            pdf.output(tmp_file.name)
+        html_content += f"""
+            </div>
             
-            # Ler arquivo para bytes
-            with open(tmp_file.name, 'rb') as f:
-                pdf_bytes = f.read()
-            
-            # Limpar arquivo temporário
-            os.unlink(tmp_file.name)
+            <div class="footer">
+                <p>Relatório gerado automaticamente pelo Sistema Esteira ADMS</p>
+                <p>Desenvolvido por: Kewin Marcel Ramirez Ferreira | GEAT</p>
+                <p>© {hoje.year} Energisa Group - Sistema proprietário</p>
+                <p><em>Este relatório foi gerado em formato HTML porque a biblioteca FPDF não está disponível.</em></p>
+            </div>
+        </body>
+        </html>
+        """
         
-        return pdf_bytes
+        # Converter HTML para bytes
+        return html_content.encode('utf-8')
         
-    except ImportError:
-        # Fallback se fpdf não estiver instalado
-        st.warning("⚠️ Biblioteca FPDF não encontrada. Instale com: `pip install fpdf`")
-        return None
     except Exception as e:
-        st.error(f"❌ Erro ao gerar PDF: {str(e)}")
+        st.error(f"❌ Erro ao gerar HTML: {str(e)}")
         return None
 
 # ============================================
-# EXIBIR POPUP SE SOLICITADO (VERSÃO COM PDF FUNCIONAL)
+# NO RODAPÉ DO POPUP (SUBSTITUIR A SEÇÃO DE EXPORTAÇÃO)
 # ============================================
-if st.session_state.df_original is not None and st.session_state.show_popup:
-    df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
+
+# ... (no código do popup, substituir a seção de rodapé com ações)
+
+# ============================================
+# RODAPÉ COM AÇÕES E DOWNLOAD (VERSÃO FINAL)
+# ============================================
+st.markdown("---")
+
+# Botões de ação
+col_exportar, col_fechar = st.columns(2)
+
+with col_exportar:
+    # Mostrar status da instalação do FPDF
+    if not fpdf_disponivel:
+        st.warning("⚠️ **FPDF não instalado** - O relatório será gerado em HTML")
     
-    # Criar um expander que simula popup
-    with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
+    # Botão para gerar e baixar relatório
+    if st.button("📥 **EXPORTAR RELATÓRIO**", 
+                 use_container_width=True,
+                 type="primary",
+                 help="Clique para baixar o relatório executivo"):
         
-        # ============================================
-        # CABEÇALHO SIMPLIFICADO
-        # ============================================
-        st.markdown("### 📰 MANCHETE - RELATÓRIO EXECUTIVO")
-        st.markdown("---")
-        
-        # ============================================
-        # SELEÇÃO DE PERÍODO
-        # ============================================
-        st.markdown("#### 📅 SELECIONE O PERÍODO")
-        
-        col_periodo1, col_periodo2 = st.columns(2)
-        
-        with col_periodo1:
-            # Opções de período
-            periodo_opcoes = [
-                "Mês Atual",
-                "Últimos 30 dias", 
-                "Últimos 90 dias",
-                "Este Ano",
-                "Ano Passado",
-                "Todo o Período"
-            ]
-            periodo_selecionado = st.selectbox(
-                "Período de análise:",
-                options=periodo_opcoes,
-                index=0,
-                key="popup_periodo"
+        with st.spinner('Gerando relatório...'):
+            # Gerar conteúdo (PDF ou HTML)
+            conteudo_bytes = exportar_para_pdf(
+                df_filtrado_periodo, 
+                periodo_titulo, 
+                indicadores, 
+                df_anterior if not df_anterior.empty else None
             )
-        
-        with col_periodo2:
-            # Se tiver dados históricos, mostrar ano específico
-            if 'Ano' in df.columns:
-                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
-                if anos_disponiveis:
-                    ano_especifico = st.selectbox(
-                        "Ou selecione um ano:",
-                        options=['Selecionar ano...'] + list(anos_disponiveis),
-                        key="popup_ano"
-                    )
+            
+            if conteudo_bytes:
+                # Determinar tipo MIME e extensão
+                if fpdf_disponivel:
+                    mime_type = "application/pdf"
+                    extensao = "pdf"
+                    nome_arquivo = f"relatorio_manchete_{periodo_titulo.replace(' ', '_').replace('/', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
                 else:
-                    ano_especifico = 'Selecionar ano...'
-            else:
-                ano_especifico = 'Selecionar ano...'
-        
-        # ============================================
-        # FILTRAR DADOS CONFORME PERÍODO SELECIONADO
-        # ============================================
-        hoje = datetime.now()
-        df_filtrado_periodo = df.copy()
-        periodo_titulo = ""
-        
-        if periodo_selecionado == "Mês Atual":
-            mes_atual = hoje.month
-            ano_atual = hoje.year
-            df_filtrado_periodo = df[(df['Criado'].dt.month == mes_atual) & 
-                                    (df['Criado'].dt.year == ano_atual)].copy()
-            periodo_titulo = f"Mês Atual ({mes_atual:02d}/{ano_atual})"
-            
-        elif periodo_selecionado == "Últimos 30 dias":
-            data_limite = hoje - timedelta(days=30)
-            df_filtrado_periodo = df[df['Criado'] >= data_limite].copy()
-            periodo_titulo = "Últimos 30 dias"
-            
-        elif periodo_selecionado == "Últimos 90 dias":
-            data_limite = hoje - timedelta(days=90)
-            df_filtrado_periodo = df[df['Criado'] >= data_limite].copy()
-            periodo_titulo = "Últimos 90 dias"
-            
-        elif periodo_selecionado == "Este Ano":
-            ano_atual = hoje.year
-            df_filtrado_periodo = df[df['Criado'].dt.year == ano_atual].copy()
-            periodo_titulo = f"Este Ano ({ano_atual})"
-            
-        elif periodo_selecionado == "Ano Passado":
-            ano_passado = hoje.year - 1
-            df_filtrado_periodo = df[df['Criado'].dt.year == ano_passado].copy()
-            periodo_titulo = f"Ano Passado ({ano_passado})"
-            
-        elif periodo_selecionado == "Todo o Período":
-            periodo_titulo = "Todo o Período Disponíve"
-            # Já é o df completo
-            
-        elif ano_especifico != 'Selecionar ano...':
-            df_filtrado_periodo = df[df['Criado'].dt.year == int(ano_especifico)].copy()
-            periodo_titulo = f"Ano {ano_especifico}"
-        
-        # ============================================
-        # CALCULAR INDICADORES PARA O PERÍODO SELECIONADO
-        # ============================================
-        total_cards = len(df_filtrado_periodo)
-        validados = len(df_filtrado_periodo[df_filtrado_periodo['Status'] == 'Sincronizado'])
-        com_erro = len(df_filtrado_periodo[df_filtrado_periodo['Revisões'] > 0])
-        sem_erro = validados - com_erro
-        
-        # Taxas
-        taxa_sucesso = (validados / total_cards * 100) if total_cards > 0 else 0
-        taxa_erro = (com_erro / validados * 100) if validados > 0 else 0
-        
-        # ============================================
-        # CALCULAR PARA PERÍODO ANTERIOR (COMPARAÇÃO)
-        # ============================================
-        # Para "Mês Atual": comparar com mês anterior
-        # Para "Últimos 30 dias": comparar com os 30 dias anteriores
-        # Para "Este Ano": comparar com ano anterior
-        df_anterior = pd.DataFrame()
-        periodo_anterior_titulo = ""
-        
-        try:
-            if periodo_selecionado == "Mês Atual":
-                mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
-                ano_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
-                df_anterior = df[(df['Criado'].dt.month == mes_anterior) & 
-                                (df['Criado'].dt.year == ano_anterior)].copy()
-                periodo_anterior_titulo = f"{mes_anterior:02d}/{ano_anterior}"
+                    mime_type = "text/html"
+                    extensao = "html"
+                    nome_arquivo = f"relatorio_manchete_{periodo_titulo.replace(' ', '_').replace('/', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
                 
-            elif periodo_selecionado == "Últimos 30 dias":
-                data_inicio_anterior = hoje - timedelta(days=60)
-                data_fim_anterior = hoje - timedelta(days=30)
-                df_anterior = df[(df['Criado'] >= data_inicio_anterior) & 
-                                (df['Criado'] < data_fim_anterior)].copy()
-                periodo_anterior_titulo = "30 dias anteriores"
-                
-            elif periodo_selecionado == "Últimos 90 dias":
-                data_inicio_anterior = hoje - timedelta(days=180)
-                data_fim_anterior = hoje - timedelta(days=90)
-                df_anterior = df[(df['Criado'] >= data_inicio_anterior) & 
-                                (df['Criado'] < data_fim_anterior)].copy()
-                periodo_anterior_titulo = "90 dias anteriores"
-                
-            elif periodo_selecionado == "Este Ano":
-                ano_anterior = ano_atual - 1
-                df_anterior = df[df['Criado'].dt.year == ano_anterior].copy()
-                periodo_anterior_titulo = f"Ano {ano_anterior}"
-                
-            elif periodo_selecionado == "Ano Passado":
-                ano_anterior_2 = ano_passado - 1
-                df_anterior = df[df['Criado'].dt.year == ano_anterior_2].copy()
-                periodo_anterior_titulo = f"Ano {ano_anterior_2}"
-                
-        except Exception as e:
-            # Se houver erro, simplesmente não mostra comparação
-            df_anterior = pd.DataFrame()
-        
-        # Calcular indicadores do período anterior
-        if not df_anterior.empty:
-            total_cards_anterior = len(df_anterior)
-            validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
-            com_erro_anterior = len(df_anterior[df_anterior['Revisões'] > 0])
-            taxa_sucesso_anterior = (validados_anterior / total_cards_anterior * 100) if total_cards_anterior > 0 else 0
-        else:
-            total_cards_anterior = 0
-            validados_anterior = 0
-            com_erro_anterior = 0
-            taxa_sucesso_anterior = 0
-        
-        # Preparar dicionário de indicadores para exportação
-        indicadores = {
-            'total_cards': total_cards,
-            'validados': validados,
-            'com_erro': com_erro,
-            'sem_erro': sem_erro,
-            'taxa_sucesso': taxa_sucesso,
-            'taxa_erro': taxa_erro,
-            'total_anterior': total_cards_anterior,
-            'validados_anterior': validados_anterior,
-            'taxa_sucesso_anterior': taxa_sucesso_anterior,
-            'periodo_anterior_titulo': periodo_anterior_titulo
-        }
-        
-        # ============================================
-        # EXIBIR INDICADORES
-        # ============================================
-        st.markdown(f"#### 🎯 DESTAQUE DO PERÍODO: {periodo_titulo}")
-        
-        # Texto narrativo dinâmico
-        if total_cards == 0:
-            st.error(f"⚠️ **NENHUM DADO DISPONÍVEL** para {periodo_titulo.lower()}")
-        elif com_erro == 0 and validados > 0:
-            st.success(f"**✅ PAPEL DO SRE VALIDOU {validados} CARDS SEM RETORNO DE ERRO!**")
-            st.info(f"Performance excepcional - 100% de aprovação direta")
-        elif taxa_erro <= 5:
-            st.warning(f"**⚡ PAPEL DO SRE VALIDOU {validados} CARDS COM APENAS {com_erro} AJUSTES**")
-            st.info(f"Alta qualidade - Taxa de erro: {taxa_erro:.1f}%")
-        else:
-            st.warning(f"**📊 PAPEL DO SRE VALIDOU {validados} CARDS, {com_erro} COM RETORNO**")
-            st.info(f"Taxa de sucesso: {taxa_sucesso:.1f}% | {sem_erro} cards perfeitos")
-        
-        st.markdown("---")
-        
-        # ============================================
-        # GRÁFICO COMPARATIVO
-        # ============================================
-        if not df_anterior.empty and total_cards_anterior > 0:
-            st.markdown("#### 📈 COMPARAÇÃO COM PERÍODO ANTERIOR")
-            
-            # Dados para o gráfico
-            periodos = [periodo_anterior_titulo, periodo_titulo]
-            cards_totais = [total_cards_anterior, total_cards]
-            cards_validados = [validados_anterior, validados]
-            taxa_sucesso_vals = [taxa_sucesso_anterior, taxa_sucesso]
-            
-            # Criar gráfico comparativo com layout melhorado
-            fig_comparativo = go.Figure()
-            
-            # Barras para cards totais
-            fig_comparativo.add_trace(go.Bar(
-                x=periodos,
-                y=cards_totais,
-                name='Total Cards',
-                marker_color='#1e3799',
-                text=cards_totais,
-                textposition='outside',
-                textfont=dict(size=10),
-                width=0.35
-            ))
-            
-            # Barras para cards validados
-            fig_comparativo.add_trace(go.Bar(
-                x=periodos,
-                y=cards_validados,
-                name='Validados',
-                marker_color='#28a745',
-                text=cards_validados,
-                textposition='outside',
-                textfont=dict(size=10),
-                width=0.35
-            ))
-            
-            # Linha para taxa de sucesso
-            fig_comparativo.add_trace(go.Scatter(
-                x=periodos,
-                y=taxa_sucesso_vals,
-                name='Taxa Sucesso',
-                yaxis='y2',
-                mode='lines+markers+text',
-                line=dict(color='#dc3545', width=2),
-                marker=dict(size=8, color='#dc3545'),
-                text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
-                textposition='top center',
-                textfont=dict(size=9)
-            ))
-            
-            fig_comparativo.update_layout(
-                title=dict(
-                    text='Comparativo: Período Atual vs Anterior',
-                    font=dict(size=14)
-                ),
-                barmode='group',
-                yaxis=dict(
-                    title=dict(text='Quantidade', font=dict(size=11)),
-                    gridcolor='rgba(0,0,0,0.05)',
-                    rangemode='tozero'
-                ),
-                yaxis2=dict(
-                    title=dict(text='Taxa Sucesso (%)', font=dict(size=11)),
-                    overlaying='y',
-                    side='right',
-                    range=[0, max(100, max(taxa_sucesso_vals) * 1.1)],
-                    gridcolor='rgba(0,0,0,0.02)'
-                ),
-                height=300,
-                showlegend=True,
-                plot_bgcolor='white',
-                margin=dict(l=50, r=50, t=50, b=50),
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="center",
-                    x=0.5,
-                    font=dict(size=10)
-                ),
-                xaxis=dict(tickfont=dict(size=10))
-            )
-            
-            fig_comparativo.update_traces(
-                marker_line_width=0.5,
-                selector=dict(type='bar')
-            )
-            
-            st.plotly_chart(fig_comparativo, use_container_width=True, config={'displayModeBar': False})
-            
-            # ============================================
-            # MÉTRICAS DE VARIAÇÃO
-            # ============================================
-            if total_cards_anterior > 0:
-                variacao_total = ((total_cards - total_cards_anterior) / total_cards_anterior * 100)
-                variacao_validados = ((validados - validados_anterior) / validados_anterior * 100) if validados_anterior > 0 else 0
-                variacao_taxa = taxa_sucesso - taxa_sucesso_anterior
-            else:
-                variacao_total = 100
-                variacao_validados = 100 if validados > 0 else 0
-                variacao_taxa = taxa_sucesso
-            
-            st.markdown("##### 📊 VARIAÇÃO PERCENTUAL")
-            
-            col_var1, col_var2, col_var3 = st.columns(3)
-            
-            with col_var1:
-                st.metric(
-                    label="Total Cards",
-                    value=f"{total_cards:,}",
-                    delta=f"{variacao_total:+.1f}%",
-                    delta_color="normal" if variacao_total >= 0 else "inverse",
-                    help=f"Anterior: {total_cards_anterior:,}"
-                )
-            
-            with col_var2:
-                st.metric(
-                    label="Validados",
-                    value=f"{validados:,}",
-                    delta=f"{variacao_validados:+.1f}%",
-                    delta_color="normal" if variacao_validados >= 0 else "inverse",
-                    help=f"Anterior: {validados_anterior:,}"
-                )
-            
-            with col_var3:
-                st.metric(
-                    label="Taxa Sucesso",
-                    value=f"{taxa_sucesso:.1f}%",
-                    delta=f"{variacao_taxa:+.1f}pp",
-                    delta_color="normal" if variacao_taxa >= 0 else "inverse",
-                    help=f"Anterior: {taxa_sucesso_anterior:.1f}%"
-                )
-            
-            st.markdown("---")
-        
-        # ============================================
-        # INDICADORES PRINCIPAIS
-        # ============================================
-        st.markdown("#### 📊 INDICADORES PRINCIPAIS")
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric(
-                "📋 Total Cards", 
-                total_cards,
-                delta=None,
-                help="Total de cards no período"
-            )
-        
-        with col2:
-            st.metric(
-                "✅ Validados", 
-                validados,
-                f"{taxa_sucesso:.1f}%",
-                delta_color="normal" if taxa_sucesso >= 90 else "off",
-                help="Cards sincronizados (aprovados)"
-            )
-        
-        with col3:
-            st.metric(
-                "🎯 Sem Erro", 
-                sem_erro,
-                f"{(sem_erro/validados*100) if validados>0 else 0:.1f}%" if validados > 0 else "0%",
-                help="Aprovação direta na primeira validação"
-            )
-        
-        with col4:
-            st.metric(
-                "⚠️ Com Erro", 
-                com_erro,
-                f"{taxa_erro:.1f}%" if validados > 0 else "0%",
-                delta_color="inverse",
-                help="Cards que retornaram para ajuste"
-            )
-        
-        # ============================================
-        # ANÁLISE DETALHADA
-        # ============================================
-        st.markdown("---")
-        st.markdown("#### 📈 ANÁLISE DETALHADA")
-        
-        if total_cards > 0:
-            # Média diária
-            if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
-                dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
-                media_diaria = total_cards / dias_unicos if dias_unicos > 0 else 0
-                
-                col_analise1, col_analise2, col_analise3 = st.columns(3)
-                
-                with col_analise1:
-                    st.metric("📅 Dias com atividade", dias_unicos)
-                
-                with col_analise2:
-                    st.metric("📊 Média diária", f"{media_diaria:.1f}")
-                
-                with col_analise3:
-                    if 'Revisões' in df_filtrado_periodo.columns:
-                        media_revisoes = df_filtrado_periodo['Revisões'].mean()
-                        st.metric("📝 Média revisões/card", f"{media_revisoes:.1f}")
-                    else:
-                        st.metric("📝 Revisões", "N/A")
-            
-            # Classificação de performance
-            st.markdown("##### 🏆 CLASSIFICAÇÃO DE PERFORMANCE")
-            
-            if taxa_sucesso >= 95:
-                st.success("""
-                **⭐ EXCELENTE**
-                - Meta de qualidade superada (>95%)
-                - Processos altamente eficientes
-                - Recomendação: Manter padrões atuais
-                """)
-            elif taxa_sucesso >= 85:
-                st.info("""
-                **👍 BOM DESEMPENHO**
-                - Dentro dos padrões esperados (85-94%)
-                - Processos consistentes
-                - Recomendação: Pequenos ajustes pontuais
-                """)
-            elif taxa_sucesso >= 70:
-                st.warning("""
-                **⚠️ OPORTUNIDADE DE MELHORIA**
-                - Abaixo do ideal (70-84%)
-                - Processos precisam de revisão
-                - Recomendação: Identificar causas principais
-                """)
-            else:
-                st.error("""
-                **🚨 ATENÇÃO NECESSÁRIA**
-                - Performance crítica (<70%)
-                - Processos ineficientes
-                - Recomendação: Revisão urgente dos fluxos
-                """)
-        else:
-            st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
-        
-        # ============================================
-        # RODAPÉ COM AÇÕES E DOWNLOAD DE PDF
-        # ============================================
-        st.markdown("---")
-        
-        # Botão para gerar e baixar PDF
-        col_exportar, col_fechar = st.columns(2)
-        
-        with col_exportar:
-            # Verificar se a biblioteca fpdf está instalada
-            try:
-                import fpdf
-                fpdf_instalado = True
-            except ImportError:
-                fpdf_instalado = False
-            
-            if fpdf_instalado:
-                # Gerar PDF quando o botão for clicado
-                pdf_bytes = exportar_para_pdf(
-                    df_filtrado_periodo, 
-                    periodo_titulo, 
-                    indicadores, 
-                    df_anterior if not df_anterior.empty else None
+                # Botão de download
+                st.download_button(
+                    label=f"⬇️ **BAIXAR RELATÓRIO (.{extensao.upper()})**",
+                    data=conteudo_bytes,
+                    file_name=nome_arquivo,
+                    mime=mime_type,
+                    use_container_width=True,
+                    key=f"btn_download_{extensao}"
                 )
                 
-                if pdf_bytes:
-                    # Botão de download do PDF
-                    st.download_button(
-                        label="📥 **EXPORTAR PDF**",
-                        data=pdf_bytes,
-                        file_name=f"manchete_{periodo_titulo.replace(' ', '_').replace('/', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        type="primary",
-                        help="Clique para baixar o relatório completo em PDF"
-                    )
-                else:
-                    st.error("❌ Não foi possível gerar o PDF")
-            else:
-                # Se fpdf não estiver instalado, mostrar botão com instruções
-                if st.button("📥 **EXPORTAR PDF**", 
-                           use_container_width=True,
-                           type="primary",
-                           help="Instale a biblioteca FPDF para exportar PDFs"):
-                    st.warning("""
-                    **⚠️ Biblioteca FPDF não encontrada!**
-                    
-                    Para exportar PDFs, instale a biblioteca:
+                # Instruções para instalar FPDF
+                if not fpdf_disponivel:
+                    st.info("""
+                    **💡 Para gerar relatórios em PDF (recomendado):**
                     
                     ```bash
                     pip install fpdf
                     ```
                     
-                    **Instruções de instalação:**
-                    1. Abra o terminal/CMD
-                    2. Execute: `pip install fpdf`
+                    **Passos:**
+                    1. Abra o terminal/CMD/Prompt de Comando
+                    2. Execute o comando acima
                     3. Reinicie o aplicativo Streamlit
                     """)
-        
-        with col_fechar:
-            if st.button("✕ **FECHAR**", 
-                        type="secondary",
-                        use_container_width=True,
-                        key="btn_fechar_final"):
-                st.session_state.show_popup = False
-                st.rerun()
-        
-        # ============================================
-        # INFORMAÇÕES ADICIONAIS
-        # ============================================
-        st.markdown(f"""
-        <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-top: 1rem;">
-            <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
-            <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
-            <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small><br>
-            <small>👤 <strong>Gerado por:</strong> Sistema Esteira ADMS</small>
-        </div>
-        """, unsafe_allow_html=True)
+            else:
+                st.error("❌ Não foi possível gerar o relatório")
 
-# ... (o restante do código permanece igual)
+with col_fechar:
+    if st.button("✕ **FECHAR**", 
+                type="secondary",
+                use_container_width=True,
+                key="btn_fechar_final"):
+        st.session_state.show_popup = False
+        st.rerun()
+
+# ============================================
+# INFORMAÇÕES ADICIONAIS
+# ============================================
+st.markdown(f"""
+<div style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-top: 1rem;">
+    <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
+    <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
+    <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small><br>
+    <small>👤 <strong>Gerado por:</strong> Sistema Esteira ADMS</small>
+    <br>
+    <small>🔄 <strong>Formato disponível:</strong> {"PDF" if fpdf_disponivel else "HTML (instale FPDF para PDF)"}</small>
+</div>
+""", unsafe_allow_html=True)
+
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
 # ============================================
