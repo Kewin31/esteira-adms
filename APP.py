@@ -620,7 +620,7 @@ def criar_popup_indicadores(df):
     
     # Texto narrativo dinâmico
     if cards_com_erro == 0:
-        texto_principal = f"✅ **PAPEL DO SRE VALIDOU {cards_validados} CARDS SEM RETORNO DE ERRO!**"
+        texto_principal = f"✅ **SRE VALIDOU {cards_validados} CARDS SEM RETORNO DE ERRO!**"
         subtexto = f"Performance excepcional em {nome_mes_pt} - 100% de aprovação direta"
         emoji_titulo = "🎯"
         cor_destaque = "#28a745"
@@ -1298,7 +1298,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         # ============================================
         # CABEÇALHO SIMPLIFICADO
         # ============================================
-        st.markdown("### 📰 MANCHETE - RELATÓRIO EXECUTIVO")
+        st.markdown("### 📰 MANCHETE - RELATÓRIO ")
         st.markdown("---")
         
         # ============================================
