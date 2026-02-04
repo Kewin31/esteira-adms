@@ -571,258 +571,418 @@ def get_horario_brasilia():
         return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
 # ============================================
-# NOVA FUNÇÃO: CRIAR POPUP DE INDICADORES
+# FUNÇÃO PARA EXPORTAR MANCHETE COMO IMAGEM
 # ============================================
-def criar_popup_indicadores(df):
-    """Cria popup modal com indicadores principais"""
-    hoje = datetime.now()
-    mes_atual = hoje.month
-    ano_atual = hoje.year
-    nome_mes = hoje.strftime('%B').capitalize()
+def exportar_manchete_como_imagem(df, periodo_titulo, indicadores):
+    """
+    Exporta a manchete como imagem PNG de alta qualidade
     
-    # Traduzir nome do mês para português
-    meses_pt = {
-        'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
-        'April': 'Abril', 'May': 'Maio', 'June': 'Junho',
-        'July': 'Julho', 'August': 'Agosto', 'September': 'Setembro',
-        'October': 'Outubro', 'November': 'Novembro', 'December': 'Dezembro'
-    }
-    nome_mes_pt = meses_pt.get(nome_mes, nome_mes)
+    Args:
+        df: DataFrame com os dados
+        periodo_titulo: Título do período analisado
+        indicadores: Dicionário com indicadores calculados
     
-    # Filtrar dados do mês atual
-    df_mes = df[(df['Criado'].dt.month == mes_atual) & 
-                (df['Criado'].dt.year == ano_atual)].copy()
-    
-    # Calcular indicadores
-    total_cards_mes = len(df_mes)
-    cards_validados = len(df_mes[df_mes['Status'] == 'Sincronizado'])
-    cards_com_erro = len(df_mes[df_mes['Revisões'] > 0])
-    cards_sem_erro = cards_validados - cards_com_erro
-    
-    # Taxas
-    taxa_sucesso = (cards_validados / total_cards_mes * 100) if total_cards_mes > 0 else 0
-    taxa_erro = (cards_com_erro / cards_validados * 100) if cards_validados > 0 else 0
-    
-    # Comparar com mês anterior
-    mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
-    ano_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
-    
-    df_mes_anterior = df[(df['Criado'].dt.month == mes_anterior) & 
-                         (df['Criado'].dt.year == ano_anterior)].copy()
-    
-    cards_validados_anterior = len(df_mes_anterior[df_mes_anterior['Status'] == 'Sincronizado'])
-    
-    # Calcular variação
-    if cards_validados_anterior > 0:
-        variacao = ((cards_validados - cards_validados_anterior) / cards_validados_anterior * 100)
-    else:
-        variacao = 0
-    
-    # Texto narrativo dinâmico
-    if cards_com_erro == 0:
-        texto_principal = f"✅ **SRE VALIDOU {cards_validados} CARDS SEM RETORNO DE ERRO!**"
-        subtexto = f"Performance excepcional em {nome_mes_pt} - 100% de aprovação direta"
-        emoji_titulo = "🎯"
-        cor_destaque = "#28a745"
-    elif taxa_erro <= 5:
-        texto_principal = f"⚡ **SRE VALIDOU {cards_validados} CARDS COM APENAS {cards_com_erro} AJUSTES**"
-        subtexto = f"Alta qualidade no mês de {nome_mes_pt} - Taxa de erro de apenas {taxa_erro:.1f}%"
-        emoji_titulo = "🚀"
-        cor_destaque = "#17a2b8"
-    else:
-        texto_principal = f"📊 **SRE VALIDOU {cards_validados} CARDS, {cards_com_erro} COM RETORNO**"
-        subtexto = f"Análise de {nome_mes_pt} - {taxa_sucesso:.1f}% de taxa de sucesso"
-        emoji_titulo = "📈"
-        cor_destaque = "#ffc107"
-    
-    # Criar HTML do popup
-    popup_html = f'''
-    <div id="popupOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                background: rgba(0, 0, 0, 0.7); z-index: 10000; display: flex; 
-                justify-content: center; align-items: center; backdrop-filter: blur(3px);">
-        <div style="background: white; width: 90%; max-width: 900px; max-height: 90vh;
-                    border-radius: 20px; padding: 0; overflow: hidden; 
-                    box-shadow: 0 25px 50px rgba(0,0,0,0.5); animation: slideIn 0.3s ease-out;">
+    Returns:
+        bytes: Imagem PNG em formato binário
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        import io
+        
+        # Configurações da imagem
+        largura = 1200
+        altura = 1600
+        margem = 50
+        
+        # Criar imagem com fundo branco
+        imagem = Image.new('RGB', (largura, altura), color='white')
+        desenho = ImageDraw.Draw(imagem)
+        
+        # Tentar carregar fontes
+        try:
+            # Tentar fontes comuns
+            try:
+                fonte_titulo = ImageFont.truetype("arial.ttf", 48)
+                fonte_subtitulo = ImageFont.truetype("arial.ttf", 32)
+                fonte_normal = ImageFont.truetype("arial.ttf", 24)
+                fonte_pequena = ImageFont.truetype("arial.ttf", 20)
+            except:
+                try:
+                    fonte_titulo = ImageFont.truetype("Arial.ttf", 48)
+                    fonte_subtitulo = ImageFont.truetype("Arial.ttf", 32)
+                    fonte_normal = ImageFont.truetype("Arial.ttf", 24)
+                    fonte_pequena = ImageFont.truetype("Arial.ttf", 20)
+                except:
+                    # Usar fonte padrão
+                    fonte_titulo = ImageFont.load_default()
+                    fonte_subtitulo = ImageFont.load_default()
+                    fonte_normal = ImageFont.load_default()
+                    fonte_pequena = ImageFont.load_default()
+        except:
+            fonte_titulo = ImageFont.load_default()
+            fonte_subtitulo = ImageFont.load_default()
+            fonte_normal = ImageFont.load_default()
+            fonte_pequena = ImageFont.load_default()
+        
+        # Posição inicial
+        pos_y = 50
+        
+        # ============================================
+        # CABEÇALHO
+        # ============================================
+        desenho.rectangle([0, pos_y, largura, pos_y + 120], fill="#0c2461")
+        desenho.text(
+            (largura // 2, pos_y + 40),
+            "📰 MANCHETE DE PERFORMANCE",
+            font=fonte_titulo,
+            fill="white",
+            anchor="mm"
+        )
+        
+        data_atual = datetime.now().strftime("%d/%m/%Y %H:%M")
+        desenho.text(
+            (largura // 2, pos_y + 90),
+            f"{periodo_titulo} | Atualizado em: {data_atual}",
+            font=fonte_pequena,
+            fill="#cccccc",
+            anchor="mm"
+        )
+        
+        pos_y += 150
+        
+        # ============================================
+        # TEXTO PRINCIPAL
+        # ============================================
+        if indicadores['com_erro'] == 0 and indicadores['validados'] > 0:
+            texto_destaque = f"✅ SRE VALIDOU {indicadores['validados']} CARDS SEM ERRO!"
+            cor_destaque = "#28a745"
+        elif indicadores['taxa_erro'] <= 5:
+            texto_destaque = f"⚡ {indicadores['validados']} CARDS VALIDADOS - APENAS {indicadores['com_erro']} AJUSTES"
+            cor_destaque = "#17a2b8"
+        else:
+            texto_destaque = f"📊 {indicadores['validados']} CARDS VALIDADOS, {indicadores['com_erro']} COM RETORNO"
+            cor_destaque = "#ffc107"
+        
+        # Caixa de destaque
+        desenho.rectangle(
+            [margem, pos_y, largura - margem, pos_y + 100],
+            fill=f"{cor_destaque}15",
+            outline=cor_destaque,
+            width=2
+        )
+        
+        # Dividir texto se necessário
+        palavras = texto_destaque.split()
+        linhas = []
+        linha_atual = []
+        
+        for palavra in palavras:
+            linha_atual.append(palavra)
+            if len(' '.join(linha_atual)) > 35:  # Limite de caracteres
+                linhas.append(' '.join(linha_atual[:-1]))
+                linha_atual = [palavra]
+        
+        if linha_atual:
+            linhas.append(' '.join(linha_atual))
+        
+        # Desenhar texto
+        for i, linha in enumerate(linhas):
+            desenho.text(
+                (largura // 2, pos_y + 40 + (i * 35)),
+                linha,
+                font=fonte_subtitulo,
+                fill="#333333",
+                anchor="mm"
+            )
+        
+        pos_y += 140
+        
+        # ============================================
+        # INDICADORES PRINCIPAIS
+        # ============================================
+        # Título da seção
+        desenho.text(
+            (margem, pos_y),
+            "📊 INDICADORES PRINCIPAIS",
+            font=fonte_subtitulo,
+            fill="#1e3799"
+        )
+        
+        pos_y += 50
+        
+        # Definir cards
+        cards_info = [
+            {
+                "titulo": "TOTAL DE CARDS",
+                "valor": f"{indicadores['total_cards']:,}",
+                "icone": "📋",
+                "cor": "#1e3799"
+            },
+            {
+                "titulo": "VALIDADOS PELO SRE",
+                "valor": f"{indicadores['validados']:,}",
+                "icone": "✅",
+                "cor": "#28a745"
+            },
+            {
+                "titulo": "SEM RETORNO DE ERRO",
+                "valor": f"{indicadores['sem_erro']:,}",
+                "icone": "🎯",
+                "cor": "#17a2b8"
+            },
+            {
+                "titulo": "COM RETORNO DE ERRO",
+                "valor": f"{indicadores['com_erro']:,}",
+                "icone": "⚠️" if indicadores['com_erro'] > 0 else "✅",
+                "cor": "#dc3545" if indicadores['com_erro'] > 0 else "#6c757d"
+            }
+        ]
+        
+        # Calcular tamanho dos cards
+        card_largura = (largura - 3 * margem) // 2
+        card_altura = 180
+        espacamento = 30
+        
+        for i, card in enumerate(cards_info):
+            linha = i // 2
+            coluna = i % 2
             
-            <!-- Cabeçalho do popup -->
-            <div style="background: linear-gradient(135deg, #0c2461, #1e3799); 
-                        padding: 1.5rem 2rem; color: white;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h2 style="margin: 0; font-size: 1.8rem;">{emoji_titulo} MANCHETE DO MÊS</h2>
-                        <p style="margin: 0.3rem 0 0 0; opacity: 0.9; font-size: 1rem;">
-                        {nome_mes_pt} {ano_atual} | Resumo Executivo
-                        </p>
-                    </div>
-                    <button onclick="document.getElementById('popupOverlay').style.display='none'" 
-                            style="background: rgba(255,255,255,0.2); color: white; 
-                                   border: none; width: 40px; height: 40px; 
-                                   border-radius: 50%; font-size: 1.5rem; 
-                                   cursor: pointer; display: flex; align-items: center; 
-                                   justify-content: center;">×</button>
-                </div>
-            </div>
+            x = margem + coluna * (card_largura + espacamento)
+            y = pos_y + linha * (card_altura + espacamento)
             
-            <!-- Conteúdo principal -->
-            <div style="padding: 2rem;">
-                <!-- Destaque narrativo -->
-                <div style="background: {cor_destaque}15; padding: 1.5rem; border-radius: 10px; 
-                            border-left: 5px solid {cor_destaque}; margin-bottom: 2rem;">
-                    <h3 style="color: #495057; margin: 0 0 0.5rem 0;">{texto_principal}</h3>
-                    <p style="color: #6c757d; margin: 0; font-size: 1rem;">{subtexto}</p>
-                </div>
-                
-                <!-- Grid de indicadores -->
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
-                    <!-- Card 1: Total de cards -->
-                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid #1e3799;">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: #1e3799; color: white; width: 50px; height: 50px; 
-                                        border-radius: 10px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.5rem;">📋</div>
-                            <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: #1e3799;">
-                                    {total_cards_mes}
-                                </div>
-                                <div style="color: #6c757d; font-size: 0.9rem;">TOTAL DE CARDS</div>
-                            </div>
-                        </div>
-                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                        Criados no mês de {nome_mes_pt}
-                        </p>
-                    </div>
-                    
-                    <!-- Card 2: Validados pelo SRE -->
-                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid #28a745;">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: #28a745; color: white; width: 50px; height: 50px; 
-                                        border-radius: 10px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.5rem;">✅</div>
-                            <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: #28a745;">
-                                    {cards_validados}
-                                </div>
-                                <div style="color: #6c757d; font-size: 0.9rem;">VALIDADOS PELO SRE</div>
-                            </div>
-                        </div>
-                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                        {variacao:+.1f}% vs mês anterior
-                        </p>
-                    </div>
-                    
-                    <!-- Card 3: Cards sem erro -->
-                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid #17a2b8;">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: #17a2b8; color: white; width: 50px; height: 50px; 
-                                        border-radius: 10px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.5rem;">🎯</div>
-                            <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: #17a2b8;">
-                                    {cards_sem_erro}
-                                </div>
-                                <div style="color: #6c757d; font-size: 0.9rem;">SEM RETORNO DE ERRO</div>
-                            </div>
-                        </div>
-                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                        Aprovação direta na primeira validação
-                        </p>
-                    </div>
-                    
-                    <!-- Card 4: Com retorno -->
-                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {'#dc3545' if cards_com_erro > 0 else '#6c757d'}">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: {'#dc3545' if cards_com_erro > 0 else '#6c757d'}; 
-                                        color: white; width: 50px; height: 50px; 
-                                        border-radius: 10px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.5rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
-                            <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; 
-                                            color: {'#dc3545' if cards_com_erro > 0 else '#6c757d'}">
-                                    {cards_com_erro}
-                                </div>
-                                <div style="color: #6c757d; font-size: 0.9rem;">COM RETORNO DE ERRO</div>
-                            </div>
-                        </div>
-                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                        {taxa_erro:.1f}% dos cards validados
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Seção de gráfico e análise -->
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
-                    <!-- Mini gráfico -->
-                    <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px;">
-                        <h4 style="color: #495057; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
-                        <div style="height: 200px; display: flex; align-items: end; gap: 20px;">
-                            <div style="text-align: center; flex: 1;">
-                                <div style="background: #6c757d; height: {max(10, min(100, cards_validados_anterior/5))}px; 
-                                            border-radius: 5px 5px 0 0;"></div>
-                                <div style="margin-top: 10px; font-size: 0.9rem; color: #6c757d;">
-                                    {mes_anterior:02d}/{ano_anterior}
-                                </div>
-                                <div style="font-weight: bold; color: #495057;">{cards_validados_anterior}</div>
-                            </div>
-                            <div style="text-align: center; flex: 1;">
-                                <div style="background: #28a745; height: {max(10, min(100, cards_validados/5))}px; 
-                                            border-radius: 5px 5px 0 0;"></div>
-                                <div style="margin-top: 10px; font-size: 0.9rem; color: #6c757d;">
-                                    {mes_atual:02d}/{ano_atual}
-                                </div>
-                                <div style="font-weight: bold; color: #495057;">{cards_validados}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Insights rápidos -->
-                    <div style="background: linear-gradient(135deg, #fff8e1, #fff3cd); 
-                                padding: 1.5rem; border-radius: 10px; border-left: 5px solid #ffc107;">
-                        <h4 style="color: #856404; margin: 0 0 1rem 0;">💡 INSIGHTS</h4>
-                        <ul style="color: #856404; padding-left: 1.2rem; margin: 0;">
-                            <li style="margin-bottom: 0.5rem;">
-                                {f"🎉 Recorde de validações!" if variacao > 20 else "📊 Performance consistente"}
-                            </li>
-                            <li style="margin-bottom: 0.5rem;">
-                                {f"✅ Qualidade excepcional" if cards_com_erro == 0 else f"🎯 {cards_sem_erro} cards perfeitos"}
-                            </li>
-                            <li>
-                                {f"🚀 Meta atingida: {taxa_sucesso:.0f}% de sucesso" if taxa_sucesso >= 90 else f"📈 Oportunidade: melhorar {100-taxa_sucesso:.0f}%"}
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+            # Desenhar card
+            desenho.rounded_rectangle(
+                [x, y, x + card_largura, y + card_altura],
+                radius=15,
+                fill="#f8f9fa",
+                outline="#dee2e6",
+                width=2
+            )
             
-            <!-- Rodapé -->
-            <div style="background: #f8f9fa; padding: 1rem 2rem; border-top: 1px solid #dee2e6;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <p style="color: #6c757d; margin: 0; font-size: 0.9rem;">
-                    📅 Atualizado em {hoje.strftime('%d/%m/%Y %H:%M')}
-                    </p>
-                    <button onclick="document.getElementById('popupOverlay').style.display='none'"
-                            style="background: #6c757d; color: white; border: none; 
-                                   padding: 0.5rem 1.5rem; border-radius: 5px; 
-                                   cursor: pointer; font-weight: 600;">
-                        Fechar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <style>
-    @keyframes slideIn {{
-        from {{ transform: translateY(-50px); opacity: 0; }}
-        to {{ transform: translateY(0); opacity: 1; }}
-    }}
-    </style>
-    '''
-    
-    return popup_html
+            # Barra superior colorida
+            desenho.rectangle(
+                [x, y, x + card_largura, y + 8],
+                fill=card["cor"]
+            )
+            
+            # Ícone
+            desenho.text(
+                (x + 30, y + 30),
+                card["icone"],
+                font=fonte_titulo,
+                fill=card["cor"]
+            )
+            
+            # Título
+            desenho.text(
+                (x + 30, y + 90),
+                card["titulo"],
+                font=fonte_pequena,
+                fill="#6c757d"
+            )
+            
+            # Valor
+            desenho.text(
+                (x + card_largura - 30, y + card_altura - 40),
+                card["valor"],
+                font=fonte_subtitulo,
+                fill=card["cor"],
+                anchor="rm"
+            )
+        
+        pos_y += 2 * (card_altura + espacamento) + 40
+        
+        # ============================================
+        # TAXAS DE PERFORMANCE
+        # ============================================
+        desenho.text(
+            (margem, pos_y),
+            "📈 TAXAS DE PERFORMANCE",
+            font=fonte_subtitulo,
+            fill="#1e3799"
+        )
+        
+        pos_y += 50
+        
+        # Taxa de sucesso
+        desenho.text(
+            (margem, pos_y),
+            f"Taxa de Sucesso: {indicadores['taxa_sucesso']:.1f}%",
+            font=fonte_normal,
+            fill="#333333"
+        )
+        
+        # Barra de progresso
+        barra_largura = largura - 2 * margem
+        barra_altura = 25
+        
+        # Fundo da barra
+        desenho.rectangle(
+            [margem, pos_y + 30, margem + barra_largura, pos_y + 30 + barra_altura],
+            fill="#e9ecef",
+            outline="#dee2e6",
+            width=1
+        )
+        
+        # Preenchimento
+        preenchimento = int((indicadores['taxa_sucesso'] / 100) * barra_largura)
+        desenho.rectangle(
+            [margem, pos_y + 30, margem + preenchimento, pos_y + 30 + barra_altura],
+            fill="#28a745"
+        )
+        
+        # Texto dentro da barra
+        cor_texto = "white" if indicadores['taxa_sucesso'] > 50 else "#333333"
+        desenho.text(
+            (margem + barra_largura // 2, pos_y + 30 + barra_altura // 2),
+            f"{indicadores['taxa_sucesso']:.1f}%",
+            font=fonte_normal,
+            fill=cor_texto,
+            anchor="mm"
+        )
+        
+        pos_y += 100
+        
+        # Taxa de erro
+        desenho.text(
+            (margem, pos_y),
+            f"Taxa de Retorno: {indicadores['taxa_erro']:.1f}%",
+            font=fonte_normal,
+            fill="#333333"
+        )
+        
+        # Barra de erro
+        preenchimento_erro = int((indicadores['taxa_erro'] / 100) * barra_largura)
+        desenho.rectangle(
+            [margem, pos_y + 30, margem + barra_largura, pos_y + 30 + barra_altura],
+            fill="#e9ecef",
+            outline="#dee2e6",
+            width=1
+        )
+        
+        desenho.rectangle(
+            [margem, pos_y + 30, margem + preenchimento_erro, pos_y + 30 + barra_altura],
+            fill="#dc3545" if indicadores['com_erro'] > 0 else "#6c757d"
+        )
+        
+        desenho.text(
+            (margem + barra_largura // 2, pos_y + 30 + barra_altura // 2),
+            f"{indicadores['taxa_erro']:.1f}%",
+            font=fonte_normal,
+            fill="white" if indicadores['taxa_erro'] > 50 else "#333333",
+            anchor="mm"
+        )
+        
+        pos_y += 120
+        
+        # ============================================
+        # CLASSIFICAÇÃO
+        # ============================================
+        desenho.text(
+            (margem, pos_y),
+            "🏆 CLASSIFICAÇÃO DE PERFORMANCE",
+            font=fonte_subtitulo,
+            fill="#1e3799"
+        )
+        
+        pos_y += 50
+        
+        # Determinar classificação
+        if indicadores['taxa_sucesso'] >= 95:
+            classificacao = "⭐ EXCELENTE"
+            descricao = "Meta de qualidade superada (>95%)"
+            cor_class = "#28a745"
+        elif indicadores['taxa_sucesso'] >= 85:
+            classificacao = "👍 BOM DESEMPENHO"
+            descricao = "Dentro dos padrões esperados (85-94%)"
+            cor_class = "#17a2b8"
+        elif indicadores['taxa_sucesso'] >= 70:
+            classificacao = "⚠️ OPORTUNIDADE"
+            descricao = "Abaixo do ideal (70-84%) - Revisão necessária"
+            cor_class = "#ffc107"
+        else:
+            classificacao = "🚨 ATENÇÃO"
+            descricao = "Performance crítica (<70%) - Ação urgente"
+            cor_class = "#dc3545"
+        
+        # Caixa de classificação
+        desenho.rectangle(
+            [margem, pos_y, largura - margem, pos_y + 120],
+            fill=f"{cor_class}10",
+            outline=cor_class,
+            width=2,
+            radius=10
+        )
+        
+        desenho.text(
+            (margem + 20, pos_y + 30),
+            classificacao,
+            font=fonte_subtitulo,
+            fill=cor_class
+        )
+        
+        desenho.text(
+            (margem + 20, pos_y + 70),
+            descricao,
+            font=fonte_pequena,
+            fill="#6c757d"
+        )
+        
+        pos_y += 150
+        
+        # ============================================
+        # RODAPÉ
+        # ============================================
+        desenho.rectangle(
+            [0, altura - 100, largura, altura],
+            fill="#f8f9fa"
+        )
+        
+        desenho.text(
+            (largura // 2, altura - 70),
+            "Esteira ADMS - Dashboard de Performance",
+            font=fonte_pequena,
+            fill="#6c757d",
+            anchor="mm"
+        )
+        
+        desenho.text(
+            (largura // 2, altura - 40),
+            "Sistema de Monitoramento SRE | EMS | EMR | ESS",
+            font=fonte_pequena,
+            fill="#adb5bd",
+            anchor="mm"
+        )
+        
+        # ============================================
+        # SALVAR EM BYTES
+        # ============================================
+        img_bytes = io.BytesIO()
+        imagem.save(img_bytes, format='PNG', optimize=True, quality=95)
+        img_bytes.seek(0)
+        
+        return img_bytes.getvalue()
+        
+    except Exception as e:
+        # Fallback simples
+        import io
+        from PIL import Image, ImageDraw
+        
+        # Criar imagem de erro
+        imagem = Image.new('RGB', (800, 600), color='white')
+        desenho = ImageDraw.Draw(imagem)
+        
+        # Usar fonte padrão
+        fonte = ImageFont.load_default()
+        
+        desenho.text((400, 250), "Erro ao gerar imagem", fill="red", anchor="mm", font=fonte)
+        desenho.text((400, 300), "Tente novamente ou contate o suporte", fill="gray", anchor="mm", font=fonte)
+        
+        img_bytes = io.BytesIO()
+        imagem.save(img_bytes, format='PNG')
+        img_bytes.seek(0)
+        
+        return img_bytes.getvalue()
 
 # ============================================
 # NOVAS FUNÇÕES PARA ANÁLISE SRE MELHORADA
@@ -1711,76 +1871,112 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         else:
             st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
         
-        # ============================================
-# RODAPÉ COM AÇÕES SIMPLIFICADAS
+       # ============================================
+# EXPORTAÇÃO DA MANCHETE COMO IMAGEM
 # ============================================
 st.markdown("---")
 
-# Container para ações
+# Container para exportação
 st.markdown("""
-<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; border: 1px solid #dee2e6;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <p style="margin: 0; color: #495057; font-weight: 600;">Ações disponíveis</p>
-            <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;">
-            Exporte o relatório completo ou feche a manchete
-            </p>
+<div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+            padding: 1.5rem; border-radius: 10px; border: 2px dashed #dee2e6;
+            margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 1rem;">
+        <div style="background: #1e3799; color: white; width: 50px; height: 50px; 
+                    border-radius: 10px; display: flex; align-items: center; 
+                    justify-content: center; font-size: 1.5rem;">
+            📸
         </div>
-        <div style="display: flex; gap: 1rem;">
-            <button onclick="document.getElementById('exportBtn').click()" 
-                    style="background: linear-gradient(135deg, #28a745, #20c997); 
-                           color: white; border: none; padding: 0.7rem 1.5rem; 
-                           border-radius: 5px; cursor: pointer; font-weight: 600;
-                           display: flex; align-items: center; gap: 8px;">
-                📥 Exportar PDF
-            </button>
-            <button onclick="document.getElementById('closeBtn').click()" 
-                    style="background: #6c757d; color: white; border: none; 
-                           padding: 0.7rem 1.5rem; border-radius: 5px; 
-                           cursor: pointer; font-weight: 600; opacity: 0.9;">
-                ✕ Fechar
-            </button>
+        <div>
+            <h4 style="margin: 0; color: #1e3799;">Exportar Manchete como Imagem</h4>
+            <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.95rem;">
+            Gere uma imagem PNG de alta qualidade para envio por e-mail
+            </p>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Botões reais (ocultos, mas funcionais)
-col_exportar, col_fechar = st.columns(2)
-
-with col_exportar:
-    if st.button("📥 **EXPORTAR PDF**", 
-                type="primary", 
+# Botão principal de exportação
+if st.button("📸 **EXPORTAR IMAGEM DA MANCHETE**", 
+            type="primary",
+            use_container_width=True,
+            help="Gera uma imagem PNG de alta qualidade para envio por e-mail",
+            key="btn_exportar_imagem_principal"):
+    
+    with st.spinner("🔄 Gerando imagem de alta qualidade..."):
+        try:
+            # Preparar indicadores para a função de exportação
+            indicadores_exportacao = {
+                'total_cards': total_cards,
+                'validados': validados,
+                'com_erro': com_erro,
+                'sem_erro': sem_erro,
+                'taxa_sucesso': taxa_sucesso,
+                'taxa_erro': taxa_erro
+            }
+            
+            # Gerar imagem
+            imagem_bytes = exportar_manchete_como_imagem(
+                df, 
+                periodo_titulo, 
+                indicadores_exportacao
+            )
+            
+            # Nome do arquivo
+            nome_arquivo = f"manchete_sre_{periodo_titulo.lower().replace(' ', '_').replace('/', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.png"
+            
+            # Criar botão de download
+            st.success("✅ Imagem gerada com sucesso!")
+            
+            st.download_button(
+                label="⬇️ **CLIQUE AQUI PARA BAIXAR A IMAGEM**",
+                data=imagem_bytes,
+                file_name=nome_arquivo,
+                mime="image/png",
                 use_container_width=True,
-                help="Gerar relatório completo em formato PDF",
-                key="btn_exportar_pdf_final"):
-        # Adicionar lógica para gerar PDF aqui
-        st.info("""
-        📄 **Funcionalidade de PDF em desenvolvimento...**
-        
-        Para uma implementação completa, você pode usar:
-        - `fpdf` ou `reportlab` para gerar PDFs
-        - `weasyprint` para converter HTML para PDF
-        - `pdfkit` (requer wkhtmltopdf)
-        
-        **Exemplo de estrutura:**
-        ```python
-        def exportar_para_pdf(df, periodo):
-            # 1. Criar template HTML
-            # 2. Adicionar gráficos como imagens
-            # 3. Converter para PDF
-            # 4. Salvar arquivo
-            # 5. Disponibilizar para download
-        ```
-        """)
+                help="Baixe a imagem para enviar por e-mail ou apresentar"
+            )
+            
+            # Pré-visualização
+            st.markdown("#### 👁️ **Pré-visualização:**")
+            col_preview1, col_preview2, col_preview3 = st.columns([1, 2, 1])
+            
+            with col_preview2:
+                st.image(imagem_bytes, use_column_width=True, 
+                        caption=f"Manchete SRE - {periodo_titulo}")
+            
+            # Dicas para envio por e-mail
+            st.markdown("---")
+            st.markdown("""
+            <div style="background: #e8f4f8; padding: 1rem; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                <h5 style="margin: 0 0 0.5rem 0; color: #0c5460;">💡 Dicas para envio por e-mail:</h5>
+                <ul style="margin: 0; color: #0c5460;">
+                    <li>Anexe esta imagem ao seu e-mail</li>
+                    <li>Assunto sugerido: <code>Manchete de Performance SRE - """ + periodo_titulo + """</code></li>
+                    <li>Inclua um breve resumo no corpo do e-mail</li>
+                    <li>Formato universal: abre em qualquer dispositivo</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        except Exception as e:
+            st.error(f"❌ Erro ao gerar imagem: {str(e)}")
+            st.info("""
+            **Solução rápida:**
+            1. Certifique-se de ter a biblioteca Pillow instalada: `pip install Pillow`
+            2. Recarregue a página e tente novamente
+            3. Se o problema persistir, contate o suporte técnico
+            """)
 
-with col_fechar:
-    if st.button("✕ **FECHAR**", 
-                type="secondary",
-                use_container_width=True,
-                key="btn_fechar_final"):
-        st.session_state.show_popup = False
-        st.rerun()
+# Botão para fechar
+st.markdown("---")
+if st.button("✕ **FECHAR MANCHETE**", 
+            type="secondary",
+            use_container_width=True,
+            key="btn_fechar_simplificado"):
+    st.session_state.show_popup = False
+    st.rerun()
         
         # ============================================
         # INFORMAÇÕES ADICIONAIS
