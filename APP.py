@@ -1871,7 +1871,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         else:
             st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
         
-       # ============================================
+      # ============================================
 # EXPORTAÇÃO DA MANCHETE COMO IMAGEM
 # ============================================
 st.markdown("---")
@@ -1948,17 +1948,21 @@ if st.button("📸 **EXPORTAR IMAGEM DA MANCHETE**",
             
             # Dicas para envio por e-mail
             st.markdown("---")
-            st.markdown("""
+            
+            # CORREÇÃO: Removendo o f-string problemático
+            dicas_html = f"""
             <div style="background: #e8f4f8; padding: 1rem; border-radius: 8px; border-left: 4px solid #17a2b8;">
                 <h5 style="margin: 0 0 0.5rem 0; color: #0c5460;">💡 Dicas para envio por e-mail:</h5>
                 <ul style="margin: 0; color: #0c5460;">
                     <li>Anexe esta imagem ao seu e-mail</li>
-                    <li>Assunto sugerido: <code>Manchete de Performance SRE - """ + periodo_titulo + """</code></li>
+                    <li>Assunto sugerido: <code>Manchete de Performance SRE - {periodo_titulo}</code></li>
                     <li>Inclua um breve resumo no corpo do e-mail</li>
                     <li>Formato universal: abre em qualquer dispositivo</li>
                 </ul>
             </div>
-            """, unsafe_allow_html=True)
+            """
+            
+            st.markdown(dicas_html, unsafe_allow_html=True)
             
         except Exception as e:
             st.error(f"❌ Erro ao gerar imagem: {str(e)}")
