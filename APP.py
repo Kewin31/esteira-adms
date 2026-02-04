@@ -1871,42 +1871,23 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         else:
             st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
         
-      # ============================================
+# ============================================
 # EXPORTAÇÃO DA MANCHETE COMO IMAGEM
 # ============================================
 st.markdown("---")
-
-# Container para exportação
-st.markdown("""
-<div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-            padding: 1.5rem; border-radius: 10px; border: 2px dashed #dee2e6;
-            margin-bottom: 1.5rem;">
-    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 1rem;">
-        <div style="background: #1e3799; color: white; width: 50px; height: 50px; 
-                    border-radius: 10px; display: flex; align-items: center; 
-                    justify-content: center; font-size: 1.5rem;">
-            📸
-        </div>
-        <div>
-            <h4 style="margin: 0; color: #1e3799;">Exportar Manchete como Imagem</h4>
-            <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.95rem;">
-            Gere uma imagem PNG de alta qualidade para envio por e-mail
-            </p>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("### 📸 Exportar Manchete como Imagem")
+st.markdown("Gere uma imagem PNG de alta qualidade para envio por e-mail")
 
 # Botão principal de exportação
 if st.button("📸 **EXPORTAR IMAGEM DA MANCHETE**", 
             type="primary",
             use_container_width=True,
-            help="Gera uma imagem PNG de alta qualidade para envio por e-mail",
+            help="Gera uma imagem PNG de alta qualidade",
             key="btn_exportar_imagem_principal"):
     
-    with st.spinner("🔄 Gerando imagem de alta qualidade..."):
+    with st.spinner("Gerando imagem..."):
         try:
-            # Preparar indicadores para a função de exportação
+            # Preparar indicadores
             indicadores_exportacao = {
                 'total_cards': total_cards,
                 'validados': validados,
@@ -1917,68 +1898,30 @@ if st.button("📸 **EXPORTAR IMAGEM DA MANCHETE**",
             }
             
             # Gerar imagem
-            imagem_bytes = exportar_manchete_como_imagem(
-                df, 
-                periodo_titulo, 
-                indicadores_exportacao
-            )
+            imagem_bytes = exportar_manchete_como_imagem(df, periodo_titulo, indicadores_exportacao)
             
             # Nome do arquivo
-            nome_arquivo = f"manchete_sre_{periodo_titulo.lower().replace(' ', '_').replace('/', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.png"
+            nome_arquivo = f"manchete_sre_{periodo_titulo.lower().replace(' ', '_')}.png"
             
-            # Criar botão de download
-            st.success("✅ Imagem gerada com sucesso!")
-            
+            # Botão de download
+            st.success("✅ Imagem gerada!")
             st.download_button(
-                label="⬇️ **CLIQUE AQUI PARA BAIXAR A IMAGEM**",
+                label="⬇️ BAIXAR IMAGEM",
                 data=imagem_bytes,
                 file_name=nome_arquivo,
                 mime="image/png",
-                use_container_width=True,
-                help="Baixe a imagem para enviar por e-mail ou apresentar"
+                use_container_width=True
             )
             
             # Pré-visualização
-            st.markdown("#### 👁️ **Pré-visualização:**")
-            col_preview1, col_preview2, col_preview3 = st.columns([1, 2, 1])
-            
-            with col_preview2:
-                st.image(imagem_bytes, use_column_width=True, 
-                        caption=f"Manchete SRE - {periodo_titulo}")
-            
-            # Dicas para envio por e-mail
-            st.markdown("---")
-            
-            # CORREÇÃO: Removendo o f-string problemático
-            dicas_html = f"""
-            <div style="background: #e8f4f8; padding: 1rem; border-radius: 8px; border-left: 4px solid #17a2b8;">
-                <h5 style="margin: 0 0 0.5rem 0; color: #0c5460;">💡 Dicas para envio por e-mail:</h5>
-                <ul style="margin: 0; color: #0c5460;">
-                    <li>Anexe esta imagem ao seu e-mail</li>
-                    <li>Assunto sugerido: <code>Manchete de Performance SRE - {periodo_titulo}</code></li>
-                    <li>Inclua um breve resumo no corpo do e-mail</li>
-                    <li>Formato universal: abre em qualquer dispositivo</li>
-                </ul>
-            </div>
-            """
-            
-            st.markdown(dicas_html, unsafe_allow_html=True)
+            st.image(imagem_bytes, use_column_width=True)
             
         except Exception as e:
-            st.error(f"❌ Erro ao gerar imagem: {str(e)}")
-            st.info("""
-            **Solução rápida:**
-            1. Certifique-se de ter a biblioteca Pillow instalada: `pip install Pillow`
-            2. Recarregue a página e tente novamente
-            3. Se o problema persistir, contate o suporte técnico
-            """)
+            st.error(f"Erro: {str(e)}")
+            st.info("Instale Pillow: pip install Pillow")
 
 # Botão para fechar
-st.markdown("---")
-if st.button("✕ **FECHAR MANCHETE**", 
-            type="secondary",
-            use_container_width=True,
-            key="btn_fechar_simplificado"):
+if st.button("✕ Fechar", type="secondary", use_container_width=True):
     st.session_state.show_popup = False
     st.rerun()
         
