@@ -1712,75 +1712,75 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
         
         # ============================================
-        # RODAPÉ COM AÇÕES SIMPLIFICADAS
-        # ============================================
-        st.markdown("---")
-        
-        # Container para ações
-        st.markdown("""
-        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; border: 1px solid #dee2e6;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <p style="margin: 0; color: #495057; font-weight: 600;">Ações disponíveis</p>
-                    <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;">
-                    Exporte o relatório completo ou feche a manchete
-                    </p>
-                </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button onclick="document.getElementById('exportBtn').click()" 
-                            style="background: linear-gradient(135deg, #28a745, #20c997); 
-                                   color: white; border: none; padding: 0.7rem 1.5rem; 
-                                   border-radius: 5px; cursor: pointer; font-weight: 600;
-                                   display: flex; align-items: center; gap: 8px;">
-                        📥 Exportar PDF
-                    </button>
-                    <button onclick="document.getElementById('closeBtn').click()" 
-                            style="background: #6c757d; color: white; border: none; 
-                                   padding: 0.7rem 1.5rem; border-radius: 5px; 
-                                   cursor: pointer; font-weight: 600; opacity: 0.9;">
-                        ✕ Fechar
-                    </button>
-                </div>
-            </div>
+# RODAPÉ COM AÇÕES SIMPLIFICADAS
+# ============================================
+st.markdown("---")
+
+# Container para ações
+st.markdown("""
+<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; border: 1px solid #dee2e6;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <p style="margin: 0; color: #495057; font-weight: 600;">Ações disponíveis</p>
+            <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;">
+            Exporte o relatório completo ou feche a manchete
+            </p>
         </div>
-        """, unsafe_allow_html=True)
+        <div style="display: flex; gap: 1rem;">
+            <button onclick="document.getElementById('exportBtn').click()" 
+                    style="background: linear-gradient(135deg, #28a745, #20c997); 
+                           color: white; border: none; padding: 0.7rem 1.5rem; 
+                           border-radius: 5px; cursor: pointer; font-weight: 600;
+                           display: flex; align-items: center; gap: 8px;">
+                📥 Exportar PDF
+            </button>
+            <button onclick="document.getElementById('closeBtn').click()" 
+                    style="background: #6c757d; color: white; border: none; 
+                           padding: 0.7rem 1.5rem; border-radius: 5px; 
+                           cursor: pointer; font-weight: 600; opacity: 0.9;">
+                ✕ Fechar
+            </button>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# Botões reais (ocultos, mas funcionais)
+col_exportar, col_fechar = st.columns(2)
+
+with col_exportar:
+    if st.button("📥 **EXPORTAR PDF**", 
+                type="primary", 
+                use_container_width=True,
+                help="Gerar relatório completo em formato PDF",
+                key="btn_exportar_pdf_final"):
+        # Adicionar lógica para gerar PDF aqui
+        st.info("""
+        📄 **Funcionalidade de PDF em desenvolvimento...**
         
-        # Botões reais (ocultos, mas funcionais)
-        col_exportar, col_fechar = st.columns(2)
+        Para uma implementação completa, você pode usar:
+        - `fpdf` ou `reportlab` para gerar PDFs
+        - `weasyprint` para converter HTML para PDF
+        - `pdfkit` (requer wkhtmltopdf)
         
-        with col_exportar:
-            if st.button("📥 **EXPORTAR PDF**", 
-                        type="primary", 
-                        use_container_width=True,
-                        help="Gerar relatório completo em formato PDF",
-                        key="btn_exportar_pdf_final"):
-                # Adicionar lógica para gerar PDF aqui
-                st.info("""
-                📄 **Funcionalidade de PDF em desenvolvimento...**
-                
-                Para uma implementação completa, você pode usar:
-                - `fpdf` ou `reportlab` para gerar PDFs
-                - `weasyprint` para converter HTML para PDF
-                - `pdfkit` (requer wkhtmltopdf)
-                
-                **Exemplo de estrutura:**
-                ```python
-                def exportar_para_pdf(df, periodo):
-                    # 1. Criar template HTML
-                    # 2. Adicionar gráficos como imagens
-                    # 3. Converter para PDF
-                    # 4. Salvar arquivo
-                    # 5. Disponibilizar para download
-                ```
-                """)
-        
-        with col_fechar:
-            if st.button("✕ **FECHAR**", 
-                        type="secondary",
-                        use_container_width=True,
-                        key="btn_fechar_final"):
-                st.session_state.show_popup = False
-                st.rerun()
+        **Exemplo de estrutura:**
+        ```python
+        def exportar_para_pdf(df, periodo):
+            # 1. Criar template HTML
+            # 2. Adicionar gráficos como imagens
+            # 3. Converter para PDF
+            # 4. Salvar arquivo
+            # 5. Disponibilizar para download
+        ```
+        """)
+
+with col_fechar:
+    if st.button("✕ **FECHAR**", 
+                type="secondary",
+                use_container_width=True,
+                key="btn_fechar_final"):
+        st.session_state.show_popup = False
+        st.rerun()
         
         # ============================================
         # INFORMAÇÕES ADICIONAIS
