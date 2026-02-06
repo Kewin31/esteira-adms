@@ -1236,7 +1236,7 @@ st.markdown("""
             Sistema de Análise de Chamados | SRE
             </p>
             <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.9rem;">
-            EMS | EMR | ESS
+            EMS | EMR | ESS | ESE
             </p>
         </div>
         <div style="text-align: right;">
