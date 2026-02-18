@@ -1375,7 +1375,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             periodo_titulo = f"Ano Passado ({ano_passado})"
             
         elif periodo_selecionado == "Todo o Período":
-            periodo_titulo = "Todo o Período Disponíve"
+            periodo_titulo = "Todo o Período Disponível"
             # Já é o df completo
             
         elif ano_especifico != 'Selecionar ano...':
@@ -1389,6 +1389,10 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         validados = len(df_filtrado_periodo[df_filtrado_periodo['Status'] == 'Sincronizado'])
         com_erro = len(df_filtrado_periodo[df_filtrado_periodo['Revisões'] > 0])
         sem_erro = validados - com_erro
+        
+        # Calcular totais de revisões
+        total_revisoes = int(df_filtrado_periodo['Revisões'].sum())
+        media_revisoes = (total_revisoes / validados) if validados > 0 else 0
         
         # Taxas
         taxa_sucesso = (validados / total_cards * 100) if total_cards > 0 else 0
@@ -1439,18 +1443,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             # Se houver erro, simplesmente não mostra comparação
             df_anterior = pd.DataFrame()
         
-        # Calcular indicadores do período anterior
-        if not df_anterior.empty:
-            total_cards_anterior = len(df_anterior)
-            validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
-            com_erro_anterior = len(df_anterior[df_anterior['Revisões'] > 0])
-            taxa_sucesso_anterior = (validados_anterior / total_cards_anterior * 100) if total_cards_anterior > 0 else 0
-        else:
-            total_cards_anterior = 0
-            validados_anterior = 0
-            com_erro_anterior = 0
-            taxa_sucesso_anterior = 0
-        
         # ============================================
         # EXIBIR INDICADORES
         # ============================================
@@ -1472,77 +1464,80 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         st.markdown("---")
         
         # ============================================
-        # GRÁFICO COMPARATIVO
+        # GRÁFICO COMPARATIVO DE REVISÕES (NOVO)
         # ============================================
-        if not df_anterior.empty and total_cards_anterior > 0:
-            st.markdown("#### 📈 COMPARAÇÃO COM PERÍODO ANTERIOR")
+        if not df_anterior.empty:
+            st.markdown("#### 🔄 COMPARAÇÃO DE REVISÕES")
+            
+            # Calcular métricas de revisões para o período anterior
+            validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
+            total_revisoes_anterior = int(df_anterior['Revisões'].sum())
+            cards_retorno_anterior = len(df_anterior[df_anterior['Revisões'] > 0])
+            media_revisoes_anterior = (total_revisoes_anterior / validados_anterior) if validados_anterior > 0 else 0
             
             # Dados para o gráfico
             periodos = [periodo_anterior_titulo, periodo_titulo]
-            cards_totais = [total_cards_anterior, total_cards]
-            cards_validados = [validados_anterior, validados]
-            taxa_sucesso_vals = [taxa_sucesso_anterior, taxa_sucesso]
             
-            # Criar gráfico comparativo com layout melhorado
-            fig_comparativo = go.Figure()
+            # Escala para a média de revisões (multiplicar por 10 para ficar visível no gráfico)
+            media_revisoes_atual_escalada = media_revisoes * 10
+            media_revisoes_anterior_escalada = media_revisoes_anterior * 10
             
-            # Barras para cards totais
-            fig_comparativo.add_trace(go.Bar(
+            # Criar gráfico comparativo de revisões
+            fig_revisoes = go.Figure()
+            
+            # Barras para Total de Revisões
+            fig_revisoes.add_trace(go.Bar(
                 x=periodos,
-                y=cards_totais,
-                name='Total Cards',
-                marker_color='#1e3799',
-                text=cards_totais,
+                y=[total_revisoes_anterior, total_revisoes],
+                name='Total Revisões',
+                marker_color='#dc3545',
+                text=[f"{int(v):,}" for v in [total_revisoes_anterior, total_revisoes]],
                 textposition='outside',
-                textfont=dict(size=10),
-                width=0.35
+                textfont=dict(size=10, color='#dc3545'),
+                width=0.25,
+                offsetgroup=0
             ))
             
-            # Barras para cards validados
-            fig_comparativo.add_trace(go.Bar(
+            # Barras para Cards com Retorno
+            fig_revisoes.add_trace(go.Bar(
                 x=periodos,
-                y=cards_validados,
-                name='Validados',
-                marker_color='#28a745',
-                text=cards_validados,
+                y=[cards_retorno_anterior, com_erro],
+                name='Cards com Retorno',
+                marker_color='#ffc107',
+                text=[f"{int(v):,}" for v in [cards_retorno_anterior, com_erro]],
                 textposition='outside',
-                textfont=dict(size=10),
-                width=0.35
+                textfont=dict(size=10, color='#ffc107'),
+                width=0.25,
+                offsetgroup=1
             ))
             
-            # Linha para taxa de sucesso
-            fig_comparativo.add_trace(go.Scatter(
+            # Barras para Média de Revisões (escalada)
+            fig_revisoes.add_trace(go.Bar(
                 x=periodos,
-                y=taxa_sucesso_vals,
-                name='Taxa Sucesso',
-                yaxis='y2',
-                mode='lines+markers+text',
-                line=dict(color='#dc3545', width=2),
-                marker=dict(size=8, color='#dc3545'),
-                text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
-                textposition='top center',
-                textfont=dict(size=9)
+                y=[media_revisoes_anterior_escalada, media_revisoes_atual_escalada],
+                name='Média Revisões (x10)',
+                marker_color='#17a2b8',
+                text=[f"{v/10:.1f}" for v in [media_revisoes_anterior_escalada, media_revisoes_atual_escalada]],
+                textposition='outside',
+                textfont=dict(size=10, color='#17a2b8'),
+                width=0.25,
+                offsetgroup=2
             ))
             
-            fig_comparativo.update_layout(
+            fig_revisoes.update_layout(
                 title=dict(
-                    text='Comparativo: Período Atual vs Anterior',
+                    text='Comparativo de Revisões: Período Atual vs Anterior',
                     font=dict(size=14)
                 ),
                 barmode='group',
+                bargap=0.15,
+                bargroupgap=0.1,
                 yaxis=dict(
                     title=dict(text='Quantidade', font=dict(size=11)),
                     gridcolor='rgba(0,0,0,0.05)',
                     rangemode='tozero'
                 ),
-                yaxis2=dict(
-                    title=dict(text='Taxa Sucesso (%)', font=dict(size=11)),
-                    overlaying='y',
-                    side='right',
-                    range=[0, max(100, max(taxa_sucesso_vals) * 1.1)],
-                    gridcolor='rgba(0,0,0,0.02)'
-                ),
-                height=300,
+                height=400,
                 showlegend=True,
                 plot_bgcolor='white',
                 margin=dict(l=50, r=50, t=50, b=50),
@@ -1557,55 +1552,89 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 xaxis=dict(tickfont=dict(size=10))
             )
             
-            fig_comparativo.update_traces(
-                marker_line_width=0.5,
-                selector=dict(type='bar')
+            # Adicionar nota sobre a escala da média
+            fig_revisoes.add_annotation(
+                x=0.98,
+                y=0.98,
+                xref="paper",
+                yref="paper",
+                text="* Média de Revisões multiplicada por 10 para escala",
+                showarrow=False,
+                font=dict(size=9, color="#6c757d"),
+                align="right"
             )
             
-            st.plotly_chart(fig_comparativo, use_container_width=True, config={'displayModeBar': False})
+            st.plotly_chart(fig_revisoes, use_container_width=True, config={'displayModeBar': False})
             
             # ============================================
-            # MÉTRICAS DE VARIAÇÃO
+            # MÉTRICAS DE VARIAÇÃO DE REVISÕES
             # ============================================
-            if total_cards_anterior > 0:
-                variacao_total = ((total_cards - total_cards_anterior) / total_cards_anterior * 100)
-                variacao_validados = ((validados - validados_anterior) / validados_anterior * 100) if validados_anterior > 0 else 0
-                variacao_taxa = taxa_sucesso - taxa_sucesso_anterior
+            if validados_anterior > 0:
+                variacao_total_revisoes = ((total_revisoes - total_revisoes_anterior) / total_revisoes_anterior * 100) if total_revisoes_anterior > 0 else 0
+                variacao_cards_retorno = ((com_erro - cards_retorno_anterior) / cards_retorno_anterior * 100) if cards_retorno_anterior > 0 else 0
+                variacao_media_revisoes = media_revisoes - media_revisoes_anterior
             else:
-                variacao_total = 100
-                variacao_validados = 100 if validados > 0 else 0
-                variacao_taxa = taxa_sucesso
+                variacao_total_revisoes = 100 if total_revisoes > 0 else 0
+                variacao_cards_retorno = 100 if com_erro > 0 else 0
+                variacao_media_revisoes = media_revisoes
             
-            st.markdown("##### 📊 VARIAÇÃO PERCENTUAL")
+            st.markdown("##### 📊 VARIAÇÃO PERCENTUAL - REVISÕES")
             
-            col_var1, col_var2, col_var3 = st.columns(3)
+            col_rev1, col_rev2, col_rev3 = st.columns(3)
             
-            with col_var1:
+            with col_rev1:
                 st.metric(
-                    label="Total Cards",
-                    value=f"{total_cards:,}",
-                    delta=f"{variacao_total:+.1f}%",
-                    delta_color="normal" if variacao_total >= 0 else "inverse",
-                    help=f"Anterior: {total_cards_anterior:,}"
+                    label="📝 Total Revisões",
+                    value=f"{total_revisoes:,}",
+                    delta=f"{variacao_total_revisoes:+.1f}%",
+                    delta_color="inverse" if variacao_total_revisoes > 0 else "normal",
+                    help=f"Anterior: {total_revisoes_anterior:,}"
                 )
             
-            with col_var2:
+            with col_rev2:
                 st.metric(
-                    label="Validados",
-                    value=f"{validados:,}",
-                    delta=f"{variacao_validados:+.1f}%",
-                    delta_color="normal" if variacao_validados >= 0 else "inverse",
-                    help=f"Anterior: {validados_anterior:,}"
+                    label="⚠️ Cards com Retorno",
+                    value=f"{com_erro:,}",
+                    delta=f"{variacao_cards_retorno:+.1f}%",
+                    delta_color="inverse" if variacao_cards_retorno > 0 else "normal",
+                    help=f"Anterior: {cards_retorno_anterior:,}"
                 )
             
-            with col_var3:
+            with col_rev3:
                 st.metric(
-                    label="Taxa Sucesso",
-                    value=f"{taxa_sucesso:.1f}%",
-                    delta=f"{variacao_taxa:+.1f}pp",
-                    delta_color="normal" if variacao_taxa >= 0 else "inverse",
-                    help=f"Anterior: {taxa_sucesso_anterior:.1f}%"
+                    label="📊 Média Revisões/Card",
+                    value=f"{media_revisoes:.1f}",
+                    delta=f"{variacao_media_revisoes:+.1f}",
+                    delta_color="inverse" if variacao_media_revisoes > 0 else "normal",
+                    help=f"Anterior: {media_revisoes_anterior:.1f}"
                 )
+            
+            # Análise adicional da qualidade
+            st.markdown("##### 🔍 ANÁLISE DE QUALIDADE")
+            
+            col_qual1, col_qual2 = st.columns(2)
+            
+            with col_qual1:
+                # Indicador de retrabalho
+                if validados > 0:
+                    revisoes_por_card = total_revisoes / validados
+                    if revisoes_por_card < 0.5:
+                        st.success(f"✅ **Baixo retrabalho**: {revisoes_por_card:.2f} revisões por card")
+                    elif revisoes_por_card < 1:
+                        st.warning(f"⚠️ **Retrabalho moderado**: {revisoes_por_card:.2f} revisões por card")
+                    else:
+                        st.error(f"🔴 **Alto retrabalho**: {revisoes_por_card:.2f} revisões por card")
+            
+            with col_qual2:
+                # Comparação com período anterior
+                if validados_anterior > 0:
+                    revisoes_por_card_anterior = total_revisoes_anterior / validados_anterior
+                    if media_revisoes < revisoes_por_card_anterior:
+                        st.success(f"📈 **Melhoria na qualidade**: {revisoes_por_card_anterior:.2f} → {media_revisoes:.2f} revisões/card")
+                    elif media_revisoes > revisoes_por_card_anterior:
+                        st.error(f"📉 **Piora na qualidade**: {revisoes_por_card_anterior:.2f} → {media_revisoes:.2f} revisões/card")
+                    else:
+                        st.info(f"➡️ **Qualidade estável**: {media_revisoes:.2f} revisões/card")
             
             st.markdown("---")
         
@@ -1672,8 +1701,8 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 
                 with col_analise3:
                     if 'Revisões' in df_filtrado_periodo.columns:
-                        media_revisoes = df_filtrado_periodo['Revisões'].mean()
-                        st.metric("📝 Média revisões/card", f"{media_revisoes:.1f}")
+                        media_revisoes_geral = df_filtrado_periodo['Revisões'].mean()
+                        st.metric("📝 Média revisões/card", f"{media_revisoes_geral:.1f}")
                     else:
                         st.metric("📝 Revisões", "N/A")
             
@@ -1793,8 +1822,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             <small>👤 <strong>Gerado por:</strong> Sistema Esteira ADMS</small>
         </div>
         """, unsafe_allow_html=True)
-
-# ... (o restante do código permanece igual a partir daqui)
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
