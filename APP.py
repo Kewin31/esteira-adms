@@ -1463,7 +1463,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         
         st.markdown("---")
         
-        # ============================================
+   # ============================================
 # GRÁFICO EVOLUTIVO DE CARDS COM RETORNO (NOVO - SIMPLIFICADO)
 # ============================================
 if not df_anterior.empty:
@@ -1599,6 +1599,13 @@ if not df_anterior.empty:
                 delta="Período anterior sem dados",
                 delta_color="off"
             )
+        else:
+            st.metric(
+                label="📈 % do Total",
+                value="0%",
+                delta="Sem dados",
+                delta_color="off"
+            )
     
     with col_var3:
         if com_erro > 0:
@@ -1617,6 +1624,11 @@ if not df_anterior.empty:
             )
     
     st.markdown("---")
+
+# ============================================
+# INDICADORES PRINCIPAIS
+# ============================================
+st.markdown("#### 📊 INDICADORES PRINCIPAIS")
         
         # ============================================
         # INDICADORES PRINCIPAIS
