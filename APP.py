@@ -1464,143 +1464,159 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         st.markdown("---")
         
         # ============================================
-        # GRÁFICO EVOLUTIVO DE CARDS COM RETORNO (NOVO - SIMPLIFICADO)
-        # ============================================
-        if not df_anterior.empty:
-            st.markdown("#### 🔄 EVOLUÇÃO DE CARDS COM RETORNO")
-            
-            # Calcular métricas para período anterior
-            cards_retorno_anterior = len(df_anterior[df_anterior['Revisões'] > 0])
-            
-            # Dados para o gráfico
-            periodos = [periodo_anterior_titulo, periodo_titulo]
-            valores = [cards_retorno_anterior, com_erro]
-            
-            # Definir cor baseada na evolução (vermelho se aumentou, verde se diminuiu)
-            cor_atual = '#dc3545' if com_erro > cards_retorno_anterior else '#28a745'
-            cor_anterior = '#6c757d'  # Cinza para o período anterior
-            
-            # Criar gráfico de barras simples
-            fig_evolucao = go.Figure()
-            
-            # Barra do período anterior (cinza)
-            fig_evolucao.add_trace(go.Bar(
-                x=[periodos[0]],
-                y=[valores[0]],
-                name='Período Anterior',
-                marker_color='#6c757d',
-                text=[f"{valores[0]}"],
-                textposition='outside',
-                textfont=dict(size=12, color='#6c757d'),
-                width=0.4
-            ))
-            
-            # Barra do período atual (vermelho se piorou, verde se melhorou)
-            fig_evolucao.add_trace(go.Bar(
-                x=[periodos[1]],
-                y=[valores[1]],
-                name='Período Atual',
-                marker_color=cor_atual,
-                text=[f"{valores[1]}"],
-                textposition='outside',
-                textfont=dict(size=12, color=cor_atual),
-                width=0.4
-            ))
-            
-            # Calcular variação
-            if valores[0] > 0:
-                variacao = ((valores[1] - valores[0]) / valores[0] * 100)
-                texto_variacao = f"{variacao:+.1f}%"
-            else:
-                variacao = 100 if valores[1] > 0 else 0
-                texto_variacao = "Novo"
-            
-            fig_evolucao.update_layout(
-                title=dict(
-                    text=f'Cards que Retornaram para Revisão: {periodos[0]} vs {periodos[1]}',
-                    font=dict(size=14)
-                ),
-                yaxis=dict(
-                    title=dict(text='Quantidade de Cards', font=dict(size=11)),
-                    gridcolor='rgba(0,0,0,0.05)',
-                    rangemode='tozero'
-                ),
-                height=350,
-                showlegend=True,
-                plot_bgcolor='white',
-                margin=dict(l=50, r=50, t=50, b=50),
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="center",
-                    x=0.5,
-                    font=dict(size=10)
-                )
+# GRÁFICO EVOLUTIVO DE CARDS COM RETORNO (NOVO - SIMPLIFICADO)
+# ============================================
+if not df_anterior.empty:
+    st.markdown("#### 🔄 EVOLUÇÃO DE CARDS COM RETORNO")
+    
+    # Calcular métricas para período anterior
+    validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
+    cards_retorno_anterior = len(df_anterior[df_anterior['Revisões'] > 0])
+    
+    # Dados para o gráfico
+    periodos = [periodo_anterior_titulo, periodo_titulo]
+    valores = [cards_retorno_anterior, com_erro]
+    
+    # Definir cor baseada na evolução (vermelho se aumentou, verde se diminuiu)
+    cor_atual = '#dc3545' if com_erro > cards_retorno_anterior else '#28a745'
+    cor_anterior = '#6c757d'  # Cinza para o período anterior
+    
+    # Criar gráfico de barras simples
+    fig_evolucao = go.Figure()
+    
+    # Barra do período anterior (cinza)
+    fig_evolucao.add_trace(go.Bar(
+        x=[periodos[0]],
+        y=[valores[0]],
+        name='Período Anterior',
+        marker_color='#6c757d',
+        text=[f"{valores[0]}"],
+        textposition='outside',
+        textfont=dict(size=12, color='#6c757d'),
+        width=0.4
+    ))
+    
+    # Barra do período atual (vermelho se piorou, verde se melhorou)
+    fig_evolucao.add_trace(go.Bar(
+        x=[periodos[1]],
+        y=[valores[1]],
+        name='Período Atual',
+        marker_color=cor_atual,
+        text=[f"{valores[1]}"],
+        textposition='outside',
+        textfont=dict(size=12, color=cor_atual),
+        width=0.4
+    ))
+    
+    # Calcular variação
+    if valores[0] > 0:
+        variacao = ((valores[1] - valores[0]) / valores[0] * 100)
+        texto_variacao = f"{variacao:+.1f}%"
+    else:
+        variacao = 100 if valores[1] > 0 else 0
+        texto_variacao = "Novo"
+    
+    fig_evolucao.update_layout(
+        title=dict(
+            text=f'Cards que Retornaram para Revisão: {periodos[0]} vs {periodos[1]}',
+            font=dict(size=14)
+        ),
+        yaxis=dict(
+            title=dict(text='Quantidade de Cards', font=dict(size=11)),
+            gridcolor='rgba(0,0,0,0.05)',
+            rangemode='tozero'
+        ),
+        height=350,
+        showlegend=True,
+        plot_bgcolor='white',
+        margin=dict(l=50, r=50, t=50, b=50),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=10)
+        )
+    )
+    
+    # Adicionar seta indicando tendência
+    if variacao > 0:
+        simbolo = "🔴▲"
+        tendencia = f"piora de {texto_variacao}"
+    elif variacao < 0:
+        simbolo = "✅▼"
+        tendencia = f"melhora de {texto_variacao.replace('+', '').replace('-', '')}"
+    else:
+        simbolo = "⚪➡️"
+        tendencia = "estável"
+    
+    fig_evolucao.add_annotation(
+        x=0.5,
+        y=0.95,
+        xref="paper",
+        yref="paper",
+        text=f"{simbolo} Tendência: {tendencia}",
+        showarrow=False,
+        font=dict(size=12, color="#495057"),
+        bgcolor="rgba(255,255,255,0.8)",
+        bordercolor="#dee2e6",
+        borderwidth=1,
+        borderpad=4
+    )
+    
+    st.plotly_chart(fig_evolucao, use_container_width=True, config={'displayModeBar': False})
+    
+    # ============================================
+    # MÉTRICA SIMPLES DE VARIAÇÃO
+    # ============================================
+    col_var1, col_var2, col_var3 = st.columns(3)
+    
+    with col_var1:
+        st.metric(
+            label="📊 Cards com Retorno",
+            value=f"{com_erro}",
+            delta=f"{texto_variacao}",
+            delta_color="inverse" if variacao > 0 else "normal" if variacao < 0 else "off",
+            help=f"Anterior: {cards_retorno_anterior}"
+        )
+    
+    with col_var2:
+        if validados > 0 and validados_anterior > 0:
+            percentual_atual = (com_erro / validados * 100)
+            percentual_anterior = (cards_retorno_anterior / validados_anterior * 100)
+            st.metric(
+                label="📈 % do Total",
+                value=f"{percentual_atual:.1f}%",
+                delta=f"{percentual_atual - percentual_anterior:+.1f}pp",
+                delta_color="inverse" if (percentual_atual - percentual_anterior) > 0 else "normal"
             )
-            
-            # Adicionar seta indicando tendência
-            if variacao > 0:
-                simbolo = "🔴▲"
-                tendencia = f"piora de {texto_variacao}"
-            elif variacao < 0:
-                simbolo = "✅▼"
-                tendencia = f"melhora de {texto_variacao.replace('+', '').replace('-', '')}"
-            else:
-                simbolo = "⚪➡️"
-                tendencia = "estável"
-            
-            fig_evolucao.add_annotation(
-                x=0.5,
-                y=0.95,
-                xref="paper",
-                yref="paper",
-                text=f"{simbolo} Tendência: {tendencia}",
-                showarrow=False,
-                font=dict(size=12, color="#495057"),
-                bgcolor="rgba(255,255,255,0.8)",
-                bordercolor="#dee2e6",
-                borderwidth=1,
-                borderpad=4
+        elif validados > 0:
+            percentual_atual = (com_erro / validados * 100)
+            st.metric(
+                label="📈 % do Total",
+                value=f"{percentual_atual:.1f}%",
+                delta="Período anterior sem dados",
+                delta_color="off"
             )
-            
-            st.plotly_chart(fig_evolucao, use_container_width=True, config={'displayModeBar': False})
-            
-            # ============================================
-            # MÉTRICA SIMPLES DE VARIAÇÃO
-            # ============================================
-            col_var1, col_var2, col_var3 = st.columns(3)
-            
-            with col_var1:
-                st.metric(
-                    label="📊 Cards com Retorno",
-                    value=f"{com_erro}",
-                    delta=f"{texto_variacao}",
-                    delta_color="inverse" if variacao > 0 else "normal" if variacao < 0 else "off",
-                    help=f"Anterior: {cards_retorno_anterior}"
-                )
-            
-            with col_var2:
-                if validados > 0:
-                    percentual_atual = (com_erro / validados * 100)
-                    percentual_anterior = (cards_retorno_anterior / validados_anterior * 100) if validados_anterior > 0 else 0
-                    st.metric(
-                        label="📈 % do Total",
-                        value=f"{percentual_atual:.1f}%",
-                        delta=f"{percentual_atual - percentual_anterior:+.1f}pp",
-                        delta_color="inverse" if (percentual_atual - percentual_anterior) > 0 else "normal"
-                    )
-            
-            with col_var3:
-                if com_erro > 0:
-                    st.metric(
-                        label="🎯 Meta (Ideal ≤5%)",
-                        value=f"{'✅ Atingida' if taxa_erro <=5 else '⚠️ Acima'}",
-                        delta=f"{taxa_erro:.1f}% vs 5%",
-                        delta_color="normal" if taxa_erro <=5 else "inverse"
-                    )
-            
-            st.markdown("---")
+    
+    with col_var3:
+        if com_erro > 0:
+            st.metric(
+                label="🎯 Meta (Ideal ≤5%)",
+                value=f"{'✅ Atingida' if taxa_erro <=5 else '⚠️ Acima'}",
+                delta=f"{taxa_erro:.1f}% vs 5%",
+                delta_color="normal" if taxa_erro <=5 else "inverse"
+            )
+        else:
+            st.metric(
+                label="🎯 Meta (Ideal ≤5%)",
+                value="✅ Atingida",
+                delta="0% de erros",
+                delta_color="normal"
+            )
+    
+    st.markdown("---")
         
         # ============================================
         # INDICADORES PRINCIPAIS
