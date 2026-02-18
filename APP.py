@@ -1464,80 +1464,68 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         st.markdown("---")
         
         # ============================================
-        # GRÁFICO COMPARATIVO DE REVISÕES (NOVO)
+        # GRÁFICO EVOLUTIVO DE CARDS COM RETORNO (NOVO - SIMPLIFICADO)
         # ============================================
         if not df_anterior.empty:
-            st.markdown("#### 🔄 COMPARAÇÃO DE REVISÕES")
+            st.markdown("#### 🔄 EVOLUÇÃO DE CARDS COM RETORNO")
             
-            # Calcular métricas de revisões para o período anterior
-            validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
-            total_revisoes_anterior = int(df_anterior['Revisões'].sum())
+            # Calcular métricas para período anterior
             cards_retorno_anterior = len(df_anterior[df_anterior['Revisões'] > 0])
-            media_revisoes_anterior = (total_revisoes_anterior / validados_anterior) if validados_anterior > 0 else 0
             
             # Dados para o gráfico
             periodos = [periodo_anterior_titulo, periodo_titulo]
+            valores = [cards_retorno_anterior, com_erro]
             
-            # Escala para a média de revisões (multiplicar por 10 para ficar visível no gráfico)
-            media_revisoes_atual_escalada = media_revisoes * 10
-            media_revisoes_anterior_escalada = media_revisoes_anterior * 10
+            # Definir cor baseada na evolução (vermelho se aumentou, verde se diminuiu)
+            cor_atual = '#dc3545' if com_erro > cards_retorno_anterior else '#28a745'
+            cor_anterior = '#6c757d'  # Cinza para o período anterior
             
-            # Criar gráfico comparativo de revisões
-            fig_revisoes = go.Figure()
+            # Criar gráfico de barras simples
+            fig_evolucao = go.Figure()
             
-            # Barras para Total de Revisões
-            fig_revisoes.add_trace(go.Bar(
-                x=periodos,
-                y=[total_revisoes_anterior, total_revisoes],
-                name='Total Revisões',
-                marker_color='#dc3545',
-                text=[f"{int(v):,}" for v in [total_revisoes_anterior, total_revisoes]],
+            # Barra do período anterior (cinza)
+            fig_evolucao.add_trace(go.Bar(
+                x=[periodos[0]],
+                y=[valores[0]],
+                name='Período Anterior',
+                marker_color='#6c757d',
+                text=[f"{valores[0]}"],
                 textposition='outside',
-                textfont=dict(size=10, color='#dc3545'),
-                width=0.25,
-                offsetgroup=0
+                textfont=dict(size=12, color='#6c757d'),
+                width=0.4
             ))
             
-            # Barras para Cards com Retorno
-            fig_revisoes.add_trace(go.Bar(
-                x=periodos,
-                y=[cards_retorno_anterior, com_erro],
-                name='Cards com Retorno',
-                marker_color='#ffc107',
-                text=[f"{int(v):,}" for v in [cards_retorno_anterior, com_erro]],
+            # Barra do período atual (vermelho se piorou, verde se melhorou)
+            fig_evolucao.add_trace(go.Bar(
+                x=[periodos[1]],
+                y=[valores[1]],
+                name='Período Atual',
+                marker_color=cor_atual,
+                text=[f"{valores[1]}"],
                 textposition='outside',
-                textfont=dict(size=10, color='#ffc107'),
-                width=0.25,
-                offsetgroup=1
+                textfont=dict(size=12, color=cor_atual),
+                width=0.4
             ))
             
-            # Barras para Média de Revisões (escalada)
-            fig_revisoes.add_trace(go.Bar(
-                x=periodos,
-                y=[media_revisoes_anterior_escalada, media_revisoes_atual_escalada],
-                name='Média Revisões (x10)',
-                marker_color='#17a2b8',
-                text=[f"{v/10:.1f}" for v in [media_revisoes_anterior_escalada, media_revisoes_atual_escalada]],
-                textposition='outside',
-                textfont=dict(size=10, color='#17a2b8'),
-                width=0.25,
-                offsetgroup=2
-            ))
+            # Calcular variação
+            if valores[0] > 0:
+                variacao = ((valores[1] - valores[0]) / valores[0] * 100)
+                texto_variacao = f"{variacao:+.1f}%"
+            else:
+                variacao = 100 if valores[1] > 0 else 0
+                texto_variacao = "Novo"
             
-            fig_revisoes.update_layout(
+            fig_evolucao.update_layout(
                 title=dict(
-                    text='Comparativo de Revisões: Período Atual vs Anterior',
+                    text=f'Cards que Retornaram para Revisão: {periodos[0]} vs {periodos[1]}',
                     font=dict(size=14)
                 ),
-                barmode='group',
-                bargap=0.15,
-                bargroupgap=0.1,
                 yaxis=dict(
-                    title=dict(text='Quantidade', font=dict(size=11)),
+                    title=dict(text='Quantidade de Cards', font=dict(size=11)),
                     gridcolor='rgba(0,0,0,0.05)',
                     rangemode='tozero'
                 ),
-                height=400,
+                height=350,
                 showlegend=True,
                 plot_bgcolor='white',
                 margin=dict(l=50, r=50, t=50, b=50),
@@ -1548,93 +1536,69 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                     xanchor="center",
                     x=0.5,
                     font=dict(size=10)
-                ),
-                xaxis=dict(tickfont=dict(size=10))
+                )
             )
             
-            # Adicionar nota sobre a escala da média
-            fig_revisoes.add_annotation(
-                x=0.98,
-                y=0.98,
+            # Adicionar seta indicando tendência
+            if variacao > 0:
+                simbolo = "🔴▲"
+                tendencia = f"piora de {texto_variacao}"
+            elif variacao < 0:
+                simbolo = "✅▼"
+                tendencia = f"melhora de {texto_variacao.replace('+', '').replace('-', '')}"
+            else:
+                simbolo = "⚪➡️"
+                tendencia = "estável"
+            
+            fig_evolucao.add_annotation(
+                x=0.5,
+                y=0.95,
                 xref="paper",
                 yref="paper",
-                text="* Média de Revisões multiplicada por 10 para escala",
+                text=f"{simbolo} Tendência: {tendencia}",
                 showarrow=False,
-                font=dict(size=9, color="#6c757d"),
-                align="right"
+                font=dict(size=12, color="#495057"),
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="#dee2e6",
+                borderwidth=1,
+                borderpad=4
             )
             
-            st.plotly_chart(fig_revisoes, use_container_width=True, config={'displayModeBar': False})
+            st.plotly_chart(fig_evolucao, use_container_width=True, config={'displayModeBar': False})
             
             # ============================================
-            # MÉTRICAS DE VARIAÇÃO DE REVISÕES
+            # MÉTRICA SIMPLES DE VARIAÇÃO
             # ============================================
-            if validados_anterior > 0:
-                variacao_total_revisoes = ((total_revisoes - total_revisoes_anterior) / total_revisoes_anterior * 100) if total_revisoes_anterior > 0 else 0
-                variacao_cards_retorno = ((com_erro - cards_retorno_anterior) / cards_retorno_anterior * 100) if cards_retorno_anterior > 0 else 0
-                variacao_media_revisoes = media_revisoes - media_revisoes_anterior
-            else:
-                variacao_total_revisoes = 100 if total_revisoes > 0 else 0
-                variacao_cards_retorno = 100 if com_erro > 0 else 0
-                variacao_media_revisoes = media_revisoes
+            col_var1, col_var2, col_var3 = st.columns(3)
             
-            st.markdown("##### 📊 VARIAÇÃO PERCENTUAL - REVISÕES")
-            
-            col_rev1, col_rev2, col_rev3 = st.columns(3)
-            
-            with col_rev1:
+            with col_var1:
                 st.metric(
-                    label="📝 Total Revisões",
-                    value=f"{total_revisoes:,}",
-                    delta=f"{variacao_total_revisoes:+.1f}%",
-                    delta_color="inverse" if variacao_total_revisoes > 0 else "normal",
-                    help=f"Anterior: {total_revisoes_anterior:,}"
+                    label="📊 Cards com Retorno",
+                    value=f"{com_erro}",
+                    delta=f"{texto_variacao}",
+                    delta_color="inverse" if variacao > 0 else "normal" if variacao < 0 else "off",
+                    help=f"Anterior: {cards_retorno_anterior}"
                 )
             
-            with col_rev2:
-                st.metric(
-                    label="⚠️ Cards com Retorno",
-                    value=f"{com_erro:,}",
-                    delta=f"{variacao_cards_retorno:+.1f}%",
-                    delta_color="inverse" if variacao_cards_retorno > 0 else "normal",
-                    help=f"Anterior: {cards_retorno_anterior:,}"
-                )
-            
-            with col_rev3:
-                st.metric(
-                    label="📊 Média Revisões/Card",
-                    value=f"{media_revisoes:.1f}",
-                    delta=f"{variacao_media_revisoes:+.1f}",
-                    delta_color="inverse" if variacao_media_revisoes > 0 else "normal",
-                    help=f"Anterior: {media_revisoes_anterior:.1f}"
-                )
-            
-            # Análise adicional da qualidade
-            st.markdown("##### 🔍 ANÁLISE DE QUALIDADE")
-            
-            col_qual1, col_qual2 = st.columns(2)
-            
-            with col_qual1:
-                # Indicador de retrabalho
+            with col_var2:
                 if validados > 0:
-                    revisoes_por_card = total_revisoes / validados
-                    if revisoes_por_card < 0.5:
-                        st.success(f"✅ **Baixo retrabalho**: {revisoes_por_card:.2f} revisões por card")
-                    elif revisoes_por_card < 1:
-                        st.warning(f"⚠️ **Retrabalho moderado**: {revisoes_por_card:.2f} revisões por card")
-                    else:
-                        st.error(f"🔴 **Alto retrabalho**: {revisoes_por_card:.2f} revisões por card")
+                    percentual_atual = (com_erro / validados * 100)
+                    percentual_anterior = (cards_retorno_anterior / validados_anterior * 100) if validados_anterior > 0 else 0
+                    st.metric(
+                        label="📈 % do Total",
+                        value=f"{percentual_atual:.1f}%",
+                        delta=f"{percentual_atual - percentual_anterior:+.1f}pp",
+                        delta_color="inverse" if (percentual_atual - percentual_anterior) > 0 else "normal"
+                    )
             
-            with col_qual2:
-                # Comparação com período anterior
-                if validados_anterior > 0:
-                    revisoes_por_card_anterior = total_revisoes_anterior / validados_anterior
-                    if media_revisoes < revisoes_por_card_anterior:
-                        st.success(f"📈 **Melhoria na qualidade**: {revisoes_por_card_anterior:.2f} → {media_revisoes:.2f} revisões/card")
-                    elif media_revisoes > revisoes_por_card_anterior:
-                        st.error(f"📉 **Piora na qualidade**: {revisoes_por_card_anterior:.2f} → {media_revisoes:.2f} revisões/card")
-                    else:
-                        st.info(f"➡️ **Qualidade estável**: {media_revisoes:.2f} revisões/card")
+            with col_var3:
+                if com_erro > 0:
+                    st.metric(
+                        label="🎯 Meta (Ideal ≤5%)",
+                        value=f"{'✅ Atingida' if taxa_erro <=5 else '⚠️ Acima'}",
+                        delta=f"{taxa_erro:.1f}% vs 5%",
+                        delta_color="normal" if taxa_erro <=5 else "inverse"
+                    )
             
             st.markdown("---")
         
@@ -1680,7 +1644,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             )
         
         # ============================================
-        # ANÁLISE DETALHADA
+        # ANÁLISE DETALHADA (MANTIDA IGUAL)
         # ============================================
         st.markdown("---")
         st.markdown("#### 📈 ANÁLISE DETALHADA")
@@ -1741,7 +1705,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
         
         # ============================================
-        # RODAPÉ COM AÇÕES SIMPLIFICADAS
+        # RODAPÉ COM AÇÕES (MANTIDO IGUAL)
         # ============================================
         st.markdown("---")
         
@@ -1774,7 +1738,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         </div>
         """, unsafe_allow_html=True)
         
-        # Botões reais (ocultos, mas funcionais)
+        # Botões reais
         col_exportar, col_fechar = st.columns(2)
         
         with col_exportar:
@@ -1783,25 +1747,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                         use_container_width=True,
                         help="Gerar relatório completo em formato PDF",
                         key="btn_exportar_pdf_final"):
-                # Adicionar lógica para gerar PDF aqui
-                st.info("""
-                📄 **Funcionalidade de PDF em desenvolvimento...**
-                
-                Para uma implementação completa, você pode usar:
-                - `fpdf` ou `reportlab` para gerar PDFs
-                - `weasyprint` para converter HTML para PDF
-                - `pdfkit` (requer wkhtmltopdf)
-                
-                **Exemplo de estrutura:**
-                ```python
-                def exportar_para_pdf(df, periodo):
-                    # 1. Criar template HTML
-                    # 2. Adicionar gráficos como imagens
-                    # 3. Converter para PDF
-                    # 4. Salvar arquivo
-                    # 5. Disponibilizar para download
-                ```
-                """)
+                st.info("📄 Funcionalidade de PDF em desenvolvimento...")
         
         with col_fechar:
             if st.button("✕ **FECHAR**", 
