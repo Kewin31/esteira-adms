@@ -2813,7 +2813,7 @@ if st.session_state.df_original is not None:
         "⚡ Diagnóstico de Erros"
     ])
     
-    # ABA 1: PERFORMANCE DE DESENVOLVEDORES - MELHORADA E DINÂMICA
+       # ABA 1: PERFORMANCE DE DESENVOLVEDORES - MELHORADA E DINÂMICA
     with tab_extra1:
         # APAGADO: Container expansível "SOBRE ESTA ANÁLISE"
         
@@ -3110,6 +3110,46 @@ if st.session_state.df_original is not None:
                                     <span style="font-size: 1.5rem;">{count}</span> DEVs
                                 </div>
                                 """, unsafe_allow_html=True)
+                
+                # ============================================
+                # NOVO EXPANDER: EXPLICAÇÃO DA PERFORMANCE DETALHADA
+                # ============================================
+                with st.expander("📊 **Como é calculada a Performance Detalhada?**", expanded=False):
+                    st.markdown("""
+                    **Métricas da Tabela de Performance Detalhada:**
+                    
+                    As métricas abaixo são calculadas **individualmente para cada desenvolvedor** no período selecionado:
+                    
+                    1. **Total Chamados**  
+                    → Número total de chamados atribuídos ao desenvolvedor no período.
+                    
+                    2. **Sem Revisão**  
+                    → Quantidade de chamados que foram aprovados sem necessidade de retorno para correção (Revisões = 0).
+                    
+                    3. **Score Qualidade (%)**  
+                    → `(Chamados Sem Revisão / Total Chamados) × 100`  
+                    Indica o percentual de chamados que o desenvolvedor acertou de primeira.
+                    
+                    4. **Sincronizados**  
+                    → Quantidade de chamados com status "Sincronizado" (aprovados e finalizados).
+                    
+                    5. **Eficiência (%)**  
+                    → `(Chamados Sincronizados / Total Chamados) × 100`  
+                    Mede a capacidade de finalizar os chamados em relação ao total recebido.
+                    
+                    6. **Produtividade (Cards/Mês)**  
+                    → `Total Chamados / Número de Meses Ativos`  
+                    - **Meses Ativos** são os meses em que o desenvolvedor teve pelo menos um chamado no período.
+                    - Indica o volume médio mensal de trabalho.
+                    
+                    7. **Classificação**  
+                    - **🟢 Alto**: Score Qualidade ≥ 80% **e** Produtividade ≥ 5 chamados/mês.  
+                    - **🟡 Médio**: Score Qualidade ≥ 60% (não se enquadra como Alto).  
+                    - **🔴 Baixo**: Score Qualidade < 60%.
+                    
+                    **Objetivo da Análise:**  
+                    Identificar não apenas quem entrega mais (Produtividade), mas quem entrega com qualidade (Score) e consegue finalizar (Eficiência).
+                    """)
                 
                 # Mostrar top 10
                 st.markdown(f"### 🏆 Top 10 Desenvolvedores ({ordenar_por})")
