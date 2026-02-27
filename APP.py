@@ -3111,7 +3111,7 @@ if st.session_state.df_original is not None:
                                 </div>
                                 """, unsafe_allow_html=True)
                 
-                # ============================================
+                               # ============================================
                 # NOVO EXPANDER: EXPLICAÇÃO DA PERFORMANCE DETALHADA
                 # ============================================
                 with st.expander("📊 **Como é calculada a Performance Detalhada?**", expanded=False):
@@ -3150,91 +3150,6 @@ if st.session_state.df_original is not None:
                     **Objetivo da Análise:**  
                     Identificar não apenas quem entrega mais (Produtividade), mas quem entrega com qualidade (Score) e consegue finalizar (Eficiência).
                     """)
-                
-                # Mostrar top 10
-                st.markdown(f"### 🏆 Top 10 Desenvolvedores ({ordenar_por})")
-                
-                # Gráfico de barras horizontais para Score de Qualidade
-                if ordenar_por == "Score de Qualidade":
-                    top10_score = df_dev_metrics.head(10)
-                    
-                    fig_score = px.bar(
-                        top10_score,
-                        y='Desenvolvedor',
-                        x='Score Qualidade',
-                        orientation='h',
-                        title='Top 10 - Score de Qualidade',
-                        text='Score Qualidade',
-                        color='Score Qualidade',
-                        color_continuous_scale='RdYlGn',
-                        range_color=[0, 100]
-                    )
-                    
-                    fig_score.update_traces(
-                        texttemplate='%{text:.1f}%',
-                        textposition='outside',
-                        marker_line_color='black',
-                        marker_line_width=0.5
-                    )
-                    
-                    fig_score.update_layout(
-                        height=500,
-                        plot_bgcolor='white',
-                        yaxis={'categoryorder': 'total ascending'},
-                        xaxis_title="Score de Qualidade (%)",
-                        yaxis_title="Desenvolvedor",
-                        xaxis_range=[0, 100]
-                    )
-                    
-                    st.plotly_chart(fig_score, use_container_width=True)
-                    
-                else:
-                    # Para outras ordenações, usar gráfico de barras
-                    top10_other = df_dev_metrics.head(10)
-                    
-                    if ordenar_por == "Total de Chamados":
-                        col_ordenada = 'Total Chamados'
-                        color_scale = 'Blues'
-                        titulo = 'Top 10 - Total de Chamados'
-                    elif ordenar_por == "Eficiência":
-                        col_ordenada = 'Eficiência'
-                        color_scale = 'Greens'
-                        titulo = 'Top 10 - Eficiência'
-                    else:  # Produtividade
-                        col_ordenada = 'Produtividade'
-                        color_scale = 'Purples'
-                        titulo = 'Top 10 - Produtividade'
-                    
-                    fig_other = px.bar(
-                        top10_other,
-                        x='Desenvolvedor',
-                        y=col_ordenada,
-                        title=titulo,
-                        text=col_ordenada,
-                        color=col_ordenada,
-                        color_continuous_scale=color_scale
-                    )
-                    
-                    if ordenar_por in ["Score de Qualidade", "Eficiência"]:
-                        fig_other.update_traces(texttemplate='%{text:.1f}%')
-                    else:
-                        fig_other.update_traces(texttemplate='%{text:.1f}')
-                    
-                    fig_other.update_traces(
-                        textposition='outside',
-                        marker_line_color='black',
-                        marker_line_width=0.5
-                    )
-                    
-                    fig_other.update_layout(
-                        height=500,
-                        plot_bgcolor='white',
-                        xaxis_title="Desenvolvedor",
-                        yaxis_title=ordenar_por,
-                        xaxis_tickangle=45
-                    )
-                    
-                    st.plotly_chart(fig_other, use_container_width=True)
                 
                 # Tabela completa
                 st.markdown("### 📋 Performance Detalhada")
