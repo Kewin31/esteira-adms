@@ -3769,35 +3769,82 @@ if st.session_state.df_original is not None:
                         """, unsafe_allow_html=True)
                 
                 # Análise de severidade (baseada em revisões)
-                if 'Revisões' in df_diag.columns:
-                    st.markdown("### ⚠️ Análise de Severidade")
-                    
-                    severidade = df_diag.groupby('Tipo_Chamado').agg({
-                        'Revisões': ['mean', 'max', 'sum'],
-                        'Chamado': 'count'
-                    }).round(2)
-                    
-                    severidade.columns = ['Média_Revisões', 'Max_Revisões', 'Total_Revisões', 'Contagem']
-                    severidade = severidade.sort_values('Média_Revisões', ascending=False)
-                    
-                    # Identificar tipos problemáticos
-                    severidade['Severidade'] = pd.qcut(
+if 'Revisões' in df_diag.columns:
+    st.markdown("### ⚠️ Análise de Severidade")
+    
+    severidade = df_diag.groupby('Tipo_Chamado').agg({
+        'Revisões': ['mean', 'max', 'sum'],
+        'Chamado': 'count'
+    }).round(2)
+    
+    severidade.columns = ['Média_Revisões', 'Max_Revisões', 'Total_Revisões', 'Contagem']
+    severidade = severidade.sort_values('Média_Revisões', ascending=False)
+    
+    # CORREÇÃO APLICADA: Tratamento para evitar erro do pd.qcut
+    # Identificar tipos problemáticos com tratamento de erro
+    try:
+        # Tentar criar 3 quantis
+        severidade['Severidade'] = pd.qcut(
+            severidade['Média_Revisões'],
+            q=3,
+            labels=['Baixa', 'Média', 'Alta'],
+            duplicates='drop'  # Permite descartar bordas duplicadas
+        )
+    except ValueError:
+        # Se ainda falhar, usar uma abordagem baseada em percentis manuais
+        # Calcular percentis manualmente
+        if len(severidade) >= 3:
+            # Usar quantis aproximados
+            bins = severidade['Média_Revisões'].quantile([0, 0.33, 0.67, 1]).values
+            
+            # Garantir que os bins são únicos
+            bins = sorted(set(bins))
+            
+            if len(bins) >= 2:  # Pelo menos 2 bins
+                if len(bins) == 2:
+                    # Apenas dois grupos possíveis
+                    severidade['Severidade'] = pd.cut(
                         severidade['Média_Revisões'],
-                        q=3,
-                        labels=['Baixa', 'Média', 'Alta']
+                        bins=bins,
+                        labels=['Baixa', 'Alta'],
+                        include_lowest=True
                     )
-                    
-                    st.dataframe(
-                        severidade.head(10),
-                        use_container_width=True,
-                        column_config={
-                            "Média_Revisões": st.column_config.NumberColumn("Média Rev.", format="%.1f"),
-                            "Max_Revisões": st.column_config.NumberColumn("Máx. Rev.", format="%d"),
-                            "Total_Revisões": st.column_config.NumberColumn("Total Rev.", format="%d"),
-                            "Contagem": st.column_config.NumberColumn("Qtd Chamados", format="%d"),
-                            "Severidade": st.column_config.TextColumn("Nível Severidade")
-                        }
+                elif len(bins) >= 3:
+                    # Três grupos
+                    severidade['Severidade'] = pd.cut(
+                        severidade['Média_Revisões'],
+                        bins=bins,
+                        labels=['Baixa', 'Média', 'Alta'][:len(bins)-1],
+                        include_lowest=True
                     )
+            else:
+                # Todos os valores são iguais
+                severidade['Severidade'] = 'Média'
+        else:
+            # Poucos dados, classificação simples
+            media_global = severidade['Média_Revisões'].median()
+            
+            def classificar_severidade(valor):
+                if valor > media_global * 1.5:
+                    return 'Alta'
+                elif valor < media_global * 0.5:
+                    return 'Baixa'
+                else:
+                    return 'Média'
+            
+            severidade['Severidade'] = severidade['Média_Revisões'].apply(classificar_severidade)
+    
+    st.dataframe(
+        severidade.head(10),
+        use_container_width=True,
+        column_config={
+            "Média_Revisões": st.column_config.NumberColumn("Média Rev.", format="%.1f"),
+            "Max_Revisões": st.column_config.NumberColumn("Máx. Rev.", format="%d"),
+            "Total_Revisões": st.column_config.NumberColumn("Total Rev.", format="%d"),
+            "Contagem": st.column_config.NumberColumn("Qtd Chamados", format="%d"),
+            "Severidade": st.column_config.TextColumn("Nível Severidade")
+        }
+    )
             
             elif tipo_analise_diag == "Tendências Temporais":
                 st.markdown("### 📈 Tendências Temporais de Erros")
