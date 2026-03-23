@@ -1226,7 +1226,6 @@ st.markdown(f"""
     position: relative;
     overflow: hidden;
 ">
-    <!-- Elemento decorativo de fundo -->
     <div style="
         position: absolute;
         top: -50px;
@@ -1250,7 +1249,6 @@ st.markdown(f"""
     
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; position: relative; z-index: 1;">
         <div style="display: flex; align-items: center; gap: 1.5rem;">
-            <!-- Logo/Ícone -->
             <div style="
                 background: rgba(255,255,255,0.12);
                 width: 60px;
@@ -1349,7 +1347,6 @@ st.markdown(f"""
         </div>
     </div>
     
-    <!-- Linha decorativa inferior -->
     <div style="
         position: absolute;
         bottom: 0;
