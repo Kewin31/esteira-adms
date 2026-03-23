@@ -1111,32 +1111,40 @@ with st.sidebar:
                     st.error(f"❌ {status}")
 
 # ============================================
-# HEADER - ESTILO MONITORING CENTER
+# HEADER - ESTILO GRADIENTE AZUL PETRÓLEO
 # ============================================
 st.markdown(f"""
-<div class="main-header-monitoring">
+<div style="
+    background: linear-gradient(135deg, {COR_AZUL_PETROLEO} 0%, {COR_AZUL_ESCURO} 100%);
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0;
+    box-shadow: 0 4px 15px rgba(2, 138, 159, 0.3);
+">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
         <div>
             <h1 style="
-                color: {COR_AZUL_ESCURO};
+                color: {COR_BRANCO};
                 margin: 0;
-                font-size: 1.4rem;
+                font-size: 1.6rem;
                 font-weight: 600;
                 letter-spacing: -0.3px;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
             ">
                 📊 ESTEIRA ADMS
             </h1>
             <p style="
-                color: {COR_CINZA_TEXTO};
+                color: rgba(255,255,255,0.9);
                 margin: 0.3rem 0 0 0;
                 font-size: 0.85rem;
+                font-weight: 400;
             ">
                 Acompanhamento de Demandas - EMS | EMR | ESS | ESE
             </p>
         </div>
         <div style="text-align: right;">
             <p style="
-                color: {COR_CINZA_TEXTO};
+                color: rgba(255,255,255,0.9);
                 margin: 0;
                 font-size: 0.85rem;
                 font-weight: 500;
@@ -1144,14 +1152,14 @@ st.markdown(f"""
                 Dashboard de Performance
             </p>
             <p style="
-                color: {COR_CINZA_TEXTO};
+                color: rgba(255,255,255,0.8);
                 margin: 0.2rem 0 0 0;
-                font-size: 0.7rem;
+                font-size: 0.75rem;
             ">
                 v5.5 | Sistema de Performance SRE
             </p>
             <p style="
-                color: {COR_AZUL_PETROLEO};
+                color: rgba(255,255,255,0.7);
                 margin: 0.3rem 0 0 0;
                 font-size: 0.7rem;
                 font-weight: 500;
