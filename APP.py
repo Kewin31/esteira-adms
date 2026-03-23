@@ -1108,27 +1108,51 @@ with st.sidebar:
                     st.error(f"❌ {status}")
 
 # ============================================
-# CONTEÚDO PRINCIPAL
+# HEADER ATUALIZADO - ESTILO MONITORING CENTER
 # ============================================
-
 st.markdown(f"""
-<div class="main-header">
-    <div style="display: flex; align-items: center; justify-content: space-between;">
+<div style="
+    background: {COR_ENERGISA_CINZA_CLARO};
+    padding: 1.2rem 2rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 4px solid {COR_ENERGISA_PRINCIPAL};
+    border-radius: 0;
+">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
         <div>
-            <h1 style="color: white; margin: 0; font-size: 1.8rem; font-weight: 700;">📊 ESTEIRA ADMS</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 0.3rem 0 0 0; font-size: 1rem;">
-            Sistema de Análise de Chamados | SRE
-            </p>
-            <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.9rem;">
-            EMS | EMR | ESS | ESE
+            <h1 style="
+                color: {COR_ENERGISA_PRETO};
+                margin: 0;
+                font-size: 1.5rem;
+                font-weight: 600;
+                letter-spacing: -0.3px;
+            ">
+                📊 ESTEIRA ADMS
+            </h1>
+            <p style="
+                color: {COR_ENERGISA_CINZA_ESCURO};
+                margin: 0.3rem 0 0 0;
+                font-size: 0.85rem;
+                font-weight: 400;
+            ">
+                Acompanhamento de Demandas - EMS | EMR | ESS | ESE
             </p>
         </div>
         <div style="text-align: right;">
-            <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 0.9rem;">
-            Dashboard de Performance
+            <p style="
+                color: {COR_ENERGISA_CINZA_ESCURO};
+                margin: 0;
+                font-size: 0.85rem;
+                font-weight: 500;
+            ">
+                Dashboard de Performance
             </p>
-            <p style="color: rgba(255,255,255,0.7); margin: 0.2rem 0 0 0; font-size: 0.85rem;">
-            v5.5 | Sistema de Performance SRE
+            <p style="
+                color: {COR_ENERGISA_CINZA_ESCURO};
+                margin: 0.2rem 0 0 0;
+                font-size: 0.75rem;
+            ">
+                v5.5 | Sistema de Performance SRE
             </p>
         </div>
     </div>
