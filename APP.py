@@ -14,18 +14,31 @@ import streamlit.components.v1 as components
 warnings.filterwarnings('ignore')
 
 # ============================================
-# PALETA DE CORES ENERGISA
+# PALETA DE CORES - NOVA IDENTIDADE VISUAL
 # ============================================
-COR_ENERGISA_PRINCIPAL = "#0033A0"      # Azul corporativo principal
-COR_ENERGISA_SECUNDARIO = "#0055B0"     # Azul secundário
-COR_ENERGISA_CLARO = "#0073E6"          # Azul claro/efeitos
-COR_ENERGISA_VERDE = "#00A65A"          # Verde para sucesso/positivo
-COR_ENERGISA_VERMELHO = "#DD3B3B"       # Vermelho para alerta/negativo
-COR_ENERGISA_CINZA_CLARO = "#F5F5F5"    # Cinza muito claro para fundos
-COR_ENERGISA_CINZA_MEDIO = "#E0E0E0"    # Cinza médio para bordas
-COR_ENERGISA_CINZA_ESCURO = "#666666"   # Cinza escuro para textos secundários
-COR_ENERGISA_BRANCO = "#FFFFFF"         # Branco para fundos
-COR_ENERGISA_PRETO = "#333333"          # Preto suave para textos principais
+# Cores principais
+COR_VERDE_ESCURO = "#2E7D32"      # Verde escuro - principal
+COR_AZUL_PETROLEO = "#028a9f"     # Azul petróleo - secundário
+COR_AZUL_ESCURO = "#005973"       # Azul escuro - destaque
+COR_LARANJA = "#F57C00"           # Laranja - alertas/positivo
+COR_VERMELHO = "#C62828"          # Vermelho - erros/negativo
+
+# Cores neutras
+COR_CINZA_FUNDO = "#F8F9FA"       # Cinza muito claro para fundos
+COR_CINZA_BORDA = "#E9ECEF"       # Cinza para bordas
+COR_CINZA_TEXTO = "#6C757D"       # Cinza para textos secundários
+COR_BRANCO = "#FFFFFF"            # Branco
+COR_PRETO_SUAVE = "#212529"       # Preto suave para textos principais
+
+# Cores para gráficos
+CORES_GRADIENTE = [
+    COR_VERDE_ESCURO,
+    COR_AZUL_PETROLEO,
+    COR_AZUL_ESCURO,
+    COR_LARANJA,
+    COR_VERMELHO,
+    "#1E88E5"  # Azul adicional
+]
 
 # ============================================
 # VARIÁVEIS GLOBAIS DE CONFIGURAÇÃO
@@ -50,67 +63,61 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS PERSONALIZADO COM CORES ENERGISA
+# CSS PERSONALIZADO - NOVA PALETA
 # ============================================
 st.markdown(f"""
 <style>
-    /* Estilos gerais - Cores Energisa */
-    .main-header {{
-        background: linear-gradient(135deg, {COR_ENERGISA_PRINCIPAL} 0%, {COR_ENERGISA_SECUNDARIO} 100%);
-        padding: 1.5rem;
-        border-radius: 12px;
+    /* Reset e estilos base */
+    .stApp {{
+        background-color: {COR_CINZA_FUNDO};
+    }}
+    
+    /* Main header - estilo Monitoring Center */
+    .main-header-monitoring {{
+        background: {COR_CINZA_FUNDO};
+        padding: 1.2rem 2rem;
         margin-bottom: 1.5rem;
-        color: white;
-        box-shadow: 0 6px 20px rgba(0, 51, 160, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 4px solid {COR_AZUL_ESCURO};
+        border-radius: 0;
     }}
     
-    .metric-card-exec {{
-        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, {COR_ENERGISA_CINZA_CLARO} 100%);
+    /* Cards de métricas */
+    .metric-card {{
+        background: {COR_BRANCO};
         padding: 1.2rem;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border: 1px solid {COR_ENERGISA_CINZA_MEDIO};
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border: 1px solid {COR_CINZA_BORDA};
         margin-bottom: 1rem;
-        transition: transform 0.3s ease;
+        transition: all 0.3s ease;
     }}
     
-    .metric-card-exec:hover {{
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0, 51, 160, 0.12);
+    .metric-card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 89, 115, 0.1);
+        border-color: {COR_AZUL_PETROLEO};
     }}
     
     .metric-value {{
         font-size: 2rem;
         font-weight: 700;
-        color: {COR_ENERGISA_PRINCIPAL};
+        color: {COR_AZUL_ESCURO};
         margin: 0;
-        line-height: 1;
+        line-height: 1.2;
     }}
     
     .metric-label {{
-        font-size: 0.9rem;
-        color: {COR_ENERGISA_CINZA_ESCURO};
+        font-size: 0.85rem;
+        color: {COR_CINZA_TEXTO};
         margin: 0.5rem 0 0 0;
         font-weight: 500;
     }}
     
-    .metric-delta-positive {{
-        color: {COR_ENERGISA_VERDE};
-        font-size: 0.85rem;
-        font-weight: 600;
-    }}
-    
-    .metric-delta-negative {{
-        color: {COR_ENERGISA_VERMELHO};
-        font-size: 0.85rem;
-        font-weight: 600;
-    }}
-    
-    .section-title-exec {{
-        color: {COR_ENERGISA_PRINCIPAL};
-        border-bottom: 3px solid {COR_ENERGISA_PRINCIPAL};
-        padding-bottom: 0.5rem;
+    /* Títulos de seção */
+    .section-title {{
+        color: {COR_AZUL_ESCURO};
+        border-left: 4px solid {COR_VERDE_ESCURO};
+        padding-left: 1rem;
         margin-bottom: 1.5rem;
         font-size: 1.2rem;
         font-weight: 700;
@@ -118,123 +125,146 @@ st.markdown(f"""
         letter-spacing: 0.5px;
     }}
     
-    /* Sidebar com cores Energisa */
+    /* Sidebar */
     [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, {COR_ENERGISA_CINZA_CLARO} 0%, {COR_ENERGISA_CINZA_MEDIO} 100%);
+        background: {COR_BRANCO};
+        border-right: 1px solid {COR_CINZA_BORDA};
     }}
     
     .sidebar-section {{
-        background: {COR_ENERGISA_BRANCO};
+        background: {COR_CINZA_FUNDO};
         padding: 1rem;
-        border-radius: 10px;
+        border-radius: 8px;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid {COR_ENERGISA_CINZA_MEDIO};
+        border: 1px solid {COR_CINZA_BORDA};
     }}
     
     /* Informações da base */
     .info-base {{
-        background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO} 0%, {COR_ENERGISA_CINZA_MEDIO} 100%);
+        background: {COR_CINZA_FUNDO};
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid {COR_ENERGISA_PRINCIPAL};
+        border-left: 4px solid {COR_VERDE_ESCURO};
         margin-bottom: 1.5rem;
     }}
     
     /* Rodapé */
-    .footer-exec {{
+    .footer {{
         text-align: center;
         margin-top: 3rem;
         padding-top: 1.5rem;
-        border-top: 2px solid {COR_ENERGISA_CINZA_MEDIO};
-        color: {COR_ENERGISA_CINZA_ESCURO};
-        font-size: 0.9rem;
-    }}
-    
-    /* Status de SRE */
-    .sre-card {{
-        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, {COR_ENERGISA_CINZA_CLARO} 100%);
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid {COR_ENERGISA_PRINCIPAL};
-        margin-bottom: 0.5rem;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }}
-    
-    .sre-rank {{
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: {COR_ENERGISA_PRINCIPAL};
-        margin-right: 0.5rem;
-    }}
-    
-    .sre-name {{
-        font-weight: 600;
-        color: {COR_ENERGISA_PRETO};
-    }}
-    
-    .sre-stats {{
-        color: {COR_ENERGISA_CINZA_ESCURO};
+        border-top: 2px solid {COR_CINZA_BORDA};
+        color: {COR_CINZA_TEXTO};
         font-size: 0.85rem;
+    }}
+    
+    /* Status cards */
+    .status-success {{
+        background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+        border-left: 4px solid {COR_VERDE_ESCURO};
+        padding: 0.75rem;
+        border-radius: 8px;
+    }}
+    
+    .status-warning {{
+        background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+        border-left: 4px solid {COR_LARANJA};
+        padding: 0.75rem;
+        border-radius: 8px;
+    }}
+    
+    .status-danger {{
+        background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
+        border-left: 4px solid {COR_VERMELHO};
+        padding: 0.75rem;
+        border-radius: 8px;
     }}
     
     /* Cards de performance */
     .performance-card {{
-        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, #f0fff4 100%);
+        background: linear-gradient(135deg, {COR_BRANCO}, #F1F8E9);
         padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid {COR_ENERGISA_VERDE};
+        border-radius: 8px;
+        border-left: 4px solid {COR_VERDE_ESCURO};
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }}
     
     .warning-card {{
-        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, #fff5f5 100%);
+        background: linear-gradient(135deg, {COR_BRANCO}, #FFF3E0);
         padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid {COR_ENERGISA_VERMELHO};
+        border-radius: 8px;
+        border-left: 4px solid {COR_LARANJA};
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }}
+    
+    .alert-card {{
+        background: linear-gradient(135deg, {COR_BRANCO}, #FFEBEE);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_VERMELHO};
+        margin-bottom: 1rem;
     }}
     
     .info-card {{
-        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, #e8f0fe 100%);
+        background: linear-gradient(135deg, {COR_BRANCO}, #E0F7FA);
         padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid {COR_ENERGISA_CLARO};
+        border-radius: 8px;
+        border-left: 4px solid {COR_AZUL_PETROLEO};
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }}
     
-    .trend-up {{
-        color: {COR_ENERGISA_VERDE};
-        font-weight: bold;
+    /* Botões */
+    .stButton > button {{
+        background: {COR_AZUL_ESCURO};
+        color: {COR_BRANCO};
+        border: none;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
     }}
     
-    .trend-down {{
-        color: {COR_ENERGISA_VERMELHO};
-        font-weight: bold;
+    .stButton > button:hover {{
+        background: {COR_AZUL_PETROLEO};
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 89, 115, 0.3);
     }}
     
-    .trend-neutral {{
-        color: {COR_ENERGISA_CINZA_ESCURO};
-        font-weight: bold;
-    }}
-    
-    /* Badges de performance */
-    .sre-performance-badge {{
-        display: inline-block;
+    /* Badges e tags */
+    .badge-success {{
+        background-color: {COR_VERDE_ESCURO};
+        color: {COR_BRANCO};
         padding: 0.25rem 0.75rem;
         border-radius: 20px;
         font-size: 0.75rem;
         font-weight: 600;
-        margin-right: 0.5rem;
     }}
     
-    .badge-excelente {{
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid {COR_ENERGISA_VERDE};
+    .badge-warning {{
+        background-color: {COR_LARANJA};
+        color: {COR_BRANCO};
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }}
+    
+    .badge-danger {{
+        background-color: {COR_VERMELHO};
+        color: {COR_BRANCO};
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }}
+    
+    .badge-info {{
+        background-color: {COR_AZUL_PETROLEO};
+        color: {COR_BRANCO};
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
     }}
     
     /* Quadrantes da matriz */
@@ -247,67 +277,55 @@ st.markdown(f"""
     }}
     
     .quadrant-stars {{
-        background-color: #d4edda;
-        color: #155724;
-        border: 2px solid {COR_ENERGISA_VERDE};
+        background-color: #E8F5E9;
+        color: {COR_VERDE_ESCURO};
+        border: 2px solid {COR_VERDE_ESCURO};
     }}
     
     .quadrant-efficient {{
-        background-color: #fff3cd;
-        color: #856404;
-        border: 2px solid #ffc107;
+        background-color: #FFF3E0;
+        color: {COR_LARANJA};
+        border: 2px solid {COR_LARANJA};
     }}
     
     .quadrant-careful {{
-        background-color: #cce5ff;
-        color: #004085;
-        border: 2px solid {COR_ENERGISA_CLARO};
+        background-color: #E0F7FA;
+        color: {COR_AZUL_PETROLEO};
+        border: 2px solid {COR_AZUL_PETROLEO};
     }}
     
     .quadrant-needs-help {{
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 2px solid {COR_ENERGISA_VERMELHO};
+        background-color: #FFEBEE;
+        color: {COR_VERMELHO};
+        border: 2px solid {COR_VERMELHO};
     }}
     
-    /* Botão do popup */
-    .popup-button {{
-        background: linear-gradient(135deg, {COR_ENERGISA_PRINCIPAL}, {COR_ENERGISA_SECUNDARIO});
-        color: white;
-        border: none;
-        border-radius: 50px;
-        padding: 10px 20px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(0, 51, 160, 0.4);
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    /* Tabelas */
+    .dataframe {{
+        border-collapse: collapse;
+        width: 100%;
     }}
     
-    .popup-button:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 51, 160, 0.6);
+    .dataframe th {{
+        background-color: {COR_AZUL_ESCURO};
+        color: {COR_BRANCO};
+        padding: 10px;
+        text-align: left;
     }}
     
-    /* Status box */
-    .status-box {{
-        padding: 0.75rem;
-        border-radius: 8px;
-        margin: 0.5rem 0;
+    .dataframe td {{
+        padding: 8px;
+        border-bottom: 1px solid {COR_CINZA_BORDA};
     }}
     
-    .status-success {{
-        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-        border-left: 4px solid {COR_ENERGISA_VERDE};
+    .dataframe tr:hover {{
+        background-color: {COR_CINZA_FUNDO};
     }}
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# FUNÇÕES AUXILIARES (mantidas iguais)
+# FUNÇÕES AUXILIARES
 # ============================================
 def formatar_nome_responsavel(nome):
     """Formata nomes dos responsáveis"""
@@ -349,10 +367,10 @@ def criar_card_indicador_simples(valor, label, icone="📊"):
         valor_formatado = str(valor)
     
     return f'''
-    <div class="metric-card-exec">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-            <span style="font-size: 1.5rem;">{icone}</span>
-            <div style="flex-grow: 1;">
+    <div class="metric-card">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 1.8rem;">{icone}</span>
+            <div>
                 <div class="metric-value">{valor_formatado}</div>
                 <div class="metric-label">{label}</div>
             </div>
@@ -570,154 +588,139 @@ def criar_popup_indicadores(df):
         texto_principal = f"✅ **SRE VALIDOU {cards_validados} CARDS SEM RETORNO DE ERRO!**"
         subtexto = f"Performance excepcional em {nome_mes_pt} - 100% de aprovação direta"
         emoji_titulo = "🎯"
-        cor_destaque = COR_ENERGISA_VERDE
+        cor_destaque = COR_VERDE_ESCURO
     elif taxa_erro <= 5:
         texto_principal = f"⚡ **SRE VALIDOU {cards_validados} CARDS COM APENAS {cards_com_erro} AJUSTES**"
         subtexto = f"Alta qualidade no mês de {nome_mes_pt} - Taxa de erro de apenas {taxa_erro:.1f}%"
         emoji_titulo = "🚀"
-        cor_destaque = COR_ENERGISA_CLARO
+        cor_destaque = COR_AZUL_PETROLEO
     else:
         texto_principal = f"📊 **SRE VALIDOU {cards_validados} CARDS, {cards_com_erro} COM RETORNO**"
         subtexto = f"Análise de {nome_mes_pt} - {taxa_sucesso:.1f}% de taxa de sucesso"
         emoji_titulo = "📈"
-        cor_destaque = "#ffc107"
+        cor_destaque = COR_LARANJA
     
     popup_html = f'''
     <div id="popupOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                 background: rgba(0, 0, 0, 0.7); z-index: 10000; display: flex; 
                 justify-content: center; align-items: center; backdrop-filter: blur(3px);">
-        <div style="background: white; width: 90%; max-width: 900px; max-height: 90vh;
-                    border-radius: 20px; padding: 0; overflow: hidden; 
-                    box-shadow: 0 25px 50px rgba(0,0,0,0.5); animation: slideIn 0.3s ease-out;">
+        <div style="background: {COR_BRANCO}; width: 90%; max-width: 900px; max-height: 90vh;
+                    border-radius: 12px; padding: 0; overflow: hidden; 
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out;">
             
-            <div style="background: linear-gradient(135deg, {COR_ENERGISA_PRINCIPAL}, {COR_ENERGISA_SECUNDARIO}); 
-                        padding: 1.5rem 2rem; color: white;">
+            <div style="background: linear-gradient(135deg, {COR_AZUL_ESCURO}, {COR_AZUL_PETROLEO}); 
+                        padding: 1.5rem 2rem; color: {COR_BRANCO};">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h2 style="margin: 0; font-size: 1.8rem;">{emoji_titulo} MANCHETE DO MÊS</h2>
-                        <p style="margin: 0.3rem 0 0 0; opacity: 0.9; font-size: 1rem;">
+                        <h2 style="margin: 0; font-size: 1.6rem;">{emoji_titulo} MANCHETE DO MÊS</h2>
+                        <p style="margin: 0.3rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">
                         {nome_mes_pt} {ano_atual} | Resumo Executivo
                         </p>
                     </div>
                     <button onclick="document.getElementById('popupOverlay').style.display='none'" 
-                            style="background: rgba(255,255,255,0.2); color: white; 
-                                   border: none; width: 40px; height: 40px; 
-                                   border-radius: 50%; font-size: 1.5rem; 
-                                   cursor: pointer; display: flex; align-items: center; 
-                                   justify-content: center;">×</button>
+                            style="background: rgba(255,255,255,0.2); color: {COR_BRANCO}; 
+                                   border: none; width: 36px; height: 36px; 
+                                   border-radius: 50%; font-size: 1.3rem; 
+                                   cursor: pointer;">×</button>
                 </div>
             </div>
             
             <div style="padding: 2rem;">
-                <div style="background: {cor_destaque}15; padding: 1.5rem; border-radius: 10px; 
-                            border-left: 5px solid {cor_destaque}; margin-bottom: 2rem;">
-                    <h3 style="color: {COR_ENERGISA_PRETO}; margin: 0 0 0.5rem 0;">{texto_principal}</h3>
-                    <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0; font-size: 1rem;">{subtexto}</p>
+                <div style="background: {cor_destaque}10; padding: 1.5rem; border-radius: 8px; 
+                            border-left: 4px solid {cor_destaque}; margin-bottom: 2rem;">
+                    <h3 style="color: {COR_PRETO_SUAVE}; margin: 0 0 0.5rem 0; font-size: 1.1rem;">{texto_principal}</h3>
+                    <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.9rem;">{subtexto}</p>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
-                    <div style="background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO}, {COR_ENERGISA_CINZA_MEDIO}); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {COR_ENERGISA_PRINCIPAL};">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: {COR_ENERGISA_PRINCIPAL}; color: white; width: 50px; height: 50px; 
-                                        border-radius: 10px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.5rem;">📋</div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem;">
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_ESCURO};">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
+                                        border-radius: 8px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.3rem;">📋</div>
                             <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: {COR_ENERGISA_PRINCIPAL};">
+                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_ESCURO};">
                                     {total_cards_mes}
                                 </div>
-                                <div style="color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">TOTAL DE CARDS</div>
+                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">TOTAL DE CARDS</div>
                             </div>
                         </div>
-                        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                        Criados no mês de {nome_mes_pt}
-                        </p>
                     </div>
                     
-                    <div style="background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO}, {COR_ENERGISA_CINZA_MEDIO}); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {COR_ENERGISA_VERDE};">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: {COR_ENERGISA_VERDE}; color: white; width: 50px; height: 50px; 
-                                        border-radius: 10px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.5rem;">✅</div>
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERDE_ESCURO};">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
+                                        border-radius: 8px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.3rem;">✅</div>
                             <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: {COR_ENERGISA_VERDE};">
+                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_VERDE_ESCURO};">
                                     {cards_validados}
                                 </div>
-                                <div style="color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">VALIDADOS PELO SRE</div>
+                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">VALIDADOS PELO SRE</div>
                             </div>
                         </div>
-                        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        <p style="color: {COR_CINZA_TEXTO}; margin: 0.5rem 0 0 0; font-size: 0.75rem;">
                         {variacao:+.1f}% vs mês anterior
                         </p>
                     </div>
                     
-                    <div style="background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO}, {COR_ENERGISA_CINZA_MEDIO}); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {COR_ENERGISA_CLARO};">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: {COR_ENERGISA_CLARO}; color: white; width: 50px; height: 50px; 
-                                        border-radius: 10px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.5rem;">🎯</div>
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_PETROLEO};">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: {COR_AZUL_PETROLEO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
+                                        border-radius: 8px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.3rem;">🎯</div>
                             <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: {COR_ENERGISA_CLARO};">
+                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_PETROLEO};">
                                     {cards_sem_erro}
                                 </div>
-                                <div style="color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">SEM RETORNO DE ERRO</div>
+                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">SEM RETORNO DE ERRO</div>
                             </div>
                         </div>
-                        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                        Aprovação direta na primeira validação
-                        </p>
                     </div>
                     
-                    <div style="background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO}, {COR_ENERGISA_CINZA_MEDIO}); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {'#dc3545' if cards_com_erro > 0 else COR_ENERGISA_CINZA_ESCURO}">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: {'#dc3545' if cards_com_erro > 0 else COR_ENERGISA_CINZA_ESCURO}; 
-                                        color: white; width: 50px; height: 50px; 
-                                        border-radius: 10px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.5rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO};">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO}; 
+                                        color: {COR_BRANCO}; width: 45px; height: 45px; 
+                                        border-radius: 8px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.3rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
                             <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; 
-                                            color: {'#dc3545' if cards_com_erro > 0 else COR_ENERGISA_CINZA_ESCURO}">
+                                <div style="font-size: 1.8rem; font-weight: 700; 
+                                            color: {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO}">
                                     {cards_com_erro}
                                 </div>
-                                <div style="color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">COM RETORNO DE ERRO</div>
+                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">COM RETORNO DE ERRO</div>
                             </div>
                         </div>
-                        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                        {taxa_erro:.1f}% dos cards validados
-                        </p>
                     </div>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
-                    <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 1.5rem; border-radius: 10px;">
-                        <h4 style="color: {COR_ENERGISA_PRETO}; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
-                        <div style="height: 200px; display: flex; align-items: end; gap: 20px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1rem; border-radius: 8px;">
+                        <h4 style="color: {COR_PRETO_SUAVE}; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
+                        <div style="height: 180px; display: flex; align-items: end; gap: 20px;">
                             <div style="text-align: center; flex: 1;">
-                                <div style="background: {COR_ENERGISA_CINZA_ESCURO}; height: {max(10, min(100, cards_validados_anterior/5))}px; 
-                                            border-radius: 5px 5px 0 0;"></div>
-                                <div style="margin-top: 10px; font-size: 0.9rem; color: {COR_ENERGISA_CINZA_ESCURO};">
+                                <div style="background: {COR_CINZA_TEXTO}; height: {max(10, min(100, cards_validados_anterior/5))}px; 
+                                            border-radius: 4px 4px 0 0;"></div>
+                                <div style="margin-top: 8px; font-size: 0.8rem; color: {COR_CINZA_TEXTO};">
                                     {mes_anterior:02d}/{ano_anterior}
                                 </div>
-                                <div style="font-weight: bold; color: {COR_ENERGISA_PRETO};">{cards_validados_anterior}</div>
+                                <div style="font-weight: bold; color: {COR_PRETO_SUAVE};">{cards_validados_anterior}</div>
                             </div>
                             <div style="text-align: center; flex: 1;">
-                                <div style="background: {COR_ENERGISA_VERDE}; height: {max(10, min(100, cards_validados/5))}px; 
-                                            border-radius: 5px 5px 0 0;"></div>
-                                <div style="margin-top: 10px; font-size: 0.9rem; color: {COR_ENERGISA_CINZA_ESCURO};">
+                                <div style="background: {COR_VERDE_ESCURO}; height: {max(10, min(100, cards_validados/5))}px; 
+                                            border-radius: 4px 4px 0 0;"></div>
+                                <div style="margin-top: 8px; font-size: 0.8rem; color: {COR_CINZA_TEXTO};">
                                     {mes_atual:02d}/{ano_atual}
                                 </div>
-                                <div style="font-weight: bold; color: {COR_ENERGISA_PRETO};">{cards_validados}</div>
+                                <div style="font-weight: bold; color: {COR_PRETO_SUAVE};">{cards_validados}</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div style="background: linear-gradient(135deg, #fff8e1, #fff3cd); 
-                                padding: 1.5rem; border-radius: 10px; border-left: 5px solid #ffc107;">
-                        <h4 style="color: #856404; margin: 0 0 1rem 0;">💡 INSIGHTS</h4>
-                        <ul style="color: #856404; padding-left: 1.2rem; margin: 0;">
+                    <div style="background: #FFF8E1; padding: 1rem; border-radius: 8px; border-left: 4px solid {COR_LARANJA};">
+                        <h4 style="color: {COR_LARANJA}; margin: 0 0 0.8rem 0;">💡 INSIGHTS</h4>
+                        <ul style="color: {COR_CINZA_TEXTO}; padding-left: 1.2rem; margin: 0; font-size: 0.85rem;">
                             <li style="margin-bottom: 0.5rem;">
                                 {f"🎉 Recorde de validações!" if variacao > 20 else "📊 Performance consistente"}
                             </li>
@@ -732,15 +735,15 @@ def criar_popup_indicadores(df):
                 </div>
             </div>
             
-            <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 1rem 2rem; border-top: 1px solid {COR_ENERGISA_CINZA_MEDIO};">
+            <div style="background: {COR_CINZA_FUNDO}; padding: 1rem 2rem; border-top: 1px solid {COR_CINZA_BORDA};">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0; font-size: 0.9rem;">
+                    <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.8rem;">
                     📅 Atualizado em {hoje.strftime('%d/%m/%Y %H:%M')}
                     </p>
                     <button onclick="document.getElementById('popupOverlay').style.display='none'"
-                            style="background: {COR_ENERGISA_CINZA_ESCURO}; color: white; border: none; 
-                                   padding: 0.5rem 1.5rem; border-radius: 5px; 
-                                   cursor: pointer; font-weight: 600;">
+                            style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; border: none; 
+                                   padding: 0.5rem 1.2rem; border-radius: 6px; 
+                                   cursor: pointer; font-weight: 500;">
                         Fechar
                     </button>
                 </div>
@@ -750,7 +753,7 @@ def criar_popup_indicadores(df):
     
     <style>
     @keyframes slideIn {{
-        from {{ transform: translateY(-50px); opacity: 0; }}
+        from {{ transform: translateY(-30px); opacity: 0; }}
         to {{ transform: translateY(0); opacity: 1; }}
     }}
     </style>
@@ -842,8 +845,8 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
 with st.sidebar:
     st.markdown(f"""
     <div style="text-align: center; padding: 1rem 0;">
-        <h3 style="color: {COR_ENERGISA_PRINCIPAL}; margin: 0;">⚙️ Painel de Controle</h3>
-        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0; font-size: 0.9rem;">Filtros e Configurações</p>
+        <h3 style="color: {COR_AZUL_ESCURO}; margin: 0;">⚙️ Painel de Controle</h3>
+        <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.85rem;">Filtros e Configurações</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -963,10 +966,10 @@ with st.sidebar:
                 ultima_mod = datetime.fromtimestamp(os.path.getmtime(arquivo_atual))
                 
                 st.markdown(f"""
-                <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
                     <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
-                    <p style="margin: 0; font-size: 0.9rem; color: {COR_ENERGISA_PRETO};">{os.path.basename(arquivo_atual)}</p>
-                    <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: {COR_ENERGISA_CINZA_ESCURO};">
+                    <p style="margin: 0; font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{os.path.basename(arquivo_atual)}</p>
+                    <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: {COR_CINZA_TEXTO};">
                     📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
                     </p>
                 </div>
@@ -1034,7 +1037,7 @@ with st.sidebar:
         if st.session_state.df_original is not None:
             ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
             st.markdown(f"""
-            <div class="status-box status-success">
+            <div class="status-success">
                 <strong>📊 Status atual:</strong><br>
                 <small>Registros: {len(st.session_state.df_original):,}</small><br>
                 <small>Atualizado: {ultima_atualizacao}</small>
@@ -1108,39 +1111,32 @@ with st.sidebar:
                     st.error(f"❌ {status}")
 
 # ============================================
-# HEADER ATUALIZADO - ESTILO MONITORING CENTER
+# HEADER - ESTILO MONITORING CENTER
 # ============================================
 st.markdown(f"""
-<div style="
-    background: {COR_ENERGISA_CINZA_CLARO};
-    padding: 1.2rem 2rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 4px solid {COR_ENERGISA_PRINCIPAL};
-    border-radius: 0;
-">
+<div class="main-header-monitoring">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
         <div>
             <h1 style="
-                color: {COR_ENERGISA_PRETO};
+                color: {COR_AZUL_ESCURO};
                 margin: 0;
-                font-size: 1.5rem;
+                font-size: 1.4rem;
                 font-weight: 600;
                 letter-spacing: -0.3px;
             ">
                 📊 ESTEIRA ADMS
             </h1>
             <p style="
-                color: {COR_ENERGISA_CINZA_ESCURO};
+                color: {COR_CINZA_TEXTO};
                 margin: 0.3rem 0 0 0;
                 font-size: 0.85rem;
-                font-weight: 400;
             ">
                 Acompanhamento de Demandas - EMS | EMR | ESS | ESE
             </p>
         </div>
         <div style="text-align: right;">
             <p style="
-                color: {COR_ENERGISA_CINZA_ESCURO};
+                color: {COR_CINZA_TEXTO};
                 margin: 0;
                 font-size: 0.85rem;
                 font-weight: 500;
@@ -1148,25 +1144,31 @@ st.markdown(f"""
                 Dashboard de Performance
             </p>
             <p style="
-                color: {COR_ENERGISA_CINZA_ESCURO};
+                color: {COR_CINZA_TEXTO};
                 margin: 0.2rem 0 0 0;
-                font-size: 0.75rem;
+                font-size: 0.7rem;
             ">
                 v5.5 | Sistema de Performance SRE
+            </p>
+            <p style="
+                color: {COR_AZUL_PETROLEO};
+                margin: 0.3rem 0 0 0;
+                font-size: 0.7rem;
+                font-weight: 500;
+            ">
+                {datetime.now().strftime('%d/%m/%Y')}
             </p>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
+# ============================================
+# BOTÃO MANCHETE E DASHBOARD PRINCIPAL
+# ============================================
 if st.session_state.df_original is not None:
     if 'show_popup' not in st.session_state:
         st.session_state.show_popup = False
-    
-    st.markdown("""
-    <div style="display: flex; justify-content: flex-end; margin: -50px 0 20px 0;">
-    </div>
-    """, unsafe_allow_html=True)
     
     col_espaco, col_botao = st.columns([10, 2])
     
@@ -1349,7 +1351,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 x=periodos,
                 y=cards_totais,
                 name='Total Cards',
-                marker_color=COR_ENERGISA_PRINCIPAL,
+                marker_color=COR_AZUL_ESCURO,
                 text=cards_totais,
                 textposition='outside',
                 textfont=dict(size=10),
@@ -1360,7 +1362,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 x=periodos,
                 y=cards_validados,
                 name='Validados',
-                marker_color=COR_ENERGISA_VERDE,
+                marker_color=COR_VERDE_ESCURO,
                 text=cards_validados,
                 textposition='outside',
                 textfont=dict(size=10),
@@ -1373,8 +1375,8 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 name='Taxa Sucesso',
                 yaxis='y2',
                 mode='lines+markers+text',
-                line=dict(color=COR_ENERGISA_VERMELHO, width=2),
-                marker=dict(size=8, color=COR_ENERGISA_VERMELHO),
+                line=dict(color=COR_LARANJA, width=2),
+                marker=dict(size=8, color=COR_LARANJA),
                 text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
                 textposition='top center',
                 textfont=dict(size=9)
@@ -1400,7 +1402,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 ),
                 height=300,
                 showlegend=True,
-                plot_bgcolor='white',
+                plot_bgcolor=COR_BRANCO,
                 margin=dict(l=50, r=50, t=50, b=50),
                 legend=dict(
                     orientation="h",
@@ -1559,26 +1561,24 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         st.markdown("---")
         
         st.markdown(f"""
-        <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 1.5rem; border-radius: 10px; border: 1px solid {COR_ENERGISA_CINZA_MEDIO};">
+        <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border: 1px solid {COR_CINZA_BORDA};">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <p style="margin: 0; color: {COR_ENERGISA_PRETO}; font-weight: 600;">Ações disponíveis</p>
-                    <p style="margin: 0.3rem 0 0 0; color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">
+                    <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 600;">Ações disponíveis</p>
+                    <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.85rem;">
                     Exporte o relatório completo ou feche a manchete
                     </p>
                 </div>
-                <div style="display: flex; gap: 1rem;">
+                <div style="display: flex; gap: 0.8rem;">
                     <button onclick="document.getElementById('exportBtn').click()" 
-                            style="background: linear-gradient(135deg, {COR_ENERGISA_VERDE}, {COR_ENERGISA_VERDE}); 
-                                   color: white; border: none; padding: 0.7rem 1.5rem; 
-                                   border-radius: 5px; cursor: pointer; font-weight: 600;
-                                   display: flex; align-items: center; gap: 8px;">
+                            style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; border: none; padding: 0.6rem 1.2rem; 
+                                   border-radius: 6px; cursor: pointer; font-weight: 500;">
                         📥 Exportar PDF
                     </button>
                     <button onclick="document.getElementById('closeBtn').click()" 
-                            style="background: {COR_ENERGISA_CINZA_ESCURO}; color: white; border: none; 
-                                   padding: 0.7rem 1.5rem; border-radius: 5px; 
-                                   cursor: pointer; font-weight: 600; opacity: 0.9;">
+                            style="background: {COR_CINZA_TEXTO}; color: {COR_BRANCO}; border: none; 
+                                   padding: 0.6rem 1.2rem; border-radius: 6px; 
+                                   cursor: pointer; font-weight: 500;">
                         ✕ Fechar
                     </button>
                 </div>
@@ -1612,11 +1612,10 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 st.rerun()
         
         st.markdown(f"""
-        <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 1rem; border-radius: 5px; margin-top: 1rem;">
+        <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 6px; margin-top: 1rem;">
             <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
             <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
-            <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small><br>
-            <small>👤 <strong>Gerado por:</strong> Sistema Esteira ADMS</small>
+            <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1635,7 +1634,7 @@ if st.session_state.df_original is not None:
         st.markdown(f"""
         <div class="info-base">
             <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
-            <p style="margin: 0.3rem 0 0 0; color: {COR_ENERGISA_CINZA_ESCURO};">
+            <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO};">
             Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
             Total de registros: {len(df):,}
             </p>
@@ -1685,7 +1684,7 @@ if st.session_state.df_original is not None:
         col_titulo, col_seletor = st.columns([3, 1])
         
         with col_titulo:
-            st.markdown(f'<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="section-title">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
         
         with col_seletor:
             if 'Ano' in df.columns:
@@ -1724,18 +1723,18 @@ if st.session_state.df_original is not None:
                     y=demandas_completas['Quantidade'],
                     mode='lines+markers+text',
                     name='Demandas',
-                    line=dict(color=COR_ENERGISA_PRINCIPAL, width=3),
-                    marker=dict(size=10, color=COR_ENERGISA_SECUNDARIO),
+                    line=dict(color=COR_AZUL_ESCURO, width=3),
+                    marker=dict(size=10, color=COR_AZUL_PETROLEO),
                     text=demandas_completas['Quantidade'],
                     textposition='top center',
-                    textfont=dict(size=12, color=COR_ENERGISA_PRINCIPAL)
+                    textfont=dict(size=12, color=COR_AZUL_ESCURO)
                 ))
                 
                 fig_mes.update_layout(
                     title=f"Demandas em {ano_selecionado}",
                     xaxis_title="Mês",
                     yaxis_title="Número de Demandas",
-                    plot_bgcolor='white',
+                    plot_bgcolor=COR_BRANCO,
                     height=450,
                     showlegend=False,
                     margin=dict(t=50, b=50, l=50, r=50),
@@ -1757,9 +1756,9 @@ if st.session_state.df_original is not None:
                     xref="paper", yref="paper",
                     text=f"Total no ano: {total_ano:,} demandas",
                     showarrow=False,
-                    font=dict(size=12, color=COR_ENERGISA_PRINCIPAL, weight="bold"),
+                    font=dict(size=12, color=COR_AZUL_ESCURO, weight="bold"),
                     bgcolor="rgba(255,255,255,0.9)",
-                    bordercolor=COR_ENERGISA_PRINCIPAL,
+                    bordercolor=COR_AZUL_ESCURO,
                     borderwidth=1,
                     borderpad=4
                 )
@@ -1780,7 +1779,7 @@ if st.session_state.df_original is not None:
                     st.metric("📊 Média mensal", f"{media_mensal:,}")
     
     with tab2:
-        st.markdown(f'<div class="section-title-exec">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
         
         col_rev_filtro1, col_rev_filtro2 = st.columns(2)
         
@@ -1843,12 +1842,12 @@ if st.session_state.df_original is not None:
                 colors = []
                 for valor in revisoes_por_responsavel['Total_Revisões']:
                     if max_revisoes == min_revisoes:
-                        colors.append(COR_ENERGISA_VERMELHO)
+                        colors.append(COR_VERMELHO)
                     else:
                         normalized = (valor - min_revisoes) / (max_revisoes - min_revisoes)
-                        red = int(221 * normalized + 40 * (1 - normalized))
-                        green = int(59 * normalized + 167 * (1 - normalized))
-                        blue = int(59 * normalized + 69 * (1 - normalized))
+                        red = int(198 * normalized + 40 * (1 - normalized))
+                        green = int(40 * normalized + 167 * (1 - normalized))
+                        blue = int(40 * normalized + 69 * (1 - normalized))
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_revisoes.add_trace(go.Bar(
@@ -1858,7 +1857,7 @@ if st.session_state.df_original is not None:
                     text=revisoes_por_responsavel['Total_Revisões'].head(15),
                     textposition='outside',
                     marker_color=colors[:15],
-                    marker_line_color=COR_ENERGISA_PRETO,
+                    marker_line_color=COR_PRETO_SUAVE,
                     marker_line_width=1.5,
                     opacity=0.8
                 ))
@@ -1867,7 +1866,7 @@ if st.session_state.df_original is not None:
                     title=titulo_rev,
                     xaxis_title='Responsável',
                     yaxis_title='Total de Revisões',
-                    plot_bgcolor='white',
+                    plot_bgcolor=COR_BRANCO,
                     height=500,
                     showlegend=False,
                     margin=dict(t=50, b=100, l=50, r=50),
@@ -1883,7 +1882,7 @@ if st.session_state.df_original is not None:
                 st.plotly_chart(fig_revisoes, use_container_width=True)
     
     with tab3:
-        st.markdown(f'<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title">📈 CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA</div>', unsafe_allow_html=True)
         
         col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
         
@@ -2074,12 +2073,12 @@ if st.session_state.df_original is not None:
                 colors = []
                 for valor in sinc_por_dia_recente['Quantidade']:
                     if max_quant == min_quant:
-                        colors.append(COR_ENERGISA_PRINCIPAL)
+                        colors.append(COR_AZUL_ESCURO)
                     else:
                         normalized = (valor - min_quant) / (max_quant - min_quant)
                         red = int(0 * normalized + 0 * (1 - normalized))
-                        green = int(51 * normalized + 51 * (1 - normalized))
-                        blue = int(160 * normalized + 160 * (1 - normalized))
+                        green = int(89 * normalized + 89 * (1 - normalized))
+                        blue = int(115 * normalized + 115 * (1 - normalized))
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_dias.add_trace(go.Bar(
@@ -2089,7 +2088,7 @@ if st.session_state.df_original is not None:
                     text=sinc_por_dia_recente['Quantidade'],
                     textposition='outside',
                     marker_color=colors,
-                    marker_line_color=COR_ENERGISA_SECUNDARIO,
+                    marker_line_color=COR_AZUL_PETROLEO,
                     marker_line_width=1.5,
                     opacity=0.8
                 ))
@@ -2099,7 +2098,7 @@ if st.session_state.df_original is not None:
                     xaxis_title='Data (Dia/Mês)',
                     yaxis_title='Quantidade de Sincronizações',
                     height=400,
-                    plot_bgcolor='white',
+                    plot_bgcolor=COR_BRANCO,
                     showlegend=False,
                     margin=dict(t=50, b=50, l=50, r=50),
                     xaxis=dict(
@@ -2232,7 +2231,7 @@ if st.session_state.df_original is not None:
                         st.markdown("**📊 Distribuição por Tipo:**")
                         for idx, row in tipo_dist.head(5).iterrows():
                             st.markdown(f"""
-                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_ENERGISA_CINZA_CLARO}; border-radius: 5px;">
+                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_CINZA_FUNDO}; border-radius: 5px;">
                                 <strong>{row['Tipo']}</strong><br>
                                 <small>{row['Quantidade']} ({row['Percentual']}%)</small>
                             </div>
@@ -2293,7 +2292,7 @@ if st.session_state.df_original is not None:
                         for idx, row in empresa_rank.head(5).iterrows():
                             medal = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][idx]
                             st.markdown(f"""
-                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_ENERGISA_CINZA_CLARO}; border-radius: 5px; border-left: 4px solid #{COR_ENERGISA_PRINCIPAL if idx==0 else COR_ENERGISA_VERDE if idx==1 else 'ffc107' if idx==2 else COR_ENERGISA_CINZA_ESCURO}">
+                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_CINZA_FUNDO}; border-radius: 5px; border-left: 4px solid {COR_AZUL_ESCURO if idx==0 else COR_VERDE_ESCURO if idx==1 else COR_LARANJA if idx==2 else COR_CINZA_TEXTO}">
                                 <strong>{medal} {row['Empresa']}</strong><br>
                                 <small>{row['Quantidade']} ({row['Percentual']}%)</small>
                             </div>
@@ -2305,7 +2304,7 @@ if st.session_state.df_original is not None:
             st.info("ℹ️ Selecione filtros para visualizar os dados de sincronização por dia.")
     
     with tab4:
-        st.markdown(f'<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
         
         if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
             col_filtro1, col_filtro2 = st.columns(2)
@@ -2377,12 +2376,12 @@ if st.session_state.df_original is not None:
                 colors = []
                 for valor in sinc_por_sre_nome['Sincronizados']:
                     if max_sinc == min_sinc:
-                        colors.append(COR_ENERGISA_PRINCIPAL)
+                        colors.append(COR_AZUL_ESCURO)
                     else:
                         normalized = (valor - min_sinc) / (max_sinc - min_sinc)
                         red = int(0 * normalized + 0 * (1 - normalized))
-                        green = int(51 * normalized + 51 * (1 - normalized))
-                        blue = int(160 * normalized + 160 * (1 - normalized))
+                        green = int(89 * normalized + 89 * (1 - normalized))
+                        blue = int(115 * normalized + 115 * (1 - normalized))
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_sinc_bar.add_trace(go.Bar(
@@ -2392,7 +2391,7 @@ if st.session_state.df_original is not None:
                     text=sinc_por_sre_nome['Sincronizados'].head(15),
                     textposition='outside',
                     marker_color=colors[:15],
-                    marker_line_color=COR_ENERGISA_SECUNDARIO,
+                    marker_line_color=COR_AZUL_PETROLEO,
                     marker_line_width=1.5,
                     opacity=0.8
                 ))
@@ -2417,7 +2416,7 @@ if st.session_state.df_original is not None:
                     title=titulo_grafico,
                     xaxis_title='SRE',
                     yaxis_title='Número de Sincronizados',
-                    plot_bgcolor='white',
+                    plot_bgcolor=COR_BRANCO,
                     height=500,
                     showlegend=False,
                     margin=dict(t=50, b=100, l=50, r=50),
@@ -2505,7 +2504,7 @@ if st.session_state.df_original is not None:
                     )
     
     st.markdown("---")
-    st.markdown(f'<div class="section-title-exec">🔍 ANÁLISES AVANÇADAS</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title">🔍 ANÁLISES AVANÇADAS</div>', unsafe_allow_html=True)
     
     tab_extra1, tab_extra2, tab_extra3 = st.tabs([
         "🚀 Performance de Desenvolvedores",
@@ -2697,7 +2696,7 @@ if st.session_state.df_original is not None:
                             y=media_qualidade + (matriz_filtrada['Qualidade'].max() - media_qualidade) * 0.5,
                             text="⭐ Estrelas",
                             showarrow=False,
-                            font=dict(size=12, color=COR_ENERGISA_VERDE)
+                            font=dict(size=12, color=COR_VERDE_ESCURO)
                         )
                         
                         fig_matriz.add_annotation(
@@ -2705,7 +2704,7 @@ if st.session_state.df_original is not None:
                             y=media_qualidade - (media_qualidade - matriz_filtrada['Qualidade'].min()) * 0.5,
                             text="⚡ Eficientes",
                             showarrow=False,
-                            font=dict(size=12, color="#ffc107")
+                            font=dict(size=12, color=COR_LARANJA)
                         )
                         
                         fig_matriz.add_annotation(
@@ -2713,7 +2712,7 @@ if st.session_state.df_original is not None:
                             y=media_qualidade + (matriz_filtrada['Qualidade'].max() - media_qualidade) * 0.5,
                             text="🎯 Cuidadosos",
                             showarrow=False,
-                            font=dict(size=12, color=COR_ENERGISA_CLARO)
+                            font=dict(size=12, color=COR_AZUL_PETROLEO)
                         )
                         
                         fig_matriz.add_annotation(
@@ -2721,7 +2720,7 @@ if st.session_state.df_original is not None:
                             y=media_qualidade - (media_qualidade - matriz_filtrada['Qualidade'].min()) * 0.5,
                             text="🔄 Necessita Apoio",
                             showarrow=False,
-                            font=dict(size=12, color=COR_ENERGISA_VERMELHO)
+                            font=dict(size=12, color=COR_VERMELHO)
                         )
                         
                         fig_matriz.update_layout(
@@ -2934,7 +2933,7 @@ if st.session_state.df_original is not None:
                     x=dados_dia['Dia'],
                     y=dados_dia['Total_Demandas'],
                     name='Total Demandas',
-                    marker_color=COR_ENERGISA_PRINCIPAL,
+                    marker_color=COR_AZUL_ESCURO,
                     text=dados_dia['Total_Demandas'],
                     textposition='auto'
                 ))
@@ -2943,7 +2942,7 @@ if st.session_state.df_original is not None:
                     x=dados_dia['Dia'],
                     y=dados_dia['Sincronizados'],
                     name='Sincronizados',
-                    marker_color=COR_ENERGISA_VERDE,
+                    marker_color=COR_VERDE_ESCURO,
                     text=dados_dia['Sincronizados'],
                     textposition='auto'
                 ))
@@ -2954,7 +2953,7 @@ if st.session_state.df_original is not None:
                     name='Taxa Sinc (%)',
                     yaxis='y2',
                     mode='lines+markers',
-                    line=dict(color=COR_ENERGISA_VERMELHO, width=3),
+                    line=dict(color=COR_LARANJA, width=3),
                     marker=dict(size=8)
                 ))
                 
@@ -3040,7 +3039,7 @@ if st.session_state.df_original is not None:
                     y=dados_hora['Total_Demandas'],
                     name='Total Demandas',
                     mode='lines+markers',
-                    line=dict(color=COR_ENERGISA_PRINCIPAL, width=3),
+                    line=dict(color=COR_AZUL_ESCURO, width=3),
                     marker=dict(size=8)
                 ))
                 
@@ -3049,7 +3048,7 @@ if st.session_state.df_original is not None:
                     y=dados_hora['Sincronizados'],
                     name='Sincronizados',
                     mode='lines+markers',
-                    line=dict(color=COR_ENERGISA_VERDE, width=3),
+                    line=dict(color=COR_VERDE_ESCURO, width=3),
                     marker=dict(size=8)
                 ))
                 
@@ -3233,7 +3232,7 @@ if st.session_state.df_original is not None:
                     x=dados_mes['Mês'],
                     y=dados_mes['Total'],
                     name='Total Demandas',
-                    marker_color=COR_ENERGISA_PRINCIPAL,
+                    marker_color=COR_AZUL_ESCURO,
                     text=dados_mes['Total'],
                     textposition='auto'
                 ))
@@ -3242,7 +3241,7 @@ if st.session_state.df_original is not None:
                     x=dados_mes['Mês'],
                     y=dados_mes['Sincronizados'],
                     name='Sincronizados',
-                    marker_color=COR_ENERGISA_VERDE,
+                    marker_color=COR_VERDE_ESCURO,
                     text=dados_mes['Sincronizados'],
                     textposition='auto'
                 ))
@@ -3253,7 +3252,7 @@ if st.session_state.df_original is not None:
                     name='Taxa Sinc (%)',
                     yaxis='y2',
                     mode='lines+markers',
-                    line=dict(color=COR_ENERGISA_VERMELHO, width=3),
+                    line=dict(color=COR_LARANJA, width=3),
                     marker=dict(size=8)
                 ))
                 
@@ -3643,7 +3642,7 @@ if st.session_state.df_original is not None:
                             <div style="display: flex; justify-content: space-between; align-items: start;">
                                 <div>
                                     <strong style="font-size: 1.1rem;">{row['Prioridade']} - {row['Recomendação']}</strong><br>
-                                    <small style="color: {COR_ENERGISA_CINZA_ESCURO};">{row['Justificativa']}</small>
+                                    <small style="color: {COR_CINZA_TEXTO};">{row['Justificativa']}</small>
                                 </div>
                             </div>
                         </div>
@@ -3661,7 +3660,7 @@ if st.session_state.df_original is not None:
                     
                     for acao in acoes:
                         st.markdown(f"""
-                        <div style="padding: 10px; margin-bottom: 8px; background: {COR_ENERGISA_CINZA_CLARO}; border-radius: 5px; border-left: 3px solid {COR_ENERGISA_PRINCIPAL};">
+                        <div style="padding: 10px; margin-bottom: 8px; background: {COR_CINZA_FUNDO}; border-radius: 5px; border-left: 3px solid {COR_AZUL_ESCURO};">
                             {acao}
                         </div>
                         """, unsafe_allow_html=True)
@@ -3672,7 +3671,7 @@ if st.session_state.df_original is not None:
     col_top, col_dist = st.columns([2, 1])
     
     with col_top:
-        st.markdown(f'<div class="section-title-exec">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
         
         if 'Responsável_Formatado' in df.columns:
             top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
@@ -3691,14 +3690,14 @@ if st.session_state.df_original is not None:
             fig_top.update_traces(
                 texttemplate='%{text}',
                 textposition='outside',
-                marker_line_color=COR_ENERGISA_SECUNDARIO,
+                marker_line_color=COR_AZUL_PETROLEO,
                 marker_line_width=1.5,
                 opacity=0.9
             )
             
             fig_top.update_layout(
                 height=500,
-                plot_bgcolor='white',
+                plot_bgcolor=COR_BRANCO,
                 showlegend=False,
                 yaxis={'categoryorder': 'total ascending'},
                 margin=dict(t=20, b=20, l=20, r=20),
@@ -3709,7 +3708,7 @@ if st.session_state.df_original is not None:
             st.plotly_chart(fig_top, use_container_width=True)
     
     with col_dist:
-        st.markdown(f'<div class="section-title-exec">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
         
         if 'Tipo_Chamado' in df.columns:
             tipos_chamado = df['Tipo_Chamado'].value_counts().reset_index()
@@ -3731,14 +3730,14 @@ if st.session_state.df_original is not None:
             fig_tipos.update_traces(
                 texttemplate='%{text}',
                 textposition='outside',
-                marker_line_color=COR_ENERGISA_PRINCIPAL,
+                marker_line_color=COR_AZUL_ESCURO,
                 marker_line_width=1,
                 opacity=0.9
             )
             
             fig_tipos.update_layout(
                 height=500,
-                plot_bgcolor='white',
+                plot_bgcolor=COR_BRANCO,
                 showlegend=False,
                 yaxis={'categoryorder': 'total ascending'},
                 margin=dict(t=20, b=20, l=20, r=20),
@@ -3749,7 +3748,7 @@ if st.session_state.df_original is not None:
             st.plotly_chart(fig_tipos, use_container_width=True)
     
     st.markdown("---")
-    st.markdown(f'<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
     
     if 'Criado' in df.columns:
         filtro_chamado_principal = st.text_input(
@@ -3868,14 +3867,14 @@ if st.session_state.df_original is not None:
             st.info("Nenhum resultado encontrado com os filtros aplicados.")
 
 else:
-    st.markdown("""
-    <div style="text-align: center; padding: 4rem; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
-        <h3 style="color: #495057;">📊 Esteira ADMS Dashboard</h3>
-        <p style="color: #6c757d; margin-bottom: 2rem;">
+    st.markdown(f"""
+    <div style="text-align: center; padding: 4rem; background: {COR_CINZA_FUNDO}; border-radius: 12px; border: 2px dashed {COR_CINZA_BORDA};">
+        <h3 style="color: {COR_PRETO_SUAVE};">📊 Esteira ADMS Dashboard</h3>
+        <p style="color: {COR_CINZA_TEXTO}; margin-bottom: 2rem;">
             Sistema de análise e monitoramento de chamados - Setor SRE
         </p>
-        <div style="margin-top: 2rem; padding: 2rem; background: white; border-radius: 8px; display: inline-block;">
-            <h4 style="color: #0033A0;">📋 Para começar:</h4>
+        <div style="margin-top: 2rem; padding: 2rem; background: {COR_BRANCO}; border-radius: 8px; display: inline-block;">
+            <h4 style="color: {COR_AZUL_ESCURO};">📋 Para começar:</h4>
             <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
             <p>2. <strong>Use a seção "Importar Dados"</strong> no final da barra lateral</p>
             <p>3. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
@@ -3888,20 +3887,20 @@ st.markdown("---")
 ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
 
 st.markdown(f"""
-<div class="footer-exec">
-    <div style="margin-bottom: 1rem;">
-        <p style="margin: 0; color: #495057; font-weight: 600;">
-        Desenvolvido por: <span style="color: {COR_ENERGISA_PRINCIPAL};">Kewin Marcel Ramirez Ferreira | GEAT</span>
+<div class="footer">
+    <div style="margin-bottom: 0.8rem;">
+        <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 500;">
+        Desenvolvido por: <span style="color: {COR_AZUL_ESCURO};">Kewin Marcel Ramirez Ferreira | GEAT</span>
         </p>
-        <p style="margin: 0.3rem 0 0 0; color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.85rem;">
-        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: {COR_ENERGISA_PRINCIPAL}; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
+        <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">
+        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: {COR_AZUL_ESCURO}; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
         </p>
     </div>
-    <div style="margin-top: 0.5rem;">
-        <p style="margin: 0; color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.8rem;">
+    <div>
+        <p style="margin: 0; color: {COR_CINZA_TEXTO}; font-size: 0.75rem;">
         © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
         </p>
-        <p style="margin: 0.2rem 0 0 0; color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.75rem;">
+        <p style="margin: 0.2rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.7rem;">
         Versão 5.5 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
         </p>
     </div>
