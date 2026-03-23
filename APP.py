@@ -14,14 +14,14 @@ import streamlit.components.v1 as components
 warnings.filterwarnings('ignore')
 
 # ============================================
-# PALETA DE CORES - NOVA IDENTIDADE VISUAL
+# PALETA DE CORES - EXECUTIVA
 # ============================================
 # Cores principais
-COR_VERDE_ESCURO = "#2E7D32"      # Verde escuro - principal
+COR_VERDE_ESCURO = "#2E7D32"      # Verde escuro - sucesso
 COR_AZUL_PETROLEO = "#028a9f"     # Azul petróleo - secundário
-COR_AZUL_ESCURO = "#005973"       # Azul escuro - destaque
-COR_LARANJA = "#F57C00"           # Laranja - alertas/positivo
-COR_VERMELHO = "#C62828"          # Vermelho - erros/negativo
+COR_AZUL_ESCURO = "#005973"       # Azul escuro - principal
+COR_LARANJA = "#F57C00"           # Laranja - alertas
+COR_VERMELHO = "#C62828"          # Vermelho - erros
 
 # Cores neutras
 COR_CINZA_FUNDO = "#F8F9FA"       # Cinza muito claro para fundos
@@ -37,7 +37,7 @@ CORES_GRADIENTE = [
     COR_AZUL_ESCURO,
     COR_LARANJA,
     COR_VERMELHO,
-    "#1E88E5"  # Azul adicional
+    "#1E88E5"
 ]
 
 # ============================================
@@ -63,7 +63,7 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS PERSONALIZADO - NOVA PALETA
+# CSS EXECUTIVO - DESIGN CORPORATIVO PREMIUM
 # ============================================
 st.markdown(f"""
 <style>
@@ -72,57 +72,195 @@ st.markdown(f"""
         background-color: {COR_CINZA_FUNDO};
     }}
     
-    /* Main header - estilo Monitoring Center */
-    .main-header-monitoring {{
-        background: {COR_CINZA_FUNDO};
-        padding: 1.2rem 2rem;
-        margin-bottom: 1.5rem;
-        border-bottom: 4px solid {COR_AZUL_ESCURO};
-        border-radius: 0;
-    }}
-    
-    /* Cards de métricas */
-    .metric-card {{
+    /* Cards executivos */
+    .executive-card {{
         background: {COR_BRANCO};
-        padding: 1.2rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         border: 1px solid {COR_CINZA_BORDA};
-        margin-bottom: 1rem;
         transition: all 0.3s ease;
     }}
     
-    .metric-card:hover {{
+    .executive-card:hover {{
+        box-shadow: 0 8px 24px rgba(0, 89, 115, 0.08);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 89, 115, 0.1);
+        border-color: {COR_AZUL_PETROLEO}40;
+    }}
+    
+    /* Títulos executivos */
+    .executive-title {{
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: {COR_PRETO_SUAVE};
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid {COR_AZUL_PETROLEO};
+        display: inline-block;
+    }}
+    
+    .executive-section-title {{
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: {COR_AZUL_ESCURO};
+        margin: 1.5rem 0 1rem 0;
+        letter-spacing: -0.3px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }}
+    
+    .executive-section-title:before {{
+        content: '';
+        width: 4px;
+        height: 24px;
+        background: {COR_AZUL_PETROLEO};
+        border-radius: 2px;
+    }}
+    
+    /* Métricas executivas */
+    .metric-exec {{
+        background: linear-gradient(135deg, {COR_BRANCO}, {COR_CINZA_FUNDO});
+        border-radius: 16px;
+        padding: 1.2rem;
+        border: 1px solid {COR_CINZA_BORDA};
+        transition: all 0.2s ease;
+    }}
+    
+    .metric-exec:hover {{
         border-color: {COR_AZUL_PETROLEO};
     }}
     
-    .metric-value {{
-        font-size: 2rem;
-        font-weight: 700;
+    .metric-exec-value {{
+        font-size: 2.2rem;
+        font-weight: 800;
         color: {COR_AZUL_ESCURO};
-        margin: 0;
-        line-height: 1.2;
+        line-height: 1;
+        margin-bottom: 0.3rem;
     }}
     
-    .metric-label {{
-        font-size: 0.85rem;
+    .metric-exec-label {{
+        font-size: 0.8rem;
         color: {COR_CINZA_TEXTO};
-        margin: 0.5rem 0 0 0;
         font-weight: 500;
-    }}
-    
-    /* Títulos de seção */
-    .section-title {{
-        color: {COR_AZUL_ESCURO};
-        border-left: 4px solid {COR_VERDE_ESCURO};
-        padding-left: 1rem;
-        margin-bottom: 1.5rem;
-        font-size: 1.2rem;
-        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+    }}
+    
+    /* KPI Cards */
+    .kpi-card {{
+        background: {COR_BRANCO};
+        border-radius: 12px;
+        padding: 1rem;
+        border-left: 4px solid {COR_AZUL_PETROLEO};
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }}
+    
+    .kpi-value {{
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: {COR_AZUL_ESCURO};
+    }}
+    
+    .kpi-label {{
+        font-size: 0.75rem;
+        color: {COR_CINZA_TEXTO};
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }}
+    
+    /* Badges executivos */
+    .badge-exec {{
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }}
+    
+    .badge-exec-primary {{
+        background: {COR_AZUL_ESCURO}10;
+        color: {COR_AZUL_ESCURO};
+        border: 1px solid {COR_AZUL_ESCURO}30;
+    }}
+    
+    .badge-exec-success {{
+        background: {COR_VERDE_ESCURO}10;
+        color: {COR_VERDE_ESCURO};
+        border: 1px solid {COR_VERDE_ESCURO}30;
+    }}
+    
+    .badge-exec-warning {{
+        background: {COR_LARANJA}10;
+        color: {COR_LARANJA};
+        border: 1px solid {COR_LARANJA}30;
+    }}
+    
+    /* Tabela executiva */
+    .dataframe-exec {{
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+    }}
+    
+    .dataframe-exec th {{
+        background: {COR_CINZA_FUNDO};
+        color: {COR_PRETO_SUAVE};
+        padding: 0.8rem 1rem;
+        font-weight: 600;
+        border-bottom: 2px solid {COR_CINZA_BORDA};
+    }}
+    
+    .dataframe-exec td {{
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid {COR_CINZA_BORDA};
+        color: {COR_CINZA_TEXTO};
+    }}
+    
+    .dataframe-exec tr:hover {{
+        background: {COR_CINZA_FUNDO};
+    }}
+    
+    /* Botões executivos */
+    .btn-exec {{
+        background: linear-gradient(135deg, {COR_AZUL_ESCURO}, {COR_AZUL_PETROLEO});
+        border: none;
+        padding: 0.6rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px rgba(0, 89, 115, 0.2);
+    }}
+    
+    .btn-exec:hover {{
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 89, 115, 0.3);
+    }}
+    
+    .btn-exec-outline {{
+        background: transparent;
+        border: 1.5px solid {COR_AZUL_PETROLEO};
+        color: {COR_AZUL_PETROLEO};
+        box-shadow: none;
+    }}
+    
+    .btn-exec-outline:hover {{
+        background: {COR_AZUL_PETROLEO}10;
+        transform: translateY(-1px);
+    }}
+    
+    /* Divider executivo */
+    .executive-divider {{
+        height: 1px;
+        background: linear-gradient(90deg, transparent, {COR_CINZA_BORDA}, transparent);
+        margin: 2rem 0;
     }}
     
     /* Sidebar */
@@ -134,7 +272,7 @@ st.markdown(f"""
     .sidebar-section {{
         background: {COR_CINZA_FUNDO};
         padding: 1rem;
-        border-radius: 8px;
+        border-radius: 12px;
         margin-bottom: 1rem;
         border: 1px solid {COR_CINZA_BORDA};
     }}
@@ -143,8 +281,8 @@ st.markdown(f"""
     .info-base {{
         background: {COR_CINZA_FUNDO};
         padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid {COR_VERDE_ESCURO};
+        border-radius: 12px;
+        border-left: 4px solid {COR_AZUL_PETROLEO};
         margin-bottom: 1.5rem;
     }}
     
@@ -153,9 +291,9 @@ st.markdown(f"""
         text-align: center;
         margin-top: 3rem;
         padding-top: 1.5rem;
-        border-top: 2px solid {COR_CINZA_BORDA};
+        border-top: 1px solid {COR_CINZA_BORDA};
         color: {COR_CINZA_TEXTO};
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }}
     
     /* Status cards */
@@ -163,28 +301,14 @@ st.markdown(f"""
         background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
         border-left: 4px solid {COR_VERDE_ESCURO};
         padding: 0.75rem;
-        border-radius: 8px;
+        border-radius: 12px;
     }}
     
-    .status-warning {{
-        background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
-        border-left: 4px solid {COR_LARANJA};
-        padding: 0.75rem;
-        border-radius: 8px;
-    }}
-    
-    .status-danger {{
-        background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
-        border-left: 4px solid {COR_VERMELHO};
-        padding: 0.75rem;
-        border-radius: 8px;
-    }}
-    
-    /* Cards de performance */
+    /* Performance cards */
     .performance-card {{
         background: linear-gradient(135deg, {COR_BRANCO}, #F1F8E9);
         padding: 1rem;
-        border-radius: 8px;
+        border-radius: 12px;
         border-left: 4px solid {COR_VERDE_ESCURO};
         margin-bottom: 1rem;
     }}
@@ -192,7 +316,7 @@ st.markdown(f"""
     .warning-card {{
         background: linear-gradient(135deg, {COR_BRANCO}, #FFF3E0);
         padding: 1rem;
-        border-radius: 8px;
+        border-radius: 12px;
         border-left: 4px solid {COR_LARANJA};
         margin-bottom: 1rem;
     }}
@@ -200,7 +324,7 @@ st.markdown(f"""
     .alert-card {{
         background: linear-gradient(135deg, {COR_BRANCO}, #FFEBEE);
         padding: 1rem;
-        border-radius: 8px;
+        border-radius: 12px;
         border-left: 4px solid {COR_VERMELHO};
         margin-bottom: 1rem;
     }}
@@ -208,69 +332,15 @@ st.markdown(f"""
     .info-card {{
         background: linear-gradient(135deg, {COR_BRANCO}, #E0F7FA);
         padding: 1rem;
-        border-radius: 8px;
+        border-radius: 12px;
         border-left: 4px solid {COR_AZUL_PETROLEO};
         margin-bottom: 1rem;
-    }}
-    
-    /* Botões */
-    .stButton > button {{
-        background: {COR_AZUL_ESCURO};
-        color: {COR_BRANCO};
-        border: none;
-        border-radius: 6px;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }}
-    
-    .stButton > button:hover {{
-        background: {COR_AZUL_PETROLEO};
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 89, 115, 0.3);
-    }}
-    
-    /* Badges e tags */
-    .badge-success {{
-        background-color: {COR_VERDE_ESCURO};
-        color: {COR_BRANCO};
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }}
-    
-    .badge-warning {{
-        background-color: {COR_LARANJA};
-        color: {COR_BRANCO};
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }}
-    
-    .badge-danger {{
-        background-color: {COR_VERMELHO};
-        color: {COR_BRANCO};
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }}
-    
-    .badge-info {{
-        background-color: {COR_AZUL_PETROLEO};
-        color: {COR_BRANCO};
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
     }}
     
     /* Quadrantes da matriz */
     .matrix-quadrant {{
         padding: 10px;
-        border-radius: 8px;
+        border-radius: 12px;
         margin: 5px;
         font-weight: bold;
         text-align: center;
@@ -300,26 +370,48 @@ st.markdown(f"""
         border: 2px solid {COR_VERMELHO};
     }}
     
-    /* Tabelas */
-    .dataframe {{
-        border-collapse: collapse;
-        width: 100%;
+    /* Metric card simples */
+    .metric-card {{
+        background: {COR_BRANCO};
+        padding: 1.2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        border: 1px solid {COR_CINZA_BORDA};
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
     }}
     
-    .dataframe th {{
-        background-color: {COR_AZUL_ESCURO};
-        color: {COR_BRANCO};
-        padding: 10px;
-        text-align: left;
+    .metric-card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 89, 115, 0.08);
+        border-color: {COR_AZUL_PETROLEO}40;
     }}
     
-    .dataframe td {{
-        padding: 8px;
-        border-bottom: 1px solid {COR_CINZA_BORDA};
+    .metric-value {{
+        font-size: 2rem;
+        font-weight: 700;
+        color: {COR_AZUL_ESCURO};
+        margin: 0;
+        line-height: 1.2;
     }}
     
-    .dataframe tr:hover {{
-        background-color: {COR_CINZA_FUNDO};
+    .metric-label {{
+        font-size: 0.85rem;
+        color: {COR_CINZA_TEXTO};
+        margin: 0.5rem 0 0 0;
+        font-weight: 500;
+    }}
+    
+    /* Section title */
+    .section-title {{
+        color: {COR_AZUL_ESCURO};
+        border-left: 4px solid {COR_AZUL_PETROLEO};
+        padding-left: 1rem;
+        margin-bottom: 1.5rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -605,7 +697,7 @@ def criar_popup_indicadores(df):
                 background: rgba(0, 0, 0, 0.7); z-index: 10000; display: flex; 
                 justify-content: center; align-items: center; backdrop-filter: blur(3px);">
         <div style="background: {COR_BRANCO}; width: 90%; max-width: 900px; max-height: 90vh;
-                    border-radius: 12px; padding: 0; overflow: hidden; 
+                    border-radius: 20px; padding: 0; overflow: hidden; 
                     box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out;">
             
             <div style="background: linear-gradient(135deg, {COR_AZUL_ESCURO}, {COR_AZUL_PETROLEO}); 
@@ -626,17 +718,17 @@ def criar_popup_indicadores(df):
             </div>
             
             <div style="padding: 2rem;">
-                <div style="background: {cor_destaque}10; padding: 1.5rem; border-radius: 8px; 
+                <div style="background: {cor_destaque}10; padding: 1.5rem; border-radius: 12px; 
                             border-left: 4px solid {cor_destaque}; margin-bottom: 2rem;">
                     <h3 style="color: {COR_PRETO_SUAVE}; margin: 0 0 0.5rem 0; font-size: 1.1rem;">{texto_principal}</h3>
                     <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.9rem;">{subtexto}</p>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem;">
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_ESCURO};">
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 12px; border-top: 3px solid {COR_AZUL_ESCURO};">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <div style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
-                                        border-radius: 8px; display: flex; align-items: center; 
+                                        border-radius: 12px; display: flex; align-items: center; 
                                         justify-content: center; font-size: 1.3rem;">📋</div>
                             <div>
                                 <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_ESCURO};">
@@ -647,10 +739,10 @@ def criar_popup_indicadores(df):
                         </div>
                     </div>
                     
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERDE_ESCURO};">
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 12px; border-top: 3px solid {COR_VERDE_ESCURO};">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <div style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
-                                        border-radius: 8px; display: flex; align-items: center; 
+                                        border-radius: 12px; display: flex; align-items: center; 
                                         justify-content: center; font-size: 1.3rem;">✅</div>
                             <div>
                                 <div style="font-size: 1.8rem; font-weight: 700; color: {COR_VERDE_ESCURO};">
@@ -664,10 +756,10 @@ def criar_popup_indicadores(df):
                         </p>
                     </div>
                     
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_PETROLEO};">
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 12px; border-top: 3px solid {COR_AZUL_PETROLEO};">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <div style="background: {COR_AZUL_PETROLEO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
-                                        border-radius: 8px; display: flex; align-items: center; 
+                                        border-radius: 12px; display: flex; align-items: center; 
                                         justify-content: center; font-size: 1.3rem;">🎯</div>
                             <div>
                                 <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_PETROLEO};">
@@ -678,11 +770,11 @@ def criar_popup_indicadores(df):
                         </div>
                     </div>
                     
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO};">
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 12px; border-top: 3px solid {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO};">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <div style="background: {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO}; 
                                         color: {COR_BRANCO}; width: 45px; height: 45px; 
-                                        border-radius: 8px; display: flex; align-items: center; 
+                                        border-radius: 12px; display: flex; align-items: center; 
                                         justify-content: center; font-size: 1.3rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
                             <div>
                                 <div style="font-size: 1.8rem; font-weight: 700; 
@@ -696,7 +788,7 @@ def criar_popup_indicadores(df):
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1rem; border-radius: 8px;">
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1rem; border-radius: 12px;">
                         <h4 style="color: {COR_PRETO_SUAVE}; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
                         <div style="height: 180px; display: flex; align-items: end; gap: 20px;">
                             <div style="text-align: center; flex: 1;">
@@ -718,7 +810,7 @@ def criar_popup_indicadores(df):
                         </div>
                     </div>
                     
-                    <div style="background: #FFF8E1; padding: 1rem; border-radius: 8px; border-left: 4px solid {COR_LARANJA};">
+                    <div style="background: #FFF8E1; padding: 1rem; border-radius: 12px; border-left: 4px solid {COR_LARANJA};">
                         <h4 style="color: {COR_LARANJA}; margin: 0 0 0.8rem 0;">💡 INSIGHTS</h4>
                         <ul style="color: {COR_CINZA_TEXTO}; padding-left: 1.2rem; margin: 0; font-size: 0.85rem;">
                             <li style="margin-bottom: 0.5rem;">
@@ -742,7 +834,7 @@ def criar_popup_indicadores(df):
                     </p>
                     <button onclick="document.getElementById('popupOverlay').style.display='none'"
                             style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; border: none; 
-                                   padding: 0.5rem 1.2rem; border-radius: 6px; 
+                                   padding: 0.5rem 1.2rem; border-radius: 8px; 
                                    cursor: pointer; font-weight: 500;">
                         Fechar
                     </button>
@@ -966,7 +1058,7 @@ with st.sidebar:
                 ultima_mod = datetime.fromtimestamp(os.path.getmtime(arquivo_atual))
                 
                 st.markdown(f"""
-                <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 12px; margin-bottom: 1rem;">
                     <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
                     <p style="margin: 0; font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{os.path.basename(arquivo_atual)}</p>
                     <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: {COR_CINZA_TEXTO};">
@@ -1111,63 +1203,162 @@ with st.sidebar:
                     st.error(f"❌ {status}")
 
 # ============================================
-# HEADER - ESTILO GRADIENTE AZUL PETRÓLEO
+# HEADER EXECUTIVO - DESIGN CORPORATIVO PREMIUM
 # ============================================
+# Data atual formatada
+data_atual = datetime.now().strftime('%d de %B de %Y')
+meses_pt = {
+    'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
+    'April': 'Abril', 'May': 'Maio', 'June': 'Junho',
+    'July': 'Julho', 'August': 'Agosto', 'September': 'Setembro',
+    'October': 'Outubro', 'November': 'Novembro', 'December': 'Dezembro'
+}
+for en, pt in meses_pt.items():
+    data_atual = data_atual.replace(en, pt)
+
 st.markdown(f"""
 <div style="
-    background: linear-gradient(135deg, {COR_AZUL_PETROLEO} 0%, {COR_AZUL_ESCURO} 100%);
-    padding: 1.5rem 2rem;
-    margin-bottom: 1.5rem;
-    border-radius: 0;
-    box-shadow: 0 4px 15px rgba(2, 138, 159, 0.3);
+    background: linear-gradient(135deg, {COR_AZUL_ESCURO} 0%, {COR_AZUL_PETROLEO} 100%);
+    padding: 2rem 2.5rem;
+    margin-bottom: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 89, 115, 0.2);
+    position: relative;
+    overflow: hidden;
 ">
-    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-        <div>
-            <h1 style="
-                color: {COR_BRANCO};
-                margin: 0;
-                font-size: 1.6rem;
-                font-weight: 600;
-                letter-spacing: -0.3px;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    <!-- Elemento decorativo de fundo -->
+    <div style="
+        position: absolute;
+        top: -50px;
+        right: -50px;
+        width: 200px;
+        height: 200px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 50%;
+        pointer-events: none;
+    "></div>
+    <div style="
+        position: absolute;
+        bottom: -80px;
+        left: -80px;
+        width: 300px;
+        height: 300px;
+        background: rgba(255,255,255,0.02);
+        border-radius: 50%;
+        pointer-events: none;
+    "></div>
+    
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; position: relative; z-index: 1;">
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+            <!-- Logo/Ícone -->
+            <div style="
+                background: rgba(255,255,255,0.12);
+                width: 60px;
+                height: 60px;
+                border-radius: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(4px);
+                border: 1px solid rgba(255,255,255,0.2);
             ">
-                📊 ESTEIRA ADMS
-            </h1>
-            <p style="
-                color: rgba(255,255,255,0.9);
-                margin: 0.3rem 0 0 0;
-                font-size: 0.85rem;
-                font-weight: 400;
-            ">
-                Acompanhamento de Demandas - EMS | EMR | ESS | ESE
-            </p>
+                <span style="font-size: 2rem;">📊</span>
+            </div>
+            
+            <div>
+                <h1 style="
+                    color: {COR_BRANCO};
+                    margin: 0;
+                    font-size: 1.8rem;
+                    font-weight: 700;
+                    letter-spacing: -0.5px;
+                    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                ">
+                    ESTEIRA ADMS
+                </h1>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.3rem;">
+                    <span style="
+                        background: rgba(255,255,255,0.2);
+                        padding: 0.2rem 0.8rem;
+                        border-radius: 20px;
+                        font-size: 0.7rem;
+                        font-weight: 500;
+                        color: {COR_BRANCO};
+                        letter-spacing: 0.5px;
+                    ">SRE</span>
+                    <span style="
+                        background: rgba(255,255,255,0.2);
+                        padding: 0.2rem 0.8rem;
+                        border-radius: 20px;
+                        font-size: 0.7rem;
+                        font-weight: 500;
+                        color: {COR_BRANCO};
+                        letter-spacing: 0.5px;
+                    ">ADMS</span>
+                    <span style="
+                        background: rgba(255,255,255,0.2);
+                        padding: 0.2rem 0.8rem;
+                        border-radius: 20px;
+                        font-size: 0.7rem;
+                        font-weight: 500;
+                        color: {COR_BRANCO};
+                        letter-spacing: 0.5px;
+                    ">GEAT</span>
+                </div>
+                <p style="
+                    color: rgba(255,255,255,0.85);
+                    margin: 0.5rem 0 0 0;
+                    font-size: 0.85rem;
+                    font-weight: 400;
+                ">
+                    Acompanhamento de Demandas | EMS • EMR • ESS • ESE
+                </p>
+            </div>
         </div>
+        
         <div style="text-align: right;">
+            <div style="
+                background: rgba(255,255,255,0.12);
+                padding: 0.5rem 1.2rem;
+                border-radius: 40px;
+                backdrop-filter: blur(4px);
+                border: 1px solid rgba(255,255,255,0.2);
+                margin-bottom: 0.8rem;
+            ">
+                <span style="color: rgba(255,255,255,0.9); font-size: 0.75rem; font-weight: 500;">PERFORMANCE DASHBOARD</span>
+            </div>
             <p style="
                 color: rgba(255,255,255,0.9);
                 margin: 0;
                 font-size: 0.85rem;
                 font-weight: 500;
-            ">
-                Dashboard de Performance
-            </p>
-            <p style="
-                color: rgba(255,255,255,0.8);
-                margin: 0.2rem 0 0 0;
-                font-size: 0.75rem;
             ">
                 v5.5 | Sistema de Performance SRE
             </p>
             <p style="
                 color: rgba(255,255,255,0.7);
-                margin: 0.3rem 0 0 0;
-                font-size: 0.7rem;
-                font-weight: 500;
+                margin: 0.2rem 0 0 0;
+                font-size: 0.75rem;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 0.3rem;
             ">
-                {datetime.now().strftime('%d/%m/%Y')}
+                <span>📅</span> {data_atual}
             </p>
         </div>
     </div>
+    
+    <!-- Linha decorativa inferior -->
+    <div style="
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, {COR_LARANJA}, {COR_VERDE_ESCURO}, {COR_AZUL_PETROLEO});
+        opacity: 0.6;
+    "></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1197,7 +1388,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
     
     with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
         
-        st.markdown("### 📰 MANCHETE - RELATÓRIO ")
+        st.markdown("### 📰 MANCHETE - RELATÓRIO EXECUTIVO")
         st.markdown("---")
         
         st.markdown("#### 📅 SELECIONE O PERÍODO")
@@ -1266,7 +1457,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             periodo_titulo = f"Ano Passado ({ano_passado})"
             
         elif periodo_selecionado == "Todo o Período":
-            periodo_titulo = "Todo o Período Disponíve"
+            periodo_titulo = "Todo o Período Disponível"
             
         elif ano_especifico != 'Selecionar ano...':
             df_filtrado_periodo = df[df['Criado'].dt.year == int(ano_especifico)].copy()
@@ -1569,7 +1760,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         st.markdown("---")
         
         st.markdown(f"""
-        <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border: 1px solid {COR_CINZA_BORDA};">
+        <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 12px; border: 1px solid {COR_CINZA_BORDA};">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 600;">Ações disponíveis</p>
@@ -1580,12 +1771,12 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 <div style="display: flex; gap: 0.8rem;">
                     <button onclick="document.getElementById('exportBtn').click()" 
                             style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; border: none; padding: 0.6rem 1.2rem; 
-                                   border-radius: 6px; cursor: pointer; font-weight: 500;">
+                                   border-radius: 8px; cursor: pointer; font-weight: 500;">
                         📥 Exportar PDF
                     </button>
                     <button onclick="document.getElementById('closeBtn').click()" 
                             style="background: {COR_CINZA_TEXTO}; color: {COR_BRANCO}; border: none; 
-                                   padding: 0.6rem 1.2rem; border-radius: 6px; 
+                                   padding: 0.6rem 1.2rem; border-radius: 8px; 
                                    cursor: pointer; font-weight: 500;">
                         ✕ Fechar
                     </button>
@@ -1620,7 +1811,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 st.rerun()
         
         st.markdown(f"""
-        <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 6px; margin-top: 1rem;">
+        <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-top: 1rem;">
             <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
             <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
             <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small>
@@ -1681,6 +1872,7 @@ if st.session_state.df_original is not None:
     
     st.markdown("---")
     
+    # Criar abas principais
     tab1, tab2, tab3, tab4 = st.tabs([
         "📅 Evolução de Demandas", 
         "📊 Análise de Revisões", 
@@ -2239,7 +2431,7 @@ if st.session_state.df_original is not None:
                         st.markdown("**📊 Distribuição por Tipo:**")
                         for idx, row in tipo_dist.head(5).iterrows():
                             st.markdown(f"""
-                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_CINZA_FUNDO}; border-radius: 5px;">
+                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_CINZA_FUNDO}; border-radius: 8px;">
                                 <strong>{row['Tipo']}</strong><br>
                                 <small>{row['Quantidade']} ({row['Percentual']}%)</small>
                             </div>
@@ -2300,7 +2492,7 @@ if st.session_state.df_original is not None:
                         for idx, row in empresa_rank.head(5).iterrows():
                             medal = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][idx]
                             st.markdown(f"""
-                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_CINZA_FUNDO}; border-radius: 5px; border-left: 4px solid {COR_AZUL_ESCURO if idx==0 else COR_VERDE_ESCURO if idx==1 else COR_LARANJA if idx==2 else COR_CINZA_TEXTO}">
+                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_CINZA_FUNDO}; border-radius: 8px; border-left: 4px solid {COR_AZUL_ESCURO if idx==0 else COR_VERDE_ESCURO if idx==1 else COR_LARANJA if idx==2 else COR_CINZA_TEXTO}">
                                 <strong>{medal} {row['Empresa']}</strong><br>
                                 <small>{row['Quantidade']} ({row['Percentual']}%)</small>
                             </div>
@@ -3668,7 +3860,7 @@ if st.session_state.df_original is not None:
                     
                     for acao in acoes:
                         st.markdown(f"""
-                        <div style="padding: 10px; margin-bottom: 8px; background: {COR_CINZA_FUNDO}; border-radius: 5px; border-left: 3px solid {COR_AZUL_ESCURO};">
+                        <div style="padding: 10px; margin-bottom: 8px; background: {COR_CINZA_FUNDO}; border-radius: 8px; border-left: 3px solid {COR_AZUL_ESCURO};">
                             {acao}
                         </div>
                         """, unsafe_allow_html=True)
@@ -3876,12 +4068,12 @@ if st.session_state.df_original is not None:
 
 else:
     st.markdown(f"""
-    <div style="text-align: center; padding: 4rem; background: {COR_CINZA_FUNDO}; border-radius: 12px; border: 2px dashed {COR_CINZA_BORDA};">
+    <div style="text-align: center; padding: 4rem; background: {COR_CINZA_FUNDO}; border-radius: 16px; border: 2px dashed {COR_CINZA_BORDA};">
         <h3 style="color: {COR_PRETO_SUAVE};">📊 Esteira ADMS Dashboard</h3>
         <p style="color: {COR_CINZA_TEXTO}; margin-bottom: 2rem;">
             Sistema de análise e monitoramento de chamados - Setor SRE
         </p>
-        <div style="margin-top: 2rem; padding: 2rem; background: {COR_BRANCO}; border-radius: 8px; display: inline-block;">
+        <div style="margin-top: 2rem; padding: 2rem; background: {COR_BRANCO}; border-radius: 12px; display: inline-block;">
             <h4 style="color: {COR_AZUL_ESCURO};">📋 Para começar:</h4>
             <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
             <p>2. <strong>Use a seção "Importar Dados"</strong> no final da barra lateral</p>
