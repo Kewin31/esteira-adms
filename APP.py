@@ -10,15 +10,27 @@ import hashlib
 import warnings
 from pytz import timezone
 import numpy as np
-import streamlit.components.v1 as components  # NOVO: Importação para o popup
+import streamlit.components.v1 as components
 warnings.filterwarnings('ignore')
+
+# ============================================
+# PALETA DE CORES ENERGISA
+# ============================================
+COR_ENERGISA_PRINCIPAL = "#0033A0"      # Azul corporativo principal
+COR_ENERGISA_SECUNDARIO = "#0055B0"     # Azul secundário
+COR_ENERGISA_CLARO = "#0073E6"          # Azul claro/efeitos
+COR_ENERGISA_VERDE = "#00A65A"          # Verde para sucesso/positivo
+COR_ENERGISA_VERMELHO = "#DD3B3B"       # Vermelho para alerta/negativo
+COR_ENERGISA_CINZA_CLARO = "#F5F5F5"    # Cinza muito claro para fundos
+COR_ENERGISA_CINZA_MEDIO = "#E0E0E0"    # Cinza médio para bordas
+COR_ENERGISA_CINZA_ESCURO = "#666666"   # Cinza escuro para textos secundários
+COR_ENERGISA_BRANCO = "#FFFFFF"         # Branco para fundos
+COR_ENERGISA_PRETO = "#333333"          # Preto suave para textos principais
 
 # ============================================
 # VARIÁVEIS GLOBAIS DE CONFIGURAÇÃO
 # ============================================
-# CONFIGURE AQUI O CAMINHO DO SEU ARQUIVO
-CAMINHO_ARQUIVO_PRINCIPAL = "esteira_demandas.csv"  # ← ALTERE AQUI!
-# Possíveis caminhos alternativos
+CAMINHO_ARQUIVO_PRINCIPAL = "esteira_demandas.csv"
 CAMINHOS_ALTERNATIVOS = [
     "data/esteira_demandas.csv",
     "dados/esteira_demandas.csv",
@@ -38,271 +50,229 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS PERSONALIZADO ATUALIZADO
+# CSS PERSONALIZADO COM CORES ENERGISA
 # ============================================
-st.markdown("""
+st.markdown(f"""
 <style>
-    /* Estilos gerais */
-    .main-header {
-        background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+    /* Estilos gerais - Cores Energisa */
+    .main-header {{
+        background: linear-gradient(135deg, {COR_ENERGISA_PRINCIPAL} 0%, {COR_ENERGISA_SECUNDARIO} 100%);
         padding: 1.5rem;
         border-radius: 12px;
         margin-bottom: 1.5rem;
         color: white;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 6px 20px rgba(0, 51, 160, 0.15);
         border: 1px solid rgba(255, 255, 255, 0.1);
-    }
+    }}
     
-    .metric-card-exec {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    .metric-card-exec {{
+        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, {COR_ENERGISA_CINZA_CLARO} 100%);
         padding: 1.2rem;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border: 1px solid #e9ecef;
+        border: 1px solid {COR_ENERGISA_CINZA_MEDIO};
         margin-bottom: 1rem;
         transition: transform 0.3s ease;
-    }
+    }}
     
-    .metric-card-exec:hover {
+    .metric-card-exec:hover {{
         transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-    }
+        box-shadow: 0 8px 20px rgba(0, 51, 160, 0.12);
+    }}
     
-    .metric-value {
+    .metric-value {{
         font-size: 2rem;
         font-weight: 700;
-        color: #1e3799;
+        color: {COR_ENERGISA_PRINCIPAL};
         margin: 0;
         line-height: 1;
-    }
+    }}
     
-    .metric-label {
+    .metric-label {{
         font-size: 0.9rem;
-        color: #6c757d;
+        color: {COR_ENERGISA_CINZA_ESCURO};
         margin: 0.5rem 0 0 0;
         font-weight: 500;
-    }
+    }}
     
-    .metric-delta-positive {
-        color: #28a745;
+    .metric-delta-positive {{
+        color: {COR_ENERGISA_VERDE};
         font-size: 0.85rem;
         font-weight: 600;
-    }
+    }}
     
-    .metric-delta-negative {
-        color: #dc3545;
+    .metric-delta-negative {{
+        color: {COR_ENERGISA_VERMELHO};
         font-size: 0.85rem;
         font-weight: 600;
-    }
+    }}
     
-    .section-title-exec {
-        color: #1e3799;
-        border-bottom: 3px solid #1e3799;
+    .section-title-exec {{
+        color: {COR_ENERGISA_PRINCIPAL};
+        border-bottom: 3px solid {COR_ENERGISA_PRINCIPAL};
         padding-bottom: 0.5rem;
         margin-bottom: 1.5rem;
         font-size: 1.2rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-    }
+    }}
     
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
-    }
+    /* Sidebar com cores Energisa */
+    [data-testid="stSidebar"] {{
+        background: linear-gradient(180deg, {COR_ENERGISA_CINZA_CLARO} 0%, {COR_ENERGISA_CINZA_MEDIO} 100%);
+    }}
     
-    .sidebar-section {
-        background: white;
+    .sidebar-section {{
+        background: {COR_ENERGISA_BRANCO};
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 1rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid #dee2e6;
-    }
+        border: 1px solid {COR_ENERGISA_CINZA_MEDIO};
+    }}
     
     /* Informações da base */
-    .info-base {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    .info-base {{
+        background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO} 0%, {COR_ENERGISA_CINZA_MEDIO} 100%);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #1e3799;
+        border-left: 4px solid {COR_ENERGISA_PRINCIPAL};
         margin-bottom: 1.5rem;
-    }
+    }}
     
     /* Rodapé */
-    .footer-exec {
+    .footer-exec {{
         text-align: center;
         margin-top: 3rem;
         padding-top: 1.5rem;
-        border-top: 2px solid #e9ecef;
-        color: #6c757d;
+        border-top: 2px solid {COR_ENERGISA_CINZA_MEDIO};
+        color: {COR_ENERGISA_CINZA_ESCURO};
         font-size: 0.9rem;
-    }
+    }}
     
     /* Status de SRE */
-    .sre-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f0f8ff 100%);
+    .sre-card {{
+        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, {COR_ENERGISA_CINZA_CLARO} 100%);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #1e3799;
+        border-left: 4px solid {COR_ENERGISA_PRINCIPAL};
         margin-bottom: 0.5rem;
         box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
+    }}
     
-    .sre-rank {
+    .sre-rank {{
         font-size: 1.5rem;
         font-weight: 700;
-        color: #1e3799;
+        color: {COR_ENERGISA_PRINCIPAL};
         margin-right: 0.5rem;
-    }
+    }}
     
-    .sre-name {
+    .sre-name {{
         font-weight: 600;
-        color: #495057;
-    }
+        color: {COR_ENERGISA_PRETO};
+    }}
     
-    .sre-stats {
-        color: #6c757d;
+    .sre-stats {{
+        color: {COR_ENERGISA_CINZA_ESCURO};
         font-size: 0.85rem;
-    }
+    }}
     
-    /* Novos estilos para análises melhoradas */
-    .performance-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fff9 100%);
+    /* Cards de performance */
+    .performance-card {{
+        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, #f0fff4 100%);
         padding: 1rem;
         border-radius: 10px;
-        border-left: 4px solid #28a745;
+        border-left: 4px solid {COR_ENERGISA_VERDE};
         margin-bottom: 1rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
+    }}
     
-    .warning-card {
-        background: linear-gradient(135deg, #ffffff 0%, #fff8f8 100%);
+    .warning-card {{
+        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, #fff5f5 100%);
         padding: 1rem;
         border-radius: 10px;
-        border-left: 4px solid #dc3545;
+        border-left: 4px solid {COR_ENERGISA_VERMELHO};
         margin-bottom: 1rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
+    }}
     
-    .info-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fcff 100%);
+    .info-card {{
+        background: linear-gradient(135deg, {COR_ENERGISA_BRANCO} 0%, #e8f0fe 100%);
         padding: 1rem;
         border-radius: 10px;
-        border-left: 4px solid #17a2b8;
+        border-left: 4px solid {COR_ENERGISA_CLARO};
         margin-bottom: 1rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
+    }}
     
-    .trend-up {
-        color: #28a745;
+    .trend-up {{
+        color: {COR_ENERGISA_VERDE};
         font-weight: bold;
-    }
+    }}
     
-    .trend-down {
-        color: #dc3545;
+    .trend-down {{
+        color: {COR_ENERGISA_VERMELHO};
         font-weight: bold;
-    }
+    }}
     
-    .trend-neutral {
-        color: #6c757d;
+    .trend-neutral {{
+        color: {COR_ENERGISA_CINZA_ESCURO};
         font-weight: bold;
-    }
+    }}
     
-    /* Estilos para o dashboard comparativo dos SREs */
-    .sre-comparison-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        border: 1px solid #dee2e6;
-        margin-bottom: 1rem;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-        transition: all 0.3s ease;
-    }
-    
-    .sre-comparison-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
-    .sre-performance-badge {
+    /* Badges de performance */
+    .sre-performance-badge {{
         display: inline-block;
         padding: 0.25rem 0.75rem;
         border-radius: 20px;
         font-size: 0.75rem;
         font-weight: 600;
         margin-right: 0.5rem;
-    }
+    }}
     
-    .badge-excelente {
+    .badge-excelente {{
         background-color: #d4edda;
         color: #155724;
-        border: 1px solid #c3e6cb;
-    }
+        border: 1px solid {COR_ENERGISA_VERDE};
+    }}
     
-    .bom {
-        background-color: #d1ecf1;
-        color: #0c5460;
-        border: 1px solid #bee5eb;
-    }
-    
-    .regular {
-        background-color: #fff3cd;
-        color: #856404;
-        border: 1px solid #ffeaa7;
-    }
-    
-    .melhorar {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-    
-    /* Novos estilos para análise SRE */
-    .sre-metric-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fcff 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid #1e3799;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
-    
-    .matrix-quadrant {
+    /* Quadrantes da matriz */
+    .matrix-quadrant {{
         padding: 10px;
         border-radius: 8px;
         margin: 5px;
         font-weight: bold;
         text-align: center;
-    }
+    }}
     
-    .quadrant-stars {
+    .quadrant-stars {{
         background-color: #d4edda;
         color: #155724;
-        border: 2px solid #28a745;
-    }
+        border: 2px solid {COR_ENERGISA_VERDE};
+    }}
     
-    .quadrant-efficient {
+    .quadrant-efficient {{
         background-color: #fff3cd;
         color: #856404;
         border: 2px solid #ffc107;
-    }
+    }}
     
-    .quadrant-careful {
+    .quadrant-careful {{
         background-color: #cce5ff;
         color: #004085;
-        border: 2px solid #007bff;
-    }
+        border: 2px solid {COR_ENERGISA_CLARO};
+    }}
     
-    .quadrant-needs-help {
+    .quadrant-needs-help {{
         background-color: #f8d7da;
         color: #721c24;
-        border: 2px solid #dc3545;
-    }
+        border: 2px solid {COR_ENERGISA_VERMELHO};
+    }}
     
-    /* NOVO: Estilos para o botão do popup */
-    .popup-button {
-        background: linear-gradient(135deg, #1e3799, #0c2461);
+    /* Botão do popup */
+    .popup-button {{
+        background: linear-gradient(135deg, {COR_ENERGISA_PRINCIPAL}, {COR_ENERGISA_SECUNDARIO});
         color: white;
         border: none;
         border-radius: 50px;
@@ -310,22 +280,34 @@ st.markdown("""
         font-size: 0.9rem;
         font-weight: 600;
         cursor: pointer;
-        box-shadow: 0 4px 15px rgba(30, 55, 153, 0.4);
+        box-shadow: 0 4px 15px rgba(0, 51, 160, 0.4);
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
         gap: 8px;
-    }
+    }}
     
-    .popup-button:hover {
+    .popup-button:hover {{
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(30, 55, 153, 0.6);
-    }
+        box-shadow: 0 6px 20px rgba(0, 51, 160, 0.6);
+    }}
+    
+    /* Status box */
+    .status-box {{
+        padding: 0.75rem;
+        border-radius: 8px;
+        margin: 0.5rem 0;
+    }}
+    
+    .status-success {{
+        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+        border-left: 4px solid {COR_ENERGISA_VERDE};
+    }}
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# FUNÇÕES AUXILIARES
+# FUNÇÕES AUXILIARES (mantidas iguais)
 # ============================================
 def formatar_nome_responsavel(nome):
     """Formata nomes dos responsáveis"""
@@ -334,19 +316,15 @@ def formatar_nome_responsavel(nome):
     
     nome_str = str(nome).strip()
     
-    # Se for e-mail, extrair nome
     if '@' in nome_str:
         partes = nome_str.split('@')[0]
-        # Remover números e separadores
         for separador in ['.', '_', '-']:
             if separador in partes:
                 partes = partes.replace(separador, ' ')
         
-        # Capitalizar e formatar
         palavras = [p.capitalize() for p in partes.split() if not p.isdigit()]
         nome_formatado = ' '.join(palavras)
         
-        # Corrigir conectivos
         correcoes = {
             ' Da ': ' da ',
             ' De ': ' de ',
@@ -361,12 +339,10 @@ def formatar_nome_responsavel(nome):
         
         return nome_formatado
     
-    # Se já for nome, apenas formatar
     return nome_str.title()
 
 def criar_card_indicador_simples(valor, label, icone="📊"):
     """Cria card de indicador SIMPLES - sem delta"""
-    # Verificar se o valor é numérico para formatar com vírgula
     if isinstance(valor, (int, float)):
         valor_formatado = f"{valor:,}"
     else:
@@ -388,12 +364,11 @@ def calcular_hash_arquivo(conteudo):
     """Calcula hash do conteúdo do arquivo para detectar mudanças"""
     return hashlib.md5(conteudo).hexdigest()
 
-@st.cache_data(ttl=300)  # Cache expira em 5 minutos
+@st.cache_data(ttl=300)
 def carregar_dados(uploaded_file=None, caminho_arquivo=None):
     """Carrega e processa os dados"""
     try:
         if uploaded_file:
-            # Ler conteúdo como bytes para hash
             conteudo_bytes = uploaded_file.getvalue()
             conteudo = conteudo_bytes.decode('utf-8-sig')
         elif caminho_arquivo and os.path.exists(caminho_arquivo):
@@ -405,7 +380,6 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         
         lines = conteudo.split('\n')
         
-        # Encontrar cabeçalho
         header_line = None
         for i, line in enumerate(lines):
             if line.startswith('"Chamado","Tipo Chamado"'):
@@ -421,11 +395,9 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         if header_line is None:
             return None, "Formato de arquivo inválido", None
         
-        # Ler dados
         data_str = '\n'.join(lines[header_line:])
         df = pd.read_csv(io.StringIO(data_str), quotechar='"')
         
-        # Renomear colunas
         col_mapping = {
             'Chamado': 'Chamado',
             'Tipo Chamado': 'Tipo_Chamado',
@@ -443,17 +415,14 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         
         df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
         
-        # Formatar nomes dos responsáveis
         if 'Responsável' in df.columns:
             df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
         
-        # Converter datas
         date_columns = ['Criado', 'Modificado']
         for col in date_columns:
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
         
-        # Extrair informações temporais
         if 'Criado' in df.columns:
             df['Ano'] = df['Criado'].dt.year
             df['Mês'] = df['Criado'].dt.month
@@ -473,14 +442,10 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             })
             df['Ano_Mês'] = df['Criado'].dt.strftime('%Y-%m')
         
-        # Converter revisões
         if 'Revisões' in df.columns:
             df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
         
-        # Calcular hash do conteúdo
         hash_conteudo = calcular_hash_arquivo(conteudo_bytes)
-        
-        # Adicionar timestamp para evitar cache
         timestamp = time.time()
         
         return df, "✅ Dados carregados com sucesso", f"{hash_conteudo}_{timestamp}"
@@ -490,11 +455,9 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
 
 def encontrar_arquivo_dados():
     """Tenta encontrar o arquivo de dados em vários caminhos possíveis"""
-    # Tentar primeiro o caminho principal
     if os.path.exists(CAMINHO_ARQUIVO_PRINCIPAL):
         return CAMINHO_ARQUIVO_PRINCIPAL
     
-    # Tentar caminhos alternativos
     for caminho in CAMINHOS_ALTERNATIVOS:
         if os.path.exists(caminho):
             return caminho
@@ -523,26 +486,20 @@ def verificar_e_atualizar_arquivo():
     caminho_arquivo = encontrar_arquivo_dados()
     
     if caminho_arquivo and os.path.exists(caminho_arquivo):
-        # Inicializar session state se não existir
         if 'ultima_modificacao' not in st.session_state:
             st.session_state.ultima_modificacao = os.path.getmtime(caminho_arquivo)
             return False
         
-        # Verificar se o arquivo foi modificado
         modificacao_atual = os.path.getmtime(caminho_arquivo)
         
-        # Se o arquivo foi modificado E temos dados carregados
         if (modificacao_atual > st.session_state.ultima_modificacao and 
             st.session_state.df_original is not None):
             
-            # Calcular hash atual para verificar se realmente mudou
             with open(caminho_arquivo, 'rb') as f:
                 conteudo_atual = f.read()
             hash_atual = calcular_hash_arquivo(conteudo_atual)
             
-            # Comparar com hash anterior
             if 'file_hash' not in st.session_state or hash_atual != st.session_state.file_hash:
-                # Atualizar timestamp
                 st.session_state.ultima_modificacao = modificacao_atual
                 return True
         
@@ -555,7 +512,7 @@ def limpar_sessao_dados():
     keys_to_clear = [
         'df_original', 'df_filtrado', 'arquivo_atual',
         'ultima_modificacao', 'file_hash', 'uploaded_file_name',
-        'ultima_atualizacao'  # Adicionado para tracking de tempo
+        'ultima_atualizacao'
     ]
     
     for key in keys_to_clear:
@@ -570,9 +527,6 @@ def get_horario_brasilia():
     except:
         return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
-# ============================================
-# NOVA FUNÇÃO: CRIAR POPUP DE INDICADORES
-# ============================================
 def criar_popup_indicadores(df):
     """Cria popup modal com indicadores principais"""
     hoje = datetime.now()
@@ -580,7 +534,6 @@ def criar_popup_indicadores(df):
     ano_atual = hoje.year
     nome_mes = hoje.strftime('%B').capitalize()
     
-    # Traduzir nome do mês para português
     meses_pt = {
         'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
         'April': 'Abril', 'May': 'Maio', 'June': 'Junho',
@@ -589,21 +542,17 @@ def criar_popup_indicadores(df):
     }
     nome_mes_pt = meses_pt.get(nome_mes, nome_mes)
     
-    # Filtrar dados do mês atual
     df_mes = df[(df['Criado'].dt.month == mes_atual) & 
                 (df['Criado'].dt.year == ano_atual)].copy()
     
-    # Calcular indicadores
     total_cards_mes = len(df_mes)
     cards_validados = len(df_mes[df_mes['Status'] == 'Sincronizado'])
     cards_com_erro = len(df_mes[df_mes['Revisões'] > 0])
     cards_sem_erro = cards_validados - cards_com_erro
     
-    # Taxas
     taxa_sucesso = (cards_validados / total_cards_mes * 100) if total_cards_mes > 0 else 0
     taxa_erro = (cards_com_erro / cards_validados * 100) if cards_validados > 0 else 0
     
-    # Comparar com mês anterior
     mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
     ano_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
     
@@ -612,30 +561,27 @@ def criar_popup_indicadores(df):
     
     cards_validados_anterior = len(df_mes_anterior[df_mes_anterior['Status'] == 'Sincronizado'])
     
-    # Calcular variação
     if cards_validados_anterior > 0:
         variacao = ((cards_validados - cards_validados_anterior) / cards_validados_anterior * 100)
     else:
         variacao = 0
     
-    # Texto narrativo dinâmico
     if cards_com_erro == 0:
         texto_principal = f"✅ **SRE VALIDOU {cards_validados} CARDS SEM RETORNO DE ERRO!**"
         subtexto = f"Performance excepcional em {nome_mes_pt} - 100% de aprovação direta"
         emoji_titulo = "🎯"
-        cor_destaque = "#28a745"
+        cor_destaque = COR_ENERGISA_VERDE
     elif taxa_erro <= 5:
         texto_principal = f"⚡ **SRE VALIDOU {cards_validados} CARDS COM APENAS {cards_com_erro} AJUSTES**"
         subtexto = f"Alta qualidade no mês de {nome_mes_pt} - Taxa de erro de apenas {taxa_erro:.1f}%"
         emoji_titulo = "🚀"
-        cor_destaque = "#17a2b8"
+        cor_destaque = COR_ENERGISA_CLARO
     else:
         texto_principal = f"📊 **SRE VALIDOU {cards_validados} CARDS, {cards_com_erro} COM RETORNO**"
         subtexto = f"Análise de {nome_mes_pt} - {taxa_sucesso:.1f}% de taxa de sucesso"
         emoji_titulo = "📈"
         cor_destaque = "#ffc107"
     
-    # Criar HTML do popup
     popup_html = f'''
     <div id="popupOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                 background: rgba(0, 0, 0, 0.7); z-index: 10000; display: flex; 
@@ -644,8 +590,7 @@ def criar_popup_indicadores(df):
                     border-radius: 20px; padding: 0; overflow: hidden; 
                     box-shadow: 0 25px 50px rgba(0,0,0,0.5); animation: slideIn 0.3s ease-out;">
             
-            <!-- Cabeçalho do popup -->
-            <div style="background: linear-gradient(135deg, #0c2461, #1e3799); 
+            <div style="background: linear-gradient(135deg, {COR_ENERGISA_PRINCIPAL}, {COR_ENERGISA_SECUNDARIO}); 
                         padding: 1.5rem 2rem; color: white;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -663,122 +608,112 @@ def criar_popup_indicadores(df):
                 </div>
             </div>
             
-            <!-- Conteúdo principal -->
             <div style="padding: 2rem;">
-                <!-- Destaque narrativo -->
                 <div style="background: {cor_destaque}15; padding: 1.5rem; border-radius: 10px; 
                             border-left: 5px solid {cor_destaque}; margin-bottom: 2rem;">
-                    <h3 style="color: #495057; margin: 0 0 0.5rem 0;">{texto_principal}</h3>
-                    <p style="color: #6c757d; margin: 0; font-size: 1rem;">{subtexto}</p>
+                    <h3 style="color: {COR_ENERGISA_PRETO}; margin: 0 0 0.5rem 0;">{texto_principal}</h3>
+                    <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0; font-size: 1rem;">{subtexto}</p>
                 </div>
                 
-                <!-- Grid de indicadores -->
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
-                    <!-- Card 1: Total de cards -->
-                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid #1e3799;">
+                    <div style="background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO}, {COR_ENERGISA_CINZA_MEDIO}); 
+                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {COR_ENERGISA_PRINCIPAL};">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: #1e3799; color: white; width: 50px; height: 50px; 
+                            <div style="background: {COR_ENERGISA_PRINCIPAL}; color: white; width: 50px; height: 50px; 
                                         border-radius: 10px; display: flex; align-items: center; 
                                         justify-content: center; font-size: 1.5rem;">📋</div>
                             <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: #1e3799;">
+                                <div style="font-size: 2.2rem; font-weight: 800; color: {COR_ENERGISA_PRINCIPAL};">
                                     {total_cards_mes}
                                 </div>
-                                <div style="color: #6c757d; font-size: 0.9rem;">TOTAL DE CARDS</div>
+                                <div style="color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">TOTAL DE CARDS</div>
                             </div>
                         </div>
-                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
                         Criados no mês de {nome_mes_pt}
                         </p>
                     </div>
                     
-                    <!-- Card 2: Validados pelo SRE -->
-                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid #28a745;">
+                    <div style="background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO}, {COR_ENERGISA_CINZA_MEDIO}); 
+                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {COR_ENERGISA_VERDE};">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: #28a745; color: white; width: 50px; height: 50px; 
+                            <div style="background: {COR_ENERGISA_VERDE}; color: white; width: 50px; height: 50px; 
                                         border-radius: 10px; display: flex; align-items: center; 
                                         justify-content: center; font-size: 1.5rem;">✅</div>
                             <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: #28a745;">
+                                <div style="font-size: 2.2rem; font-weight: 800; color: {COR_ENERGISA_VERDE};">
                                     {cards_validados}
                                 </div>
-                                <div style="color: #6c757d; font-size: 0.9rem;">VALIDADOS PELO SRE</div>
+                                <div style="color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">VALIDADOS PELO SRE</div>
                             </div>
                         </div>
-                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
                         {variacao:+.1f}% vs mês anterior
                         </p>
                     </div>
                     
-                    <!-- Card 3: Cards sem erro -->
-                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid #17a2b8;">
+                    <div style="background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO}, {COR_ENERGISA_CINZA_MEDIO}); 
+                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {COR_ENERGISA_CLARO};">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: #17a2b8; color: white; width: 50px; height: 50px; 
+                            <div style="background: {COR_ENERGISA_CLARO}; color: white; width: 50px; height: 50px; 
                                         border-radius: 10px; display: flex; align-items: center; 
                                         justify-content: center; font-size: 1.5rem;">🎯</div>
                             <div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: #17a2b8;">
+                                <div style="font-size: 2.2rem; font-weight: 800; color: {COR_ENERGISA_CLARO};">
                                     {cards_sem_erro}
                                 </div>
-                                <div style="color: #6c757d; font-size: 0.9rem;">SEM RETORNO DE ERRO</div>
+                                <div style="color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">SEM RETORNO DE ERRO</div>
                             </div>
                         </div>
-                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
                         Aprovação direta na primeira validação
                         </p>
                     </div>
                     
-                    <!-- Card 4: Com retorno -->
-                    <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {'#dc3545' if cards_com_erro > 0 else '#6c757d'}">
+                    <div style="background: linear-gradient(135deg, {COR_ENERGISA_CINZA_CLARO}, {COR_ENERGISA_CINZA_MEDIO}); 
+                                padding: 1.5rem; border-radius: 10px; border-top: 4px solid {'#dc3545' if cards_com_erro > 0 else COR_ENERGISA_CINZA_ESCURO}">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                            <div style="background: {'#dc3545' if cards_com_erro > 0 else '#6c757d'}; 
+                            <div style="background: {'#dc3545' if cards_com_erro > 0 else COR_ENERGISA_CINZA_ESCURO}; 
                                         color: white; width: 50px; height: 50px; 
                                         border-radius: 10px; display: flex; align-items: center; 
                                         justify-content: center; font-size: 1.5rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
                             <div>
                                 <div style="font-size: 2.2rem; font-weight: 800; 
-                                            color: {'#dc3545' if cards_com_erro > 0 else '#6c757d'}">
+                                            color: {'#dc3545' if cards_com_erro > 0 else COR_ENERGISA_CINZA_ESCURO}">
                                     {cards_com_erro}
                                 </div>
-                                <div style="color: #6c757d; font-size: 0.9rem;">COM RETORNO DE ERRO</div>
+                                <div style="color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">COM RETORNO DE ERRO</div>
                             </div>
                         </div>
-                        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
                         {taxa_erro:.1f}% dos cards validados
                         </p>
                     </div>
                 </div>
                 
-                <!-- Seção de gráfico e análise -->
                 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
-                    <!-- Mini gráfico -->
-                    <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px;">
-                        <h4 style="color: #495057; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
+                    <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 1.5rem; border-radius: 10px;">
+                        <h4 style="color: {COR_ENERGISA_PRETO}; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
                         <div style="height: 200px; display: flex; align-items: end; gap: 20px;">
                             <div style="text-align: center; flex: 1;">
-                                <div style="background: #6c757d; height: {max(10, min(100, cards_validados_anterior/5))}px; 
+                                <div style="background: {COR_ENERGISA_CINZA_ESCURO}; height: {max(10, min(100, cards_validados_anterior/5))}px; 
                                             border-radius: 5px 5px 0 0;"></div>
-                                <div style="margin-top: 10px; font-size: 0.9rem; color: #6c757d;">
+                                <div style="margin-top: 10px; font-size: 0.9rem; color: {COR_ENERGISA_CINZA_ESCURO};">
                                     {mes_anterior:02d}/{ano_anterior}
                                 </div>
-                                <div style="font-weight: bold; color: #495057;">{cards_validados_anterior}</div>
+                                <div style="font-weight: bold; color: {COR_ENERGISA_PRETO};">{cards_validados_anterior}</div>
                             </div>
                             <div style="text-align: center; flex: 1;">
-                                <div style="background: #28a745; height: {max(10, min(100, cards_validados/5))}px; 
+                                <div style="background: {COR_ENERGISA_VERDE}; height: {max(10, min(100, cards_validados/5))}px; 
                                             border-radius: 5px 5px 0 0;"></div>
-                                <div style="margin-top: 10px; font-size: 0.9rem; color: #6c757d;">
+                                <div style="margin-top: 10px; font-size: 0.9rem; color: {COR_ENERGISA_CINZA_ESCURO};">
                                     {mes_atual:02d}/{ano_atual}
                                 </div>
-                                <div style="font-weight: bold; color: #495057;">{cards_validados}</div>
+                                <div style="font-weight: bold; color: {COR_ENERGISA_PRETO};">{cards_validados}</div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Insights rápidos -->
                     <div style="background: linear-gradient(135deg, #fff8e1, #fff3cd); 
                                 padding: 1.5rem; border-radius: 10px; border-left: 5px solid #ffc107;">
                         <h4 style="color: #856404; margin: 0 0 1rem 0;">💡 INSIGHTS</h4>
@@ -797,14 +732,13 @@ def criar_popup_indicadores(df):
                 </div>
             </div>
             
-            <!-- Rodapé -->
-            <div style="background: #f8f9fa; padding: 1rem 2rem; border-top: 1px solid #dee2e6;">
+            <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 1rem 2rem; border-top: 1px solid {COR_ENERGISA_CINZA_MEDIO};">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <p style="color: #6c757d; margin: 0; font-size: 0.9rem;">
+                    <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0; font-size: 0.9rem;">
                     📅 Atualizado em {hoje.strftime('%d/%m/%Y %H:%M')}
                     </p>
                     <button onclick="document.getElementById('popupOverlay').style.display='none'"
-                            style="background: #6c757d; color: white; border: none; 
+                            style="background: {COR_ENERGISA_CINZA_ESCURO}; color: white; border: none; 
                                    padding: 0.5rem 1.5rem; border-radius: 5px; 
                                    cursor: pointer; font-weight: 600;">
                         Fechar
@@ -824,13 +758,8 @@ def criar_popup_indicadores(df):
     
     return popup_html
 
-# ============================================
-# NOVAS FUNÇÕES PARA ANÁLISE SRE MELHORADA
-# ============================================
-
 def calcular_taxa_retorno_sre(df, sre_nome):
     """Calcula taxa de retorno específica para um SRE"""
-    # Filtrar cards do SRE
     df_sre = df[df['SRE'] == sre_nome].copy()
     
     if len(df_sre) == 0:
@@ -838,7 +767,6 @@ def calcular_taxa_retorno_sre(df, sre_nome):
     
     total_cards = len(df_sre)
     
-    # Estimar cards que retornaram para DEV (baseado em revisões > 0)
     if 'Revisões' in df_sre.columns:
         cards_com_revisoes = len(df_sre[df_sre['Revisões'] > 0])
         taxa_retorno = (cards_com_revisoes / total_cards * 100) if total_cards > 0 else 0
@@ -846,7 +774,6 @@ def calcular_taxa_retorno_sre(df, sre_nome):
         taxa_retorno = 0
         cards_com_revisoes = 0
     
-    # Cards sincronizados (aprovados)
     cards_sincronizados = len(df_sre[df_sre['Status'] == 'Sincronizado'])
     
     return taxa_retorno, cards_com_revisoes, cards_sincronizados
@@ -864,21 +791,18 @@ def criar_matriz_performance_dev(df):
         
         total_cards = len(df_dev)
         
-        # Calcular eficiência (cards por mês)
         if 'Criado' in df_dev.columns:
             meses_ativos = df_dev['Criado'].dt.to_period('M').nunique()
             eficiencia = total_cards / max(meses_ativos, 1)
         else:
             eficiencia = total_cards
         
-        # Calcular qualidade (taxa de aprovação sem revisão)
         if 'Revisões' in df_dev.columns:
             cards_sem_revisao = len(df_dev[df_dev['Revisões'] == 0])
             qualidade = (cards_sem_revisao / total_cards * 100) if total_cards > 0 else 0
         else:
             qualidade = 100
         
-        # Calcular score composto
         score = (qualidade * 0.5) + (eficiencia * 5 * 0.3) + ((total_cards / max(len(df), 1)) * 100 * 0.2)
         
         matriz_data.append({
@@ -898,40 +822,33 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     if len(df_sre) == 0 or 'Criado' not in df_sre.columns:
         return None
     
-    # Agrupar por mês
     df_sre['Mes_Ano'] = df_sre['Criado'].dt.strftime('%Y-%m')
     
-    # Sincronizados por mês
     sinc_mes = df_sre[df_sre['Status'] == 'Sincronizado'].groupby('Mes_Ano').size().reset_index()
     sinc_mes.columns = ['Mes_Ano', 'Sincronizados']
     
-    # Total por mês
     total_mes = df_sre.groupby('Mes_Ano').size().reset_index()
     total_mes.columns = ['Mes_Ano', 'Total']
     
-    # Combinar
     dados_mes = pd.merge(total_mes, sinc_mes, on='Mes_Ano', how='left').fillna(0)
     
-    # Ordenar por data
     dados_mes = dados_mes.sort_values('Mes_Ano')
     
     return dados_mes
 
 # ============================================
-# SIDEBAR - FILTROS E CONTROLES (REORGANIZADO)
+# SIDEBAR - FILTROS E CONTROLES
 # ============================================
 with st.sidebar:
-    # Logo e título
-    st.markdown("""
+    st.markdown(f"""
     <div style="text-align: center; padding: 1rem 0;">
-        <h3 style="color: #1e3799; margin: 0;">⚙️ Painel de Controle</h3>
-        <p style="color: #6c757d; margin: 0; font-size: 0.9rem;">Filtros e Configurações</p>
+        <h3 style="color: {COR_ENERGISA_PRINCIPAL}; margin: 0;">⚙️ Painel de Controle</h3>
+        <p style="color: {COR_ENERGISA_CINZA_ESCURO}; margin: 0; font-size: 0.9rem;">Filtros e Configurações</p>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Inicializar session state
     if 'df_original' not in st.session_state:
         st.session_state.df_original = None
         st.session_state.df_filtrado = None
@@ -940,7 +857,6 @@ with st.sidebar:
         st.session_state.uploaded_file_name = None
         st.session_state.ultima_atualizacao = None
     
-    # FILTROS APENAS SE HOUVER DADOS
     if st.session_state.df_original is not None:
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
@@ -948,7 +864,6 @@ with st.sidebar:
             
             df = st.session_state.df_original.copy()
             
-            # FILTRO POR ANO
             if 'Ano' in df.columns:
                 anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
                 if anos_disponiveis:
@@ -961,7 +876,6 @@ with st.sidebar:
                     if ano_selecionado != 'Todos os Anos':
                         df = df[df['Ano'] == int(ano_selecionado)]
             
-            # FILTRO POR MÊS
             if 'Mês' in df.columns:
                 meses_disponiveis = sorted(df['Mês'].dropna().unique().astype(int))
                 if meses_disponiveis:
@@ -974,7 +888,6 @@ with st.sidebar:
                     if mes_selecionado != 'Todos os Meses':
                         df = df[df['Mês'] == int(mes_selecionado)]
             
-            # FILTRO POR RESPONSÁVEL
             if 'Responsável_Formatado' in df.columns:
                 responsaveis = ['Todos'] + sorted(df['Responsável_Formatado'].dropna().unique())
                 responsavel_selecionado = st.selectbox(
@@ -985,7 +898,6 @@ with st.sidebar:
                 if responsavel_selecionado != 'Todos':
                     df = df[df['Responsável_Formatado'] == responsavel_selecionado]
             
-            # BUSCA POR CHAMADO
             busca_chamado = st.text_input(
                 "🔎 Buscar Chamado",
                 placeholder="Digite número do chamado...",
@@ -994,7 +906,6 @@ with st.sidebar:
             if busca_chamado:
                 df = df[df['Chamado'].astype(str).str.contains(busca_chamado, na=False)]
             
-            # FILTRO POR STATUS
             if 'Status' in df.columns:
                 status_opcoes = ['Todos'] + sorted(df['Status'].dropna().unique())
                 status_selecionado = st.selectbox(
@@ -1005,7 +916,6 @@ with st.sidebar:
                 if status_selecionado != 'Todos':
                     df = df[df['Status'] == status_selecionado]
             
-            # FILTRO POR TIPO
             if 'Tipo_Chamado' in df.columns:
                 tipos = ['Todos'] + sorted(df['Tipo_Chamado'].dropna().unique())
                 tipo_selecionado = st.selectbox(
@@ -1016,7 +926,6 @@ with st.sidebar:
                 if tipo_selecionado != 'Todos':
                     df = df[df['Tipo_Chamado'] == tipo_selecionado]
             
-            # FILTRO POR EMPRESA
             if 'Empresa' in df.columns:
                 empresas = ['Todas'] + sorted(df['Empresa'].dropna().unique())
                 empresa_selecionada = st.selectbox(
@@ -1027,7 +936,6 @@ with st.sidebar:
                 if empresa_selecionada != 'Todas':
                     df = df[df['Empresa'] == empresa_selecionada]
             
-            # FILTRO POR SRE
             if 'SRE' in df.columns:
                 sres = ['Todos'] + sorted(df['SRE'].dropna().unique())
                 sre_selecionado = st.selectbox(
@@ -1038,41 +946,35 @@ with st.sidebar:
                 if sre_selecionado != 'Todos':
                     df = df[df['SRE'] == sre_selecionado]
             
-            # Atualizar dados filtrados
             st.session_state.df_filtrado = df
             
             st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
             st.markdown('</div>', unsafe_allow_html=True)
     
-    # CONTROLES DE ATUALIZAÇÃO (SEMPRE VISÍVEL)
     with st.container():
         st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
         st.markdown("**🔄 Controles de Atualização**")
         
-        # Verificar se há dados carregados
         if st.session_state.df_original is not None:
             arquivo_atual = st.session_state.arquivo_atual
             
             if arquivo_atual and isinstance(arquivo_atual, str) and os.path.exists(arquivo_atual):
-                # Informações do arquivo
                 tamanho_kb = os.path.getsize(arquivo_atual) / 1024
                 ultima_mod = datetime.fromtimestamp(os.path.getmtime(arquivo_atual))
                 
                 st.markdown(f"""
-                <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
                     <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
-                    <p style="margin: 0; font-size: 0.9rem; color: #495057;">{os.path.basename(arquivo_atual)}</p>
-                    <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #6c757d;">
+                    <p style="margin: 0; font-size: 0.9rem; color: {COR_ENERGISA_PRETO};">{os.path.basename(arquivo_atual)}</p>
+                    <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: {COR_ENERGISA_CINZA_ESCURO};">
                     📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Verificar se o arquivo foi modificado
                 if verificar_e_atualizar_arquivo():
                     st.warning("⚠️ O arquivo local foi modificado! Clique em 'Recarregar Local' para atualizar.")
             
-            # Botões de ação
             col_btn1, col_btn2 = st.columns(2)
             
             with col_btn1:
@@ -1087,21 +989,17 @@ with st.sidebar:
                     if caminho_atual and os.path.exists(caminho_atual):
                         with st.spinner('Recarregando dados do arquivo local...'):
                             try:
-                                # Forçar recarregamento limpando o cache
                                 carregar_dados.clear()
                                 
-                                # Recarregar dados
                                 df_atualizado, status, hash_conteudo = carregar_dados(caminho_arquivo=caminho_atual)
                                 
                                 if df_atualizado is not None:
-                                    # Atualizar session state
                                     st.session_state.df_original = df_atualizado
                                     st.session_state.df_filtrado = df_atualizado.copy()
                                     st.session_state.arquivo_atual = caminho_atual
                                     st.session_state.file_hash = hash_conteudo
                                     st.session_state.ultima_atualizacao = get_horario_brasilia()
                                     
-                                    # Atualizar timestamp da última modificação
                                     st.session_state.ultima_modificacao = os.path.getmtime(caminho_atual)
                                     
                                     st.success(f"✅ Dados atualizados! {len(df_atualizado):,} registros")
@@ -1121,10 +1019,8 @@ with st.sidebar:
                            help="Limpa todos os dados e cache",
                            key="btn_limpar"):
                     
-                    # Limpar cache
                     st.cache_data.clear()
                     
-                    # Limpar session state
                     limpar_sessao_dados()
                     
                     st.success("✅ Dados e cache limpos!")
@@ -1133,10 +1029,8 @@ with st.sidebar:
             
             st.markdown("---")
         
-        # UPLOAD DE ARQUIVO
         st.markdown("**📤 Importar Dados**")
         
-        # Mostrar status atual
         if st.session_state.df_original is not None:
             ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
             st.markdown(f"""
@@ -1155,9 +1049,7 @@ with st.sidebar:
             label_visibility="collapsed"
         )
         
-        # Se um arquivo foi enviado
         if uploaded_file is not None:
-            # Verificar se é um arquivo diferente do atual
             current_hash = calcular_hash_arquivo(uploaded_file.getvalue())
             
             file_details = {
@@ -1170,17 +1062,14 @@ with st.sidebar:
             
             if st.button("📥 Processar Arquivo", use_container_width=True, type="primary", key="btn_processar"):
                 with st.spinner('Processando novo arquivo...'):
-                    # Salvar temporariamente
                     temp_path = f"temp_{uploaded_file.name}"
                     with open(temp_path, 'wb') as f:
                         f.write(uploaded_file.getbuffer())
                     
-                    # Carregar dados
                     df_novo, status, hash_conteudo = carregar_dados(caminho_arquivo=temp_path)
                     os.remove(temp_path)
                     
                     if df_novo is not None:
-                        # Atualizar session state
                         st.session_state.df_original = df_novo
                         st.session_state.df_filtrado = df_novo.copy()
                         st.session_state.arquivo_atual = uploaded_file.name
@@ -1188,13 +1077,11 @@ with st.sidebar:
                         st.session_state.uploaded_file_name = uploaded_file.name
                         st.session_state.ultima_atualizacao = get_horario_brasilia()
                         
-                        # Limpar filtros
                         if 'filtros_aplicados' in st.session_state:
                             del st.session_state.filtros_aplicados
                         
                         st.success(f"✅ {len(df_novo):,} registros carregados!")
                         
-                        # Forçar recarregamento da página
                         time.sleep(1)
                         st.rerun()
                     else:
@@ -1202,7 +1089,6 @@ with st.sidebar:
         
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # CARREGAMENTO AUTOMÁTICO DO ARQUIVO LOCAL - REORGANIZADO
     if st.session_state.df_original is None:
         caminho_encontrado = encontrar_arquivo_dados()
         
@@ -1215,7 +1101,6 @@ with st.sidebar:
                     st.session_state.arquivo_atual = caminho_encontrado
                     st.session_state.file_hash = hash_conteudo
                     st.session_state.ultima_atualizacao = get_horario_brasilia()
-                    # Registrar data da última modificação
                     if os.path.exists(caminho_encontrado):
                         st.session_state.ultima_modificacao = os.path.getmtime(caminho_encontrado)
                     st.rerun()
@@ -1226,8 +1111,7 @@ with st.sidebar:
 # CONTEÚDO PRINCIPAL
 # ============================================
 
-# HEADER ATUALIZADO (removida a data completamente)
-st.markdown("""
+st.markdown(f"""
 <div class="main-header">
     <div style="display: flex; align-items: center; justify-content: space-between;">
         <div>
@@ -1251,21 +1135,15 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ============================================
-# NOVO: BOTÃO PARA ABRIR POPUP DE MANCHETE
-# ============================================
 if st.session_state.df_original is not None:
-    # Inicializar estado do popup
     if 'show_popup' not in st.session_state:
         st.session_state.show_popup = False
     
-    # Container para o botão (discreto, não polui a página)
     st.markdown("""
     <div style="display: flex; justify-content: flex-end; margin: -50px 0 20px 0;">
     </div>
     """, unsafe_allow_html=True)
     
-    # Botão usando Streamlit (posicionado após o header)
     col_espaco, col_botao = st.columns([10, 2])
     
     with col_botao:
@@ -1276,40 +1154,23 @@ if st.session_state.df_original is not None:
                     key="btn_manchete"):
             st.session_state.show_popup = True
 
-# ============================================
-# VERIFICAÇÃO AUTOMÁTICA DE ATUALIZAÇÕES
-# ============================================
 if st.session_state.df_original is not None:
-    # Verificar se o arquivo foi atualizado
     if verificar_e_atualizar_arquivo():
         st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
-# ... (código anterior mantido igual até a linha 1098)
-
-# ============================================
-# EXIBIR POPUP SE SOLICITADO (VERSÃO SIMPLIFICADA)
-# ============================================
 if st.session_state.df_original is not None and st.session_state.show_popup:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
     
-    # Criar um expander que simula popup
     with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
         
-        # ============================================
-        # CABEÇALHO SIMPLIFICADO
-        # ============================================
         st.markdown("### 📰 MANCHETE - RELATÓRIO ")
         st.markdown("---")
         
-        # ============================================
-        # SELEÇÃO DE PERÍODO
-        # ============================================
         st.markdown("#### 📅 SELECIONE O PERÍODO")
         
         col_periodo1, col_periodo2 = st.columns(2)
         
         with col_periodo1:
-            # Opções de período
             periodo_opcoes = [
                 "Mês Atual",
                 "Últimos 30 dias", 
@@ -1326,7 +1187,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             )
         
         with col_periodo2:
-            # Se tiver dados históricos, mostrar ano específico
             if 'Ano' in df.columns:
                 anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
                 if anos_disponiveis:
@@ -1340,9 +1200,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             else:
                 ano_especifico = 'Selecionar ano...'
         
-        # ============================================
-        # FILTRAR DADOS CONFORME PERÍODO SELECIONADO
-        # ============================================
         hoje = datetime.now()
         df_filtrado_periodo = df.copy()
         periodo_titulo = ""
@@ -1376,30 +1233,19 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             
         elif periodo_selecionado == "Todo o Período":
             periodo_titulo = "Todo o Período Disponíve"
-            # Já é o df completo
             
         elif ano_especifico != 'Selecionar ano...':
             df_filtrado_periodo = df[df['Criado'].dt.year == int(ano_especifico)].copy()
             periodo_titulo = f"Ano {ano_especifico}"
         
-        # ============================================
-        # CALCULAR INDICADORES PARA O PERÍODO SELECIONADO
-        # ============================================
         total_cards = len(df_filtrado_periodo)
         validados = len(df_filtrado_periodo[df_filtrado_periodo['Status'] == 'Sincronizado'])
         com_erro = len(df_filtrado_periodo[df_filtrado_periodo['Revisões'] > 0])
         sem_erro = validados - com_erro
         
-        # Taxas
         taxa_sucesso = (validados / total_cards * 100) if total_cards > 0 else 0
         taxa_erro = (com_erro / validados * 100) if validados > 0 else 0
         
-        # ============================================
-        # CALCULAR PARA PERÍODO ANTERIOR (COMPARAÇÃO)
-        # ============================================
-        # Para "Mês Atual": comparar com mês anterior
-        # Para "Últimos 30 dias": comparar com os 30 dias anteriores
-        # Para "Este Ano": comparar com ano anterior
         df_anterior = pd.DataFrame()
         periodo_anterior_titulo = ""
         
@@ -1436,10 +1282,8 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 periodo_anterior_titulo = f"Ano {ano_anterior_2}"
                 
         except Exception as e:
-            # Se houver erro, simplesmente não mostra comparação
             df_anterior = pd.DataFrame()
         
-        # Calcular indicadores do período anterior
         if not df_anterior.empty:
             total_cards_anterior = len(df_anterior)
             validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
@@ -1451,12 +1295,8 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             com_erro_anterior = 0
             taxa_sucesso_anterior = 0
         
-        # ============================================
-        # EXIBIR INDICADORES
-        # ============================================
         st.markdown(f"#### 🎯 DESTAQUE DO PERÍODO: {periodo_titulo}")
         
-        # Texto narrativo dinâmico
         if total_cards == 0:
             st.error(f"⚠️ **NENHUM DADO DISPONÍVEL** para {periodo_titulo.lower()}")
         elif com_erro == 0 and validados > 0:
@@ -1471,54 +1311,46 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         
         st.markdown("---")
         
-        # ============================================
-        # GRÁFICO COMPARATIVO
-        # ============================================
         if not df_anterior.empty and total_cards_anterior > 0:
             st.markdown("#### 📈 COMPARAÇÃO COM PERÍODO ANTERIOR")
             
-            # Dados para o gráfico
             periodos = [periodo_anterior_titulo, periodo_titulo]
             cards_totais = [total_cards_anterior, total_cards]
             cards_validados = [validados_anterior, validados]
             taxa_sucesso_vals = [taxa_sucesso_anterior, taxa_sucesso]
             
-            # Criar gráfico comparativo com layout melhorado
             fig_comparativo = go.Figure()
             
-            # Barras para cards totais
             fig_comparativo.add_trace(go.Bar(
                 x=periodos,
                 y=cards_totais,
                 name='Total Cards',
-                marker_color='#1e3799',
+                marker_color=COR_ENERGISA_PRINCIPAL,
                 text=cards_totais,
                 textposition='outside',
                 textfont=dict(size=10),
                 width=0.35
             ))
             
-            # Barras para cards validados
             fig_comparativo.add_trace(go.Bar(
                 x=periodos,
                 y=cards_validados,
                 name='Validados',
-                marker_color='#28a745',
+                marker_color=COR_ENERGISA_VERDE,
                 text=cards_validados,
                 textposition='outside',
                 textfont=dict(size=10),
                 width=0.35
             ))
             
-            # Linha para taxa de sucesso
             fig_comparativo.add_trace(go.Scatter(
                 x=periodos,
                 y=taxa_sucesso_vals,
                 name='Taxa Sucesso',
                 yaxis='y2',
                 mode='lines+markers+text',
-                line=dict(color='#dc3545', width=2),
-                marker=dict(size=8, color='#dc3545'),
+                line=dict(color=COR_ENERGISA_VERMELHO, width=2),
+                marker=dict(size=8, color=COR_ENERGISA_VERMELHO),
                 text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
                 textposition='top center',
                 textfont=dict(size=9)
@@ -1564,9 +1396,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             
             st.plotly_chart(fig_comparativo, use_container_width=True, config={'displayModeBar': False})
             
-            # ============================================
-            # MÉTRICAS DE VARIAÇÃO
-            # ============================================
             if total_cards_anterior > 0:
                 variacao_total = ((total_cards - total_cards_anterior) / total_cards_anterior * 100)
                 variacao_validados = ((validados - validados_anterior) / validados_anterior * 100) if validados_anterior > 0 else 0
@@ -1609,9 +1438,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             
             st.markdown("---")
         
-        # ============================================
-        # INDICADORES PRINCIPAIS
-        # ============================================
         st.markdown("#### 📊 INDICADORES PRINCIPAIS")
         
         col1, col2, col3, col4 = st.columns(4)
@@ -1650,14 +1476,10 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 help="Cards que retornaram para ajuste"
             )
         
-        # ============================================
-        # ANÁLISE DETALHADA
-        # ============================================
         st.markdown("---")
         st.markdown("#### 📈 ANÁLISE DETALHADA")
         
         if total_cards > 0:
-            # Média diária
             if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
                 dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
                 media_diaria = total_cards / dias_unicos if dias_unicos > 0 else 0
@@ -1677,7 +1499,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                     else:
                         st.metric("📝 Revisões", "N/A")
             
-            # Classificação de performance
             st.markdown("##### 🏆 CLASSIFICAÇÃO DE PERFORMANCE")
             
             if taxa_sucesso >= 95:
@@ -1711,31 +1532,27 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         else:
             st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
         
-        # ============================================
-        # RODAPÉ COM AÇÕES SIMPLIFICADAS
-        # ============================================
         st.markdown("---")
         
-        # Container para ações
-        st.markdown("""
-        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; border: 1px solid #dee2e6;">
+        st.markdown(f"""
+        <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 1.5rem; border-radius: 10px; border: 1px solid {COR_ENERGISA_CINZA_MEDIO};">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <p style="margin: 0; color: #495057; font-weight: 600;">Ações disponíveis</p>
-                    <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.9rem;">
+                    <p style="margin: 0; color: {COR_ENERGISA_PRETO}; font-weight: 600;">Ações disponíveis</p>
+                    <p style="margin: 0.3rem 0 0 0; color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.9rem;">
                     Exporte o relatório completo ou feche a manchete
                     </p>
                 </div>
                 <div style="display: flex; gap: 1rem;">
                     <button onclick="document.getElementById('exportBtn').click()" 
-                            style="background: linear-gradient(135deg, #28a745, #20c997); 
+                            style="background: linear-gradient(135deg, {COR_ENERGISA_VERDE}, {COR_ENERGISA_VERDE}); 
                                    color: white; border: none; padding: 0.7rem 1.5rem; 
                                    border-radius: 5px; cursor: pointer; font-weight: 600;
                                    display: flex; align-items: center; gap: 8px;">
                         📥 Exportar PDF
                     </button>
                     <button onclick="document.getElementById('closeBtn').click()" 
-                            style="background: #6c757d; color: white; border: none; 
+                            style="background: {COR_ENERGISA_CINZA_ESCURO}; color: white; border: none; 
                                    padding: 0.7rem 1.5rem; border-radius: 5px; 
                                    cursor: pointer; font-weight: 600; opacity: 0.9;">
                         ✕ Fechar
@@ -1745,7 +1562,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         </div>
         """, unsafe_allow_html=True)
         
-        # Botões reais (ocultos, mas funcionais)
         col_exportar, col_fechar = st.columns(2)
         
         with col_exportar:
@@ -1754,7 +1570,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                         use_container_width=True,
                         help="Gerar relatório completo em formato PDF",
                         key="btn_exportar_pdf_final"):
-                # Adicionar lógica para gerar PDF aqui
                 st.info("""
                 📄 **Funcionalidade de PDF em desenvolvimento...**
                 
@@ -1762,16 +1577,6 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 - `fpdf` ou `reportlab` para gerar PDFs
                 - `weasyprint` para converter HTML para PDF
                 - `pdfkit` (requer wkhtmltopdf)
-                
-                **Exemplo de estrutura:**
-                ```python
-                def exportar_para_pdf(df, periodo):
-                    # 1. Criar template HTML
-                    # 2. Adicionar gráficos como imagens
-                    # 3. Converter para PDF
-                    # 4. Salvar arquivo
-                    # 5. Disponibilizar para download
-                ```
                 """)
         
         with col_fechar:
@@ -1782,11 +1587,8 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 st.session_state.show_popup = False
                 st.rerun()
         
-        # ============================================
-        # INFORMAÇÕES ADICIONAIS
-        # ============================================
         st.markdown(f"""
-        <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-top: 1rem;">
+        <div style="background: {COR_ENERGISA_CINZA_CLARO}; padding: 1rem; border-radius: 5px; margin-top: 1rem;">
             <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
             <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
             <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small><br>
@@ -1794,17 +1596,12 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         </div>
         """, unsafe_allow_html=True)
 
-# ... (o restante do código permanece igual a partir daqui)
-
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
 # ============================================
 if st.session_state.df_original is not None:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
     
-    # ============================================
-    # INFORMAÇÕES DA BASE DE DADOS (SIMPLIFICADO)
-    # ============================================
     st.markdown("## 📊 Informações da Base de Dados")
     
     if 'Criado' in df.columns and not df.empty:
@@ -1814,16 +1611,13 @@ if st.session_state.df_original is not None:
         st.markdown(f"""
         <div class="info-base">
             <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
-            <p style="margin: 0.3rem 0 0 0; color: #6c757d;">
+            <p style="margin: 0.3rem 0 0 0; color: {COR_ENERGISA_CINZA_ESCURO};">
             Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
             Total de registros: {len(df):,}
             </p>
         </div>
         """, unsafe_allow_html=True)
     
-    # ============================================
-    # INDICADORES PRINCIPAIS SIMPLES (APENAS 3)
-    # ============================================
     st.markdown("## 📈 INDICADORES PRINCIPAIS")
     
     col1, col2, col3 = st.columns(3)
@@ -1854,12 +1648,8 @@ if st.session_state.df_original is not None:
                 "📝"
             ), unsafe_allow_html=True)
     
-    # ============================================
-    # ABAS PRINCIPAIS (ORIGINAIS)
-    # ============================================
     st.markdown("---")
     
-    # Definir 4 abas principais
     tab1, tab2, tab3, tab4 = st.tabs([
         "📅 Evolução de Demandas", 
         "📊 Análise de Revisões", 
@@ -1868,11 +1658,10 @@ if st.session_state.df_original is not None:
     ])
     
     with tab1:
-        # Cabeçalho com seletor de ano no lado direito
         col_titulo, col_seletor = st.columns([3, 1])
         
         with col_titulo:
-            st.markdown('<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="section-title-exec">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
         
         with col_seletor:
             if 'Ano' in df.columns:
@@ -1887,29 +1676,23 @@ if st.session_state.df_original is not None:
                     )
         
         if 'Ano' in df.columns and 'Nome_Mês' in df.columns and anos_disponiveis:
-            # Filtrar dados para o ano selecionado
             df_ano = df[df['Ano'] == ano_selecionado].copy()
             
             if not df_ano.empty:
-                # Ordem dos meses abreviados
                 ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
                                          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                 
-                # Criar dataframe com todos os meses do ano
                 todos_meses = pd.DataFrame({
                     'Mês_Num': range(1, 13),
                     'Nome_Mês': ordem_meses_abreviados
                 })
                 
-                # Agrupar por mês
                 demandas_por_mes = df_ano.groupby('Mês_Num').size().reset_index()
                 demandas_por_mes.columns = ['Mês_Num', 'Quantidade']
                 
-                # Juntar com todos os meses para garantir 12 meses
                 demandas_completas = pd.merge(todos_meses, demandas_por_mes, on='Mês_Num', how='left')
                 demandas_completas['Quantidade'] = demandas_completas['Quantidade'].fillna(0).astype(int)
                 
-                # Criar gráfico de linha
                 fig_mes = go.Figure()
                 
                 fig_mes.add_trace(go.Scatter(
@@ -1917,11 +1700,11 @@ if st.session_state.df_original is not None:
                     y=demandas_completas['Quantidade'],
                     mode='lines+markers+text',
                     name='Demandas',
-                    line=dict(color='#1e3799', width=3),
-                    marker=dict(size=10, color='#0c2461'),
+                    line=dict(color=COR_ENERGISA_PRINCIPAL, width=3),
+                    marker=dict(size=10, color=COR_ENERGISA_SECUNDARIO),
                     text=demandas_completas['Quantidade'],
                     textposition='top center',
-                    textfont=dict(size=12, color='#1e3799')
+                    textfont=dict(size=12, color=COR_ENERGISA_PRINCIPAL)
                 ))
                 
                 fig_mes.update_layout(
@@ -1944,23 +1727,21 @@ if st.session_state.df_original is not None:
                     )
                 )
                 
-                # Adicionar valor total
                 total_ano = int(demandas_completas['Quantidade'].sum())
                 fig_mes.add_annotation(
                     x=0.5, y=0.95,
                     xref="paper", yref="paper",
                     text=f"Total no ano: {total_ano:,} demandas",
                     showarrow=False,
-                    font=dict(size=12, color="#1e3799", weight="bold"),
+                    font=dict(size=12, color=COR_ENERGISA_PRINCIPAL, weight="bold"),
                     bgcolor="rgba(255,255,255,0.9)",
-                    bordercolor="#1e3799",
+                    bordercolor=COR_ENERGISA_PRINCIPAL,
                     borderwidth=1,
                     borderpad=4
                 )
                 
                 st.plotly_chart(fig_mes, use_container_width=True)
                 
-                # Estatísticas mensais
                 col_stats1, col_stats2, col_stats3 = st.columns(3)
                 with col_stats1:
                     mes_max = demandas_completas.loc[demandas_completas['Quantidade'].idxmax()]
@@ -1975,13 +1756,11 @@ if st.session_state.df_original is not None:
                     st.metric("📊 Média mensal", f"{media_mensal:,}")
     
     with tab2:
-        st.markdown('<div class="section-title-exec">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title-exec">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
         
-        # FILTROS PARA ANÁLISE DE REVISÕES
         col_rev_filtro1, col_rev_filtro2 = st.columns(2)
         
         with col_rev_filtro1:
-            # Filtrar por ano
             if 'Ano' in df.columns:
                 anos_rev = sorted(df['Ano'].dropna().unique().astype(int))
                 anos_opcoes_rev = ['Todos os Anos'] + list(anos_rev)
@@ -1992,7 +1771,6 @@ if st.session_state.df_original is not None:
                 )
         
         with col_rev_filtro2:
-            # Filtrar por mês
             if 'Mês' in df.columns:
                 meses_rev = sorted(df['Mês'].dropna().unique().astype(int))
                 meses_opcoes_rev = ['Todos os Meses'] + [str(m) for m in meses_rev]
@@ -2002,7 +1780,6 @@ if st.session_state.df_original is not None:
                     key="filtro_mes_revisoes"
                 )
         
-        # Aplicar filtros
         df_rev = df.copy()
         
         if ano_rev != 'Todos os Anos':
@@ -2012,11 +1789,9 @@ if st.session_state.df_original is not None:
             df_rev = df_rev[df_rev['Mês'] == int(mes_rev)]
         
         if 'Revisões' in df_rev.columns and 'Responsável_Formatado' in df_rev.columns:
-            # Filtrar apenas responsáveis com revisões
             df_com_revisoes = df_rev[df_rev['Revisões'] > 0].copy()
             
             if not df_com_revisoes.empty:
-                # Agrupar por responsável
                 revisoes_por_responsavel = df_com_revisoes.groupby('Responsável_Formatado').agg({
                     'Revisões': 'sum',
                     'Chamado': 'count'
@@ -2025,7 +1800,6 @@ if st.session_state.df_original is not None:
                 revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
                 revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
                 
-                # Criar título dinâmico
                 titulo_rev = 'Top 15 Responsáveis com Mais Revisões'
                 if ano_rev != 'Todos os Anos':
                     titulo_rev += f' - {ano_rev}'
@@ -2037,26 +1811,20 @@ if st.session_state.df_original is not None:
                     }
                     titulo_rev += f' - {meses_nomes[int(mes_rev)]}'
                 
-                # Criar gráfico de barras com cores vermelho (maior) para verde (menor)
                 fig_revisoes = go.Figure()
                 
-                # Criar escala de cores personalizada (vermelho para maiores, verde para menores)
                 max_revisoes = revisoes_por_responsavel['Total_Revisões'].max()
                 min_revisoes = revisoes_por_responsavel['Total_Revisões'].min()
                 
-                # Calcular cores baseadas no valor (vermelho para maior, verde para menor)
                 colors = []
                 for valor in revisoes_por_responsavel['Total_Revisões']:
                     if max_revisoes == min_revisoes:
-                        colors.append('#e74c3c')  # Vermelho se todos forem iguais
+                        colors.append(COR_ENERGISA_VERMELHO)
                     else:
-                        # Normalizar entre 0 e 1
                         normalized = (valor - min_revisoes) / (max_revisoes - min_revisoes)
-                        # Interpolar entre vermelho (#e74c3c) e verde (#28a745)
-                        # Quanto maior o valor, mais vermelho; quanto menor, mais verde
-                        red = int(231 * normalized + 40 * (1 - normalized))  # 231->40
-                        green = int(76 * normalized + 167 * (1 - normalized))  # 76->167
-                        blue = int(60 * normalized + 69 * (1 - normalized))  # 60->69
+                        red = int(221 * normalized + 40 * (1 - normalized))
+                        green = int(59 * normalized + 167 * (1 - normalized))
+                        blue = int(59 * normalized + 69 * (1 - normalized))
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_revisoes.add_trace(go.Bar(
@@ -2066,7 +1834,7 @@ if st.session_state.df_original is not None:
                     text=revisoes_por_responsavel['Total_Revisões'].head(15),
                     textposition='outside',
                     marker_color=colors[:15],
-                    marker_line_color='#2c3e50',
+                    marker_line_color=COR_ENERGISA_PRETO,
                     marker_line_width=1.5,
                     opacity=0.8
                 ))
@@ -2091,15 +1859,11 @@ if st.session_state.df_original is not None:
                 st.plotly_chart(fig_revisoes, use_container_width=True)
     
     with tab3:
-        st.markdown('<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title-exec">📈 CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA</div>', unsafe_allow_html=True)
         
-        # ============================================
-        # FILTROS AVANÇADOS
-        # ============================================
         col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
         
         with col_filtro1:
-            # Filtrar por ano
             if 'Ano' in df.columns:
                 anos_sinc = sorted(df['Ano'].dropna().unique().astype(int))
                 anos_opcoes_sinc = ['Todos os Anos'] + list(anos_sinc)
@@ -2110,7 +1874,6 @@ if st.session_state.df_original is not None:
                 )
         
         with col_filtro2:
-            # Filtrar por mês
             if 'Mês' in df.columns:
                 meses_sinc = sorted(df['Mês'].dropna().unique().astype(int))
                 meses_opcoes_sinc = ['Todos os Meses'] + [str(m) for m in meses_sinc]
@@ -2121,7 +1884,6 @@ if st.session_state.df_original is not None:
                 )
         
         with col_filtro3:
-            # Filtrar por SRE
             if 'SRE' in df.columns:
                 sres_sinc = ['Todos os SREs'] + sorted(df['SRE'].dropna().unique())
                 sre_sinc = st.selectbox(
@@ -2131,7 +1893,6 @@ if st.session_state.df_original is not None:
                 )
         
         with col_filtro4:
-            # Filtrar por Empresa
             if 'Empresa' in df.columns:
                 empresas_sinc = ['Todas Empresas'] + sorted(df['Empresa'].dropna().unique())
                 empresa_sinc = st.selectbox(
@@ -2140,9 +1901,6 @@ if st.session_state.df_original is not None:
                     key="filtro_empresa_sinc"
                 )
         
-        # ============================================
-        # APLICAR FILTROS
-        # ============================================
         df_sinc = df.copy()
         
         if ano_sinc != 'Todos os Anos':
@@ -2158,18 +1916,15 @@ if st.session_state.df_original is not None:
             df_sinc = df_sinc[df_sinc['Empresa'] == empresa_sinc]
         
         if 'Status' in df_sinc.columns and 'Criado' in df_sinc.columns:
-            # Filtrar apenas chamados sincronizados
             df_sincronizados = df_sinc[df_sinc['Status'] == 'Sincronizado'].copy()
             
             if not df_sincronizados.empty:
-                # Extrair data sem hora
                 df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
                 df_sincronizados['Ano_Mes'] = df_sincronizados['Criado'].dt.strftime('%Y-%m')
                 df_sincronizados['Dia_Semana'] = df_sincronizados['Criado'].dt.day_name()
                 df_sincronizados['Semana_Ano'] = df_sincronizados['Criado'].dt.isocalendar().week
                 df_sincronizados['Dia_Mes'] = df_sincronizados['Criado'].dt.day
                 
-                # Mapear dias da semana em português
                 dias_semana_map = {
                     'Monday': 'Segunda',
                     'Tuesday': 'Terça',
@@ -2181,17 +1936,12 @@ if st.session_state.df_original is not None:
                 }
                 df_sincronizados['Dia_Semana_PT'] = df_sincronizados['Dia_Semana'].map(dias_semana_map)
                 
-                # Ordenar por data
                 df_sincronizados = df_sincronizados.sort_values('Criado')
                 
-                # Agrupar por data
                 sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
                 sincronizados_por_dia.columns = ['Data', 'Quantidade']
                 sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
                 
-                # ============================================
-                # 1. INDICADORES PRINCIPAIS (KPIs)
-                # ============================================
                 st.markdown("### 📊 Indicadores Principais")
                 
                 total_sincronizados = int(sincronizados_por_dia['Quantidade'].sum())
@@ -2201,7 +1951,6 @@ if st.session_state.df_original is not None:
                 dias_com_zero = len(sincronizados_por_dia[sincronizados_por_dia['Quantidade'] == 0])
                 dias_trabalhados = len(sincronizados_por_dia)
                 
-                # Calcular variação vs período anterior (se aplicável)
                 variacao = 0
                 if len(sincronizados_por_dia) > 1:
                     primeiro_valor = sincronizados_por_dia['Quantidade'].iloc[0]
@@ -2209,7 +1958,6 @@ if st.session_state.df_original is not None:
                     if primeiro_valor > 0:
                         variacao = ((ultimo_valor - primeiro_valor) / primeiro_valor) * 100
                 
-                # Exibir KPIs em colunas
                 col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
                 
                 with col_kpi1:
@@ -2241,29 +1989,20 @@ if st.session_state.df_original is not None:
                         f"{min_dia['Data'].strftime('%d/%m')}: {int(min_dia['Quantidade']):,}"
                     )
                 
-                # ============================================
-                # 2. VISUALIZAÇÃO DETALHADA POR DIA (MOVIDA PARA CIMA)
-                # ============================================
                 with st.expander("📋 Visualização Detalhada por Dia", expanded=False):
-                    # Adicionar mais informações à tabela
                     sincronizados_por_dia['Dia_Semana'] = sincronizados_por_dia['Data'].apply(lambda x: x.strftime('%A'))
                     sincronizados_por_dia['Dia_Semana_PT'] = sincronizados_por_dia['Dia_Semana'].map(dias_semana_map)
                     
-                    # Calcular diferença do dia anterior
                     sincronizados_por_dia['Diferenca'] = sincronizados_por_dia['Quantidade'].diff()
                     sincronizados_por_dia['Variacao_%'] = (sincronizados_por_dia['Diferenca'] / sincronizados_por_dia['Quantidade'].shift(1) * 100).round(1)
                     
-                    # Adicionar média móvel
                     sincronizados_por_dia['Media_Movel_7'] = sincronizados_por_dia['Quantidade'].rolling(window=7, min_periods=1).mean().round(1)
                     
-                    # Preparar tabela para exibição
                     tabela_detalhada = sincronizados_por_dia.copy()
                     tabela_detalhada['Data_Formatada'] = tabela_detalhada['Data'].apply(lambda x: x.strftime('%d/%m/%Y'))
                     
-                    # Ordenar do mais recente para o mais antigo
                     tabela_detalhada = tabela_detalhada.sort_values('Data', ascending=False)
                     
-                    # Selecionar colunas para exibição
                     colunas_exibir = ['Data_Formatada', 'Dia_Semana_PT', 'Quantidade', 
                                     'Diferenca', 'Variacao_%', 'Media_Movel_7']
                     
@@ -2280,57 +2019,43 @@ if st.session_state.df_original is not None:
                         }
                     )
                 
-                # ============================================
-                # 3. ANÁLISE SEMANAL - GRÁFICO DE BARRA POR DIA
-                # ============================================
                 st.markdown("### 📅 Sincronizações por Dia")
                 
-                # Verificar se existem dados de fevereiro de 2026
                 anos_disponiveis = sorted(df_sincronizados['Criado'].dt.year.unique())
                 
-                # Filtrar dados reais (excluir dados futuros que não existem)
                 df_semanal_real = df_sincronizados.copy()
                 
-                # Remover quaisquer dados de 2026 se não existirem nos dados originais
                 if 2026 not in anos_disponiveis:
                     df_semanal_real = df_semanal_real[df_semanal_real['Criado'].dt.year != 2026]
                 
-                # Agrupar por dia específico (data)
                 df_semanal_real['Data_Formatada'] = df_semanal_real['Criado'].dt.strftime('%d/%m/%Y')
                 
-                # Contar sincronizações por dia
                 sinc_por_dia = df_semanal_real.groupby('Data').size().reset_index()
                 sinc_por_dia.columns = ['Data', 'Quantidade']
                 
-                # Ordenar por data
                 sinc_por_dia = sinc_por_dia.sort_values('Data')
                 
-                # Limitar para mostrar um período razoável (últimos 30 dias ou todos se menos)
                 if len(sinc_por_dia) > 30:
                     sinc_por_dia_recente = sinc_por_dia.tail(30)
                 else:
                     sinc_por_dia_recente = sinc_por_dia.copy()
                 
-                # Formatar datas para o eixo X
                 sinc_por_dia_recente['Data_Formatada'] = sinc_por_dia_recente['Data'].apply(lambda x: x.strftime('%d/%m'))
                 
-                # Criar gráfico de barras
                 fig_dias = go.Figure()
                 
-                # Calcular cores baseadas no valor (azul escuro para maior, azul claro para menor)
                 max_quant = sinc_por_dia_recente['Quantidade'].max()
                 min_quant = sinc_por_dia_recente['Quantidade'].min()
                 
                 colors = []
                 for valor in sinc_por_dia_recente['Quantidade']:
                     if max_quant == min_quant:
-                        colors.append('#1e3799')  # Azul escuro se todos forem iguais
+                        colors.append(COR_ENERGISA_PRINCIPAL)
                     else:
                         normalized = (valor - min_quant) / (max_quant - min_quant)
-                        # Interpolar entre azul escuro (#1e3799) e azul claro (#4a69bd)
-                        red = int(30 * normalized + 74 * (1 - normalized))
-                        green = int(55 * normalized + 105 * (1 - normalized))
-                        blue = int(153 * normalized + 189 * (1 - normalized))
+                        red = int(0 * normalized + 0 * (1 - normalized))
+                        green = int(51 * normalized + 51 * (1 - normalized))
+                        blue = int(160 * normalized + 160 * (1 - normalized))
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_dias.add_trace(go.Bar(
@@ -2340,7 +2065,7 @@ if st.session_state.df_original is not None:
                     text=sinc_por_dia_recente['Quantidade'],
                     textposition='outside',
                     marker_color=colors,
-                    marker_line_color='#0c2461',
+                    marker_line_color=COR_ENERGISA_SECUNDARIO,
                     marker_line_width=1.5,
                     opacity=0.8
                 ))
@@ -2365,7 +2090,6 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_dias, use_container_width=True)
                 
-                # Estatísticas por dia
                 col_dia1, col_dia2, col_dia3 = st.columns(3)
                 
                 with col_dia1:
@@ -2385,17 +2109,12 @@ if st.session_state.df_original is not None:
                     st.metric("📊 Média por Dia", 
                              f"{media_dia_total:.1f}")
                 
-                # ============================================
-                # 4. SINCRONIZAÇÕES POR SRE (STACKED BAR)
-                # ============================================
                 st.markdown("### 👥 Sincronizações por SRE")
                 
                 if 'SRE' in df_sincronizados.columns:
-                    # Agrupar por data e SRE
                     sre_por_dia = df_sincronizados.groupby(['Data', 'SRE']).size().reset_index()
                     sre_por_dia.columns = ['Data', 'SRE', 'Quantidade']
                     
-                    # Pivot para ter SREs como colunas
                     pivot_sre = sre_por_dia.pivot_table(
                         index='Data',
                         columns='SRE',
@@ -2404,11 +2123,9 @@ if st.session_state.df_original is not None:
                         fill_value=0
                     ).reset_index()
                     
-                    # Criar gráfico stacked bar
                     fig_sre = go.Figure()
                     
-                    # Adicionar uma barra para cada SRE
-                    for sre in pivot_sre.columns[1:]:  # Pular a coluna Data
+                    for sre in pivot_sre.columns[1:]:
                         fig_sre.add_trace(go.Bar(
                             x=pivot_sre['Data'],
                             y=pivot_sre[sre],
@@ -2438,20 +2155,15 @@ if st.session_state.df_original is not None:
                     
                     st.plotly_chart(fig_sre, use_container_width=True)
                 
-                # ============================================
-                # 5. SINCRONIZAÇÕES POR TIPO DE CHAMADO
-                # ============================================
                 st.markdown("### 📝 Sincronizações por Tipo de Chamado")
                 
                 if 'Tipo_Chamado' in df_sincronizados.columns:
                     col_tipo1, col_tipo2 = st.columns([2, 1])
                     
                     with col_tipo1:
-                        # Agrupar por tipo de chamado e data
                         tipo_por_dia = df_sincronizados.groupby(['Data', 'Tipo_Chamado']).size().reset_index()
                         tipo_por_dia.columns = ['Data', 'Tipo', 'Quantidade']
                         
-                        # Pivot para gráfico de linha
                         pivot_tipo = tipo_por_dia.pivot_table(
                             index='Data',
                             columns='Tipo',
@@ -2462,7 +2174,6 @@ if st.session_state.df_original is not None:
                         
                         fig_tipo = go.Figure()
                         
-                        # Adicionar linha para cada tipo (top 5 tipos)
                         top_tipos = df_sincronizados['Tipo_Chamado'].value_counts().head(5).index.tolist()
                         
                         for tipo in top_tipos:
@@ -2490,7 +2201,6 @@ if st.session_state.df_original is not None:
                         st.plotly_chart(fig_tipo, use_container_width=True)
                     
                     with col_tipo2:
-                        # Distribuição percentual por tipo
                         tipo_dist = df_sincronizados['Tipo_Chamado'].value_counts().reset_index()
                         tipo_dist.columns = ['Tipo', 'Quantidade']
                         tipo_dist['Percentual'] = (tipo_dist['Quantidade'] / total_sincronizados * 100).round(1)
@@ -2498,26 +2208,21 @@ if st.session_state.df_original is not None:
                         st.markdown("**📊 Distribuição por Tipo:**")
                         for idx, row in tipo_dist.head(5).iterrows():
                             st.markdown(f"""
-                            <div style="padding: 8px; margin-bottom: 5px; background: #f8f9fa; border-radius: 5px;">
+                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_ENERGISA_CINZA_CLARO}; border-radius: 5px;">
                                 <strong>{row['Tipo']}</strong><br>
                                 <small>{row['Quantidade']} ({row['Percentual']}%)</small>
                             </div>
                             """, unsafe_allow_html=True)
                 
-                # ============================================
-                # 6. SINCRONIZAÇÕES POR EMPRESA
-                # ============================================
                 st.markdown("### 🏢 Sincronizações por Empresa")
                 
                 if 'Empresa' in df_sincronizados.columns:
                     col_empresa1, col_empresa2 = st.columns([2, 1])
                     
                     with col_empresa1:
-                        # Agrupar por empresa e data
                         empresa_por_dia = df_sincronizados.groupby(['Data', 'Empresa']).size().reset_index()
                         empresa_por_dia.columns = ['Data', 'Empresa', 'Quantidade']
                         
-                        # Pivot para gráfico de área
                         pivot_empresa = empresa_por_dia.pivot_table(
                             index='Data',
                             columns='Empresa',
@@ -2528,7 +2233,6 @@ if st.session_state.df_original is not None:
                         
                         fig_empresa = go.Figure()
                         
-                        # Adicionar área para cada empresa (top 5)
                         top_empresas = df_sincronizados['Empresa'].value_counts().head(5).index.tolist()
                         
                         for empresa in top_empresas:
@@ -2557,7 +2261,6 @@ if st.session_state.df_original is not None:
                         st.plotly_chart(fig_empresa, use_container_width=True)
                     
                     with col_empresa2:
-                        # Ranking de empresas
                         empresa_rank = df_sincronizados['Empresa'].value_counts().reset_index()
                         empresa_rank.columns = ['Empresa', 'Quantidade']
                         empresa_rank['Percentual'] = (empresa_rank['Quantidade'] / total_sincronizados * 100).round(1)
@@ -2566,7 +2269,7 @@ if st.session_state.df_original is not None:
                         for idx, row in empresa_rank.head(5).iterrows():
                             medal = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][idx]
                             st.markdown(f"""
-                            <div style="padding: 8px; margin-bottom: 5px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid #{'1e3799' if idx==0 else '28a745' if idx==1 else 'ffc107' if idx==2 else '6c757d'}">
+                            <div style="padding: 8px; margin-bottom: 5px; background: {COR_ENERGISA_CINZA_CLARO}; border-radius: 5px; border-left: 4px solid #{COR_ENERGISA_PRINCIPAL if idx==0 else COR_ENERGISA_VERDE if idx==1 else 'ffc107' if idx==2 else COR_ENERGISA_CINZA_ESCURO}">
                                 <strong>{medal} {row['Empresa']}</strong><br>
                                 <small>{row['Quantidade']} ({row['Percentual']}%)</small>
                             </div>
@@ -2578,14 +2281,12 @@ if st.session_state.df_original is not None:
             st.info("ℹ️ Selecione filtros para visualizar os dados de sincronização por dia.")
     
     with tab4:
-        st.markdown('<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title-exec">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
         
         if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
-            # Filtros específicos para esta aba
             col_filtro1, col_filtro2 = st.columns(2)
             
             with col_filtro1:
-                # Filtrar por ano
                 if 'Ano' in df.columns:
                     anos_sre = sorted(df['Ano'].dropna().unique().astype(int))
                     anos_opcoes_sre = ['Todos'] + list(anos_sre)
@@ -2596,7 +2297,6 @@ if st.session_state.df_original is not None:
                     )
             
             with col_filtro2:
-                # Filtrar por mês
                 if 'Mês' in df.columns:
                     meses_sre = sorted(df['Mês'].dropna().unique().astype(int))
                     meses_opcoes_sre = ['Todos'] + [str(m) for m in meses_sre]
@@ -2606,7 +2306,6 @@ if st.session_state.df_original is not None:
                         key="filtro_mes_sre"
                     )
             
-            # Aplicar filtros
             df_sre = df.copy()
             
             if 'Ano' in df_sre.columns and ano_sre != 'Todos':
@@ -2615,7 +2314,6 @@ if st.session_state.df_original is not None:
             if 'Mês' in df_sre.columns and mes_sre != 'Todos':
                 df_sre = df_sre[df_sre['Mês'] == int(mes_sre)]
             
-            # Função para substituir e-mail pelo nome correto
             def substituir_nome_sre(sre_nome):
                 if pd.isna(sre_nome):
                     return "Não informado"
@@ -2631,47 +2329,36 @@ if st.session_state.df_original is not None:
                 elif "ramiza" in sre_nome_str or "irineu" in sre_nome_str:
                     return "Ramiza Irineu"
                 else:
-                    # Se não for nenhum dos nomes conhecidos, retornar o nome original
                     return sre_nome
             
-            # Filtrar apenas chamados sincronizados para análise SRE
             df_sincronizados = df_sre[df_sre['Status'] == 'Sincronizado'].copy()
             
             if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
-                # ============================================
-                # 1. SINCRONIZADOS POR SRE (GRÁFICO DE BARRAS)
-                # ============================================
                 st.markdown("### 📈 Sincronizados por SRE")
                 
-                # Calcular sincronizados por SRE
                 sinc_por_sre = df_sincronizados.groupby('SRE').size().reset_index()
                 sinc_por_sre.columns = ['SRE', 'Sincronizados']
                 sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                 
-                # Aplicar a substituição de nomes no DataFrame
                 sinc_por_sre['SRE_Nome'] = sinc_por_sre['SRE'].apply(substituir_nome_sre)
                 
-                # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
                 sinc_por_sre_nome = sinc_por_sre.groupby('SRE_Nome')['Sincronizados'].sum().reset_index()
                 sinc_por_sre_nome = sinc_por_sre_nome.sort_values('Sincronizados', ascending=False)
                 
-                # Criar gráfico de barras com nomes corrigidos
                 fig_sinc_bar = go.Figure()
                 
-                # Cores do maior para o menor (azul escuro para azul claro)
                 max_sinc = sinc_por_sre_nome['Sincronizados'].max()
                 min_sinc = sinc_por_sre_nome['Sincronizados'].min()
                 
                 colors = []
                 for valor in sinc_por_sre_nome['Sincronizados']:
                     if max_sinc == min_sinc:
-                        colors.append('#1e3799')  # Azul escuro se todos forem iguais
+                        colors.append(COR_ENERGISA_PRINCIPAL)
                     else:
                         normalized = (valor - min_sinc) / (max_sinc - min_sinc)
-                        # Interpolar entre azul escuro (#1e3799) e azul claro (#4a69bd)
-                        red = int(30 * normalized + 74 * (1 - normalized))
-                        green = int(55 * normalized + 105 * (1 - normalized))
-                        blue = int(153 * normalized + 189 * (1 - normalized))
+                        red = int(0 * normalized + 0 * (1 - normalized))
+                        green = int(51 * normalized + 51 * (1 - normalized))
+                        blue = int(160 * normalized + 160 * (1 - normalized))
                         colors.append(f'rgb({red}, {green}, {blue})')
                 
                 fig_sinc_bar.add_trace(go.Bar(
@@ -2681,12 +2368,11 @@ if st.session_state.df_original is not None:
                     text=sinc_por_sre_nome['Sincronizados'].head(15),
                     textposition='outside',
                     marker_color=colors[:15],
-                    marker_line_color='#0c2461',
+                    marker_line_color=COR_ENERGISA_SECUNDARIO,
                     marker_line_width=1.5,
                     opacity=0.8
                 ))
                 
-                # Criar título dinâmico
                 titulo_grafico = 'Sincronizados por SRE'
                 if ano_sre != 'Todos' or mes_sre != 'Todos':
                     titulo_grafico += ' - Filtrado'
@@ -2724,7 +2410,6 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_sinc_bar, use_container_width=True)
                 
-                # Top 3 SREs - COM NOMES CORRETOS
                 col_top1, col_top2, col_top3 = st.columns(3)
                 
                 if len(sinc_por_sre_nome) >= 1:
@@ -2748,10 +2433,8 @@ if st.session_state.df_original is not None:
                                  f"{sre3['SRE_Nome']}", 
                                  f"{sre3['Sincronizados']} sinc.")
                 
-                # Tabela completa
                 st.markdown("### 📋 Performance Detalhada dos SREs")
                 
-                # Calcular métricas adicionais
                 sres_metrics = []
                 sres_list = df_sre['SRE'].dropna().unique()
                 
@@ -2762,13 +2445,11 @@ if st.session_state.df_original is not None:
                         total_cards = len(df_sre_data)
                         sincronizados = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
                         
-                        # Cards que retornaram (revisões > 0)
                         if 'Revisões' in df_sre_data.columns:
                             cards_retorno = len(df_sre_data[df_sre_data['Revisões'] > 0])
                         else:
                             cards_retorno = 0
                         
-                        # Substituir e-mail pelo nome correto
                         nome_sre_display = substituir_nome_sre(sre)
                         
                         sres_metrics.append({
@@ -2780,7 +2461,6 @@ if st.session_state.df_original is not None:
                 
                 if sres_metrics:
                     df_sres_metrics = pd.DataFrame(sres_metrics)
-                    # Agrupar por nome (caso haja múltiplos e-mails para a mesma pessoa)
                     df_sres_metrics = df_sres_metrics.groupby('SRE').agg({
                         'Total_Cards': 'sum',
                         'Sincronizados': 'sum',
@@ -2800,29 +2480,20 @@ if st.session_state.df_original is not None:
                         }
                     )
     
-    # ============================================
-    # ANÁLISES MELHORADAS (COM NOVAS FUNCIONALIDADES)
-    # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title-exec">🔍 ANÁLISES AVANÇADAS</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title-exec">🔍 ANÁLISES AVANÇADAS</div>', unsafe_allow_html=True)
     
-    # Criar abas para as análises adicionais
     tab_extra1, tab_extra2, tab_extra3 = st.tabs([
         "🚀 Performance de Desenvolvedores",
         "📈 Análise de Sazonalidade", 
         "⚡ Diagnóstico de Erros"
     ])
     
-       # ABA 1: PERFORMANCE DE DESENVOLVEDORES - MELHORADA E DINÂMICA
     with tab_extra1:
-        # APAGADO: Container expansível "SOBRE ESTA ANÁLISE"
-        
         if 'Responsável_Formatado' in df.columns and 'Revisões' in df.columns and 'Status' in df.columns:
-            # Filtros para performance - REMOVIDO "MÍNIMO DE CHAMADOS"
             col_filtro_perf1, col_filtro_perf2, col_filtro_perf3 = st.columns(3)
             
             with col_filtro_perf1:
-                # Filtrar por ano
                 if 'Ano' in df.columns:
                     anos_perf = sorted(df['Ano'].dropna().unique().astype(int))
                     anos_opcoes_perf = ['Todos os Anos'] + list(anos_perf)
@@ -2833,7 +2504,6 @@ if st.session_state.df_original is not None:
                     )
             
             with col_filtro_perf2:
-                # Filtrar por mês
                 if 'Mês' in df.columns:
                     meses_perf = sorted(df['Mês'].dropna().unique().astype(int))
                     meses_opcoes_perf = ['Todos os Meses'] + [str(m) for m in meses_perf]
@@ -2850,7 +2520,6 @@ if st.session_state.df_original is not None:
                     index=0
                 )
             
-            # Filtrar dados conforme período selecionado
             df_perf = df.copy()
             
             if ano_perf != 'Todos os Anos':
@@ -2859,7 +2528,6 @@ if st.session_state.df_original is not None:
             if mes_perf != 'Todos os Meses':
                 df_perf = df_perf[df_perf['Mês'] == int(mes_perf)]
             
-            # Calcular métricas por desenvolvedor
             dev_metrics = []
             devs = df_perf['Responsável_Formatado'].unique()
             
@@ -2867,23 +2535,19 @@ if st.session_state.df_original is not None:
                 dev_data = df_perf[df_perf['Responsável_Formatado'] == dev]
                 total_chamados = len(dev_data)
                 
-                if total_chamados > 0:  # REMOVIDO O FILTRO DE MÍNIMO DE CHAMADOS
-                    # Chamados sem revisão
+                if total_chamados > 0:
                     sem_revisao = len(dev_data[dev_data['Revisões'] == 0])
                     score_qualidade = (sem_revisao / total_chamados * 100) if total_chamados > 0 else 0
                     
-                    # Eficiência (sincronizados)
                     sincronizados = len(dev_data[dev_data['Status'] == 'Sincronizado'])
                     eficiencia = (sincronizados / total_chamados * 100) if total_chamados > 0 else 0
                     
-                    # Produtividade (chamados por mês)
                     if 'Criado' in dev_data.columns:
                         meses_ativos = dev_data['Criado'].dt.to_period('M').nunique()
                         produtividade = total_chamados / meses_ativos if meses_ativos > 0 else 0
                     else:
                         produtividade = 0
                     
-                    # Classificação
                     if score_qualidade >= 80 and produtividade >= 5:
                         classificacao = "🟢 Alto"
                     elif score_qualidade >= 60:
@@ -2903,10 +2567,8 @@ if st.session_state.df_original is not None:
                     })
             
             if dev_metrics:
-                # Converter para DataFrame
                 df_dev_metrics = pd.DataFrame(dev_metrics)
                 
-                # Ordenar
                 if ordenar_por == "Score de Qualidade":
                     df_dev_metrics = df_dev_metrics.sort_values('Score Qualidade', ascending=False)
                 elif ordenar_por == "Total de Chamados":
@@ -2916,12 +2578,8 @@ if st.session_state.df_original is not None:
                 elif ordenar_por == "Produtividade":
                     df_dev_metrics = df_dev_metrics.sort_values('Produtividade', ascending=False)
                 
-                # ============================================
-                # MATRIZ DE PERFORMANCE PARA DEVS
-                # ============================================
                 st.markdown("### 🎯 Matriz de Performance - Desenvolvedores")
                 
-                # Container expansível para explicação da métrica
                 with st.expander("📊 **Como é calculada a Matriz de Performance?**", expanded=False):
                     st.markdown("""
                     **Fórmulas de Cálculo:**
@@ -2942,19 +2600,15 @@ if st.session_state.df_original is not None:
                     - **🔄 Necessita Apoio**: Baixa eficiência + Baixa qualidade
                     """)
                 
-                # Criar matriz de performance com filtros
                 matriz_df = criar_matriz_performance_dev(df_perf)
                 
                 if not matriz_df.empty:
-                    # REMOVIDO O FILTRO DE MÍNIMO DE CARDS
                     matriz_filtrada = matriz_df.copy()
                     
                     if not matriz_filtrada.empty:
-                        # Calcular médias para quadrantes
                         media_eficiencia = matriz_filtrada['Eficiencia'].mean()
                         media_qualidade = matriz_filtrada['Qualidade'].mean()
                         
-                        # Classificar em quadrantes
                         def classificar_quadrante(row):
                             if row['Eficiencia'] >= media_eficiencia and row['Qualidade'] >= media_qualidade:
                                 return "⭐ Estrelas"
@@ -2967,29 +2621,23 @@ if st.session_state.df_original is not None:
                         
                         matriz_filtrada['Quadrante'] = matriz_filtrada.apply(classificar_quadrante, axis=1)
                         
-                        # Determinar cores: verde para melhor qualidade, vermelho para pior
-                        # Ordenar por qualidade para atribuir cores
                         matriz_filtrada = matriz_filtrada.sort_values('Qualidade', ascending=False)
                         
-                        # Atribuir cores baseadas na posição na classificação de qualidade
                         num_devs = len(matriz_filtrada)
                         colors_scatter = []
                         for i in range(num_devs):
-                            # Normalizar posição (0 = melhor qualidade, 1 = pior qualidade)
                             pos_normalizada = i / max(num_devs - 1, 1)
-                            # Interpolar entre verde (#28a745) e vermelho (#dc3545)
                             red = int(220 * pos_normalizada + 40 * (1 - pos_normalizada))
                             green = int(53 * pos_normalizada + 167 * (1 - pos_normalizada))
                             blue = int(69 * pos_normalizada + 69 * (1 - pos_normalizada))
                             colors_scatter.append(f'rgb({red}, {green}, {blue})')
                         
-                        # Gráfico de dispersão com cores personalizadas
                         fig_matriz = px.scatter(
                             matriz_filtrada,
                             x='Eficiencia',
                             y='Qualidade',
                             size='Score',
-                            color=colors_scatter,  # Usar lista de cores personalizadas
+                            color=colors_scatter,
                             hover_name='Desenvolvedor',
                             title='Matriz de Performance: Eficiência vs Qualidade',
                             labels={
@@ -3000,10 +2648,8 @@ if st.session_state.df_original is not None:
                             size_max=30
                         )
                         
-                        # Remover legenda de cores (não é necessária com cores personalizadas)
                         fig_matriz.update_traces(showlegend=False)
                         
-                        # Adicionar linhas de média
                         fig_matriz.add_shape(
                             type="line",
                             x0=media_eficiencia,
@@ -3022,13 +2668,12 @@ if st.session_state.df_original is not None:
                             line=dict(color="gray", width=1, dash="dash")
                         )
                         
-                        # Adicionar anotações para os quadrantes
                         fig_matriz.add_annotation(
                             x=media_eficiencia + (matriz_filtrada['Eficiencia'].max() - media_eficiencia) * 0.5,
                             y=media_qualidade + (matriz_filtrada['Qualidade'].max() - media_qualidade) * 0.5,
                             text="⭐ Estrelas",
                             showarrow=False,
-                            font=dict(size=12, color="#28a745")
+                            font=dict(size=12, color=COR_ENERGISA_VERDE)
                         )
                         
                         fig_matriz.add_annotation(
@@ -3044,7 +2689,7 @@ if st.session_state.df_original is not None:
                             y=media_qualidade + (matriz_filtrada['Qualidade'].max() - media_qualidade) * 0.5,
                             text="🎯 Cuidadosos",
                             showarrow=False,
-                            font=dict(size=12, color="#007bff")
+                            font=dict(size=12, color=COR_ENERGISA_CLARO)
                         )
                         
                         fig_matriz.add_annotation(
@@ -3052,7 +2697,7 @@ if st.session_state.df_original is not None:
                             y=media_qualidade - (media_qualidade - matriz_filtrada['Qualidade'].min()) * 0.5,
                             text="🔄 Necessita Apoio",
                             showarrow=False,
-                            font=dict(size=12, color="#dc3545")
+                            font=dict(size=12, color=COR_ENERGISA_VERMELHO)
                         )
                         
                         fig_matriz.update_layout(
@@ -3064,7 +2709,6 @@ if st.session_state.df_original is not None:
                         
                         st.plotly_chart(fig_matriz, use_container_width=True)
                         
-                        # Tabela de classificação por quadrante
                         st.markdown("#### 📋 Classificação por Quadrante")
                         
                         col_q1, col_q2, col_q3, col_q4 = st.columns(4)
@@ -3111,9 +2755,6 @@ if st.session_state.df_original is not None:
                                 </div>
                                 """, unsafe_allow_html=True)
                 
-                               # ============================================
-                # NOVO EXPANDER: EXPLICAÇÃO DA PERFORMANCE DETALHADA
-                # ============================================
                 with st.expander("📊 **Como é calculada a Performance Detalhada?**", expanded=False):
                     st.markdown("""
                     **Métricas da Tabela de Performance Detalhada:**
@@ -3151,7 +2792,6 @@ if st.session_state.df_original is not None:
                     Identificar não apenas quem entrega mais (Produtividade), mas quem entrega com qualidade (Score) e consegue finalizar (Eficiência).
                     """)
                 
-                # Tabela completa
                 st.markdown("### 📋 Performance Detalhada")
                 st.dataframe(
                     df_dev_metrics,
@@ -3171,7 +2811,6 @@ if st.session_state.df_original is not None:
             else:
                 st.info("Nenhum desenvolvedor encontrado com os critérios selecionados.")
     
-    # ABA 2: ANÁLISE DE SAZONALIDADE - MELHORADA COM FILTROS
     with tab_extra2:
         with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
             st.markdown("""
@@ -3205,7 +2844,6 @@ if st.session_state.df_original is not None:
             """)
         
         if 'Criado' in df.columns and 'Status' in df.columns:
-            # Filtros para sazonalidade
             col_saz_filtro1, col_saz_filtro2, col_saz_filtro3 = st.columns(3)
             
             with col_saz_filtro1:
@@ -3237,7 +2875,6 @@ if st.session_state.df_original is not None:
                     index=0
                 )
             
-            # Aplicar filtros
             df_saz = df.copy()
             
             if ano_saz != 'Todos os Anos':
@@ -3246,10 +2883,8 @@ if st.session_state.df_original is not None:
             if mes_saz != 'Todos os Meses':
                 df_saz = df_saz[df_saz['Mês'] == int(mes_saz)]
             
-            # Análise por dia da semana
             st.markdown("### 📅 Padrões por Dia da Semana")
             
-            # Mapear dias da semana
             dias_semana = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
             dias_portugues = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
             dia_mapping = dict(zip(dias_semana, dias_portugues))
@@ -3260,15 +2895,12 @@ if st.session_state.df_original is not None:
             col_dia1, col_dia2 = st.columns(2)
             
             with col_dia1:
-                # Total por dia da semana
                 demanda_dia = df_saz['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
                 demanda_dia.columns = ['Dia', 'Total_Demandas']
                 
-                # Sincronizados por dia
                 sinc_dia = df_saz[df_saz['Status'] == 'Sincronizado']['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
                 sinc_dia.columns = ['Dia', 'Sincronizados']
                 
-                # Combinar dados
                 dados_dia = pd.merge(demanda_dia, sinc_dia, on='Dia', how='left').fillna(0)
                 dados_dia['Taxa_Sinc'] = (dados_dia['Sincronizados'] / dados_dia['Total_Demandas'] * 100).round(1)
                 
@@ -3278,7 +2910,7 @@ if st.session_state.df_original is not None:
                     x=dados_dia['Dia'],
                     y=dados_dia['Total_Demandas'],
                     name='Total Demandas',
-                    marker_color='#1e3799',
+                    marker_color=COR_ENERGISA_PRINCIPAL,
                     text=dados_dia['Total_Demandas'],
                     textposition='auto'
                 ))
@@ -3287,7 +2919,7 @@ if st.session_state.df_original is not None:
                     x=dados_dia['Dia'],
                     y=dados_dia['Sincronizados'],
                     name='Sincronizados',
-                    marker_color='#28a745',
+                    marker_color=COR_ENERGISA_VERDE,
                     text=dados_dia['Sincronizados'],
                     textposition='auto'
                 ))
@@ -3298,7 +2930,7 @@ if st.session_state.df_original is not None:
                     name='Taxa Sinc (%)',
                     yaxis='y2',
                     mode='lines+markers',
-                    line=dict(color='#dc3545', width=3),
+                    line=dict(color=COR_ENERGISA_VERMELHO, width=3),
                     marker=dict(size=8)
                 ))
                 
@@ -3319,12 +2951,8 @@ if st.session_state.df_original is not None:
                 st.plotly_chart(fig_dias, use_container_width=True)
             
             with col_dia2:
-                # ============================================
-                # DEMANDAS POR HORA DO DIA - COM FILTROS DE ANO E MÊS
-                # ============================================
                 st.markdown("### 🕐 Demandas por Hora do Dia")
                 
-                # Filtros específicos para análise por hora
                 col_hora_filtro1, col_hora_filtro2 = st.columns(2)
                 
                 with col_hora_filtro1:
@@ -3349,7 +2977,6 @@ if st.session_state.df_original is not None:
                     else:
                         mes_hora = 'Todos os Meses'
                 
-                # Aplicar filtros para análise por hora
                 df_hora = df.copy()
                 
                 if ano_hora != 'Todos os Anos':
@@ -3358,7 +2985,6 @@ if st.session_state.df_original is not None:
                 if mes_hora != 'Todos os Meses':
                     df_hora = df_hora[df_hora['Mês'] == int(mes_hora)]
                 
-                # Criar subtítulo dinâmico
                 subtitulo_hora = "Análise por Hora"
                 if ano_hora != 'Todos os Anos':
                     subtitulo_hora += f" - {ano_hora}"
@@ -3372,18 +2998,14 @@ if st.session_state.df_original is not None:
                 
                 st.markdown(f"**Período:** {subtitulo_hora}")
                 
-                # Extrair hora
                 df_hora['Hora'] = df_hora['Criado'].dt.hour
                 
-                # Total por hora
                 demanda_hora = df_hora['Hora'].value_counts().sort_index().reset_index()
                 demanda_hora.columns = ['Hora', 'Total_Demandas']
                 
-                # Sincronizados por hora
                 sinc_hora = df_hora[df_hora['Status'] == 'Sincronizado']['Hora'].value_counts().sort_index().reset_index()
                 sinc_hora.columns = ['Hora', 'Sincronizados']
                 
-                # Combinar dados
                 dados_hora = pd.merge(demanda_hora, sinc_hora, on='Hora', how='left').fillna(0)
                 dados_hora['Taxa_Sinc'] = (dados_hora['Sincronizados'] / dados_hora['Total_Demandas'] * 100).where(dados_hora['Total_Demandas'] > 0, 0).round(1)
                 
@@ -3394,7 +3016,7 @@ if st.session_state.df_original is not None:
                     y=dados_hora['Total_Demandas'],
                     name='Total Demandas',
                     mode='lines+markers',
-                    line=dict(color='#1e3799', width=3),
+                    line=dict(color=COR_ENERGISA_PRINCIPAL, width=3),
                     marker=dict(size=8)
                 ))
                 
@@ -3403,20 +3025,17 @@ if st.session_state.df_original is not None:
                     y=dados_hora['Sincronizados'],
                     name='Sincronizados',
                     mode='lines+markers',
-                    line=dict(color='#28a745', width=3),
+                    line=dict(color=COR_ENERGISA_VERDE, width=3),
                     marker=dict(size=8)
                 ))
                 
-                # Identificar picos
                 if not dados_hora.empty:
                     pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
                     pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
                     
-                    # ADJUSTED: Formatar hora corretamente
                     hora_pico_demanda = f"{int(pico_demanda['Hora'])}:00h"
                     hora_pico_sinc = f"{int(pico_sinc['Hora'])}:00h"
                     
-                    # Adicionar anotações para picos
                     fig_horas.add_annotation(
                         x=pico_demanda['Hora'],
                         y=pico_demanda['Total_Demandas'],
@@ -3451,13 +3070,11 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_horas, use_container_width=True)
                 
-                # Estatísticas de pico - ADJUSTED: Formatar hora corretamente
                 if not dados_hora.empty:
                     col_hora_stats1, col_hora_stats2, col_hora_stats3 = st.columns(3)
                     
                     with col_hora_stats1:
                         hora_pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
-                        # ADJUSTED: Formatar hora corretamente
                         hora_formatada = f"{int(hora_pico_demanda['Hora'])}:00h"
                         st.metric(
                             "🕐 Pico de Demandas", 
@@ -3466,10 +3083,8 @@ if st.session_state.df_original is not None:
                         )
                     
                     with col_hora_stats2:
-                        # CORREÇÃO APLICADA: Filtrar apenas horários de sincronismo
                         HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
                         
-                        # Filtrar apenas horários de sincronismo para pico
                         dados_sinc_pico = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)].copy()
                         
                         if not dados_sinc_pico.empty:
@@ -3481,7 +3096,6 @@ if st.session_state.df_original is not None:
                                 f"{int(hora_pico_sinc['Sincronizados'])} sinc."
                             )
                         else:
-                            # Fallback para todos os dados se não houver nos horários específicos
                             hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
                             hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
                             st.metric(
@@ -3492,19 +3106,15 @@ if st.session_state.df_original is not None:
                             )
                     
                     with col_hora_stats3:
-                        # CORREÇÃO APLICADA: "🏆 Melhor Taxa Sinc." considerando apenas horários de sincronismo
-                        # HORÁRIOS VÁLIDOS DE SINCRONISMO (conforme informado)
                         HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
-                        MINIMO_CHAMADOS = 2  # Mínimo de chamados para considerar estatística válida
+                        MINIMO_CHAMADOS = 2
                         
-                        # Filtrar APENAS horários de sincronismo válidos
                         dados_hora_validos = dados_hora[
                             dados_hora['Hora'].isin(HORARIOS_SINCRONISMO) &
                             (dados_hora['Total_Demandas'] >= MINIMO_CHAMADOS)
                         ]
                         
                         if not dados_hora_validos.empty:
-                            # Encontrar a melhor taxa entre os horários válidos
                             melhor_taxa_hora = dados_hora_validos.loc[dados_hora_validos['Taxa_Sinc'].idxmax()]
                             hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
                             
@@ -3514,7 +3124,6 @@ if st.session_state.df_original is not None:
                                 f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%"
                             )
                         else:
-                            # Se não houver dados válidos, usar todos os dados dos horários de sincronismo
                             dados_fallback = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)]
                             
                             if not dados_fallback.empty:
@@ -3527,19 +3136,14 @@ if st.session_state.df_original is not None:
                                     help="Taxa calculada com volume baixo de dados"
                                 )
                             else:
-                                # Se não houver dados em nenhum horário de sincronismo
                                 st.metric(
                                     "🏆 Melhor Taxa Sinc.", 
                                     "N/A",
                                     "Sem dados nos horários 8-12,14-16h"
                                 )
             
-            # ============================================
-            # SAZONALIDADE MENSAL - CORRIGIDA PARA MOSTRAR DEZEMBRO
-            # ============================================
             st.markdown("### 📈 Sazonalidade Mensal")
             
-            # Filtro simples para sazonalidade mensal
             col_saz_mes1, col_saz_mes2 = st.columns(2)
             
             with col_saz_mes1:
@@ -3553,20 +3157,17 @@ if st.session_state.df_original is not None:
                 )
             
             with col_saz_mes2:
-                # Apenas mostra o ano selecionado
                 if ano_saz_mes != 'Todos os Anos':
                     st.markdown(f"**Ano selecionado:** {ano_saz_mes}")
                 else:
                     st.markdown("**Todos os anos**")
             
-            # Aplicar filtro para análise mensal
             if ano_saz_mes != 'Todos os Anos':
                 df_saz_mes = df[df['Ano'] == int(ano_saz_mes)].copy()
             else:
                 df_saz_mes = df.copy()
             
             if not df_saz_mes.empty:
-                # Ordem dos meses abreviados em português (incluindo Dezembro)
                 meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                 meses_nomes_completos = {
                     'Jan': 'Janeiro', 'Fev': 'Fevereiro', 'Mar': 'Março', 'Abr': 'Abril',
@@ -3574,37 +3175,30 @@ if st.session_state.df_original is not None:
                     'Set': 'Setembro', 'Out': 'Outubro', 'Nov': 'Novembro', 'Dez': 'Dezembro'
                 }
                 
-                # Usar o mês abreviado já criado na função carregar_dados
                 if 'Nome_Mês' in df_saz_mes.columns:
-                    # Garantir que estamos usando a abreviação correta
                     df_saz_mes['Mês_Abrev'] = df_saz_mes['Nome_Mês']
                 else:
-                    # Se não existir, criar a partir da data
                     df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.month.map({
                         1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
                         5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
                         9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
                     })
                 
-                # Dados mensais para o ano selecionado
                 demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reset_index()
                 demanda_mes.columns = ['Mês', 'Total']
                 
-                # Reindex para garantir todos os 12 meses aparecem
                 demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).reset_index()
                 demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
                 
                 sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reset_index()
                 sinc_mes.columns = ['Mês', 'Sincronizados']
                 
-                # Reindex para garantir todos os 12 meses aparecem
                 sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).reset_index()
                 sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
                 
                 dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
                 dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).where(dados_mes['Total'] > 0, 0).round(1)
                 
-                # Criar título dinâmico
                 titulo_grafico = f'Distribuição Mensal'
                 if ano_saz_mes != 'Todos os Anos':
                     titulo_grafico += f' - {ano_saz_mes}'
@@ -3615,7 +3209,7 @@ if st.session_state.df_original is not None:
                     x=dados_mes['Mês'],
                     y=dados_mes['Total'],
                     name='Total Demandas',
-                    marker_color='#1e3799',
+                    marker_color=COR_ENERGISA_PRINCIPAL,
                     text=dados_mes['Total'],
                     textposition='auto'
                 ))
@@ -3624,7 +3218,7 @@ if st.session_state.df_original is not None:
                     x=dados_mes['Mês'],
                     y=dados_mes['Sincronizados'],
                     name='Sincronizados',
-                    marker_color='#28a745',
+                    marker_color=COR_ENERGISA_VERDE,
                     text=dados_mes['Sincronizados'],
                     textposition='auto'
                 ))
@@ -3635,7 +3229,7 @@ if st.session_state.df_original is not None:
                     name='Taxa Sinc (%)',
                     yaxis='y2',
                     mode='lines+markers',
-                    line=dict(color='#dc3545', width=3),
+                    line=dict(color=COR_ENERGISA_VERMELHO, width=3),
                     marker=dict(size=8)
                 ))
                 
@@ -3655,7 +3249,6 @@ if st.session_state.df_original is not None:
                 
                 st.plotly_chart(fig_mes_saz, use_container_width=True)
                 
-                # Estatísticas de pico
                 col_pico1, col_pico2, col_pico3 = st.columns(3)
                 
                 with col_pico1:
@@ -3673,7 +3266,6 @@ if st.session_state.df_original is not None:
                     st.metric("🏆 Melhor taxa de sincronização", 
                              f"{meses_nomes_completos.get(melhor_taxa['Mês'], melhor_taxa['Mês'])}: {melhor_taxa['Taxa_Sinc']}%")
     
-        # ABA 3: DIAGNÓSTICO DE ERROS - SURPREENDENTE
     with tab_extra3:
         with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
             st.markdown("""
@@ -3685,7 +3277,6 @@ if st.session_state.df_original is not None:
             """)
         
         if 'Tipo_Chamado' in df.columns:
-            # Filtros para diagnóstico
             col_diag1, col_diag2, col_diag3 = st.columns(3)
             
             with col_diag1:
@@ -3717,7 +3308,6 @@ if st.session_state.df_original is not None:
                     index=0
                 )
             
-            # Aplicar filtros
             df_diag = df.copy()
             
             if ano_diag != 'Todos os Anos':
@@ -3726,11 +3316,9 @@ if st.session_state.df_original is not None:
             if mes_diag != 'Todos os Meses':
                 df_diag = df_diag[df_diag['Mês'] == int(mes_diag)]
             
-            # Análise principal baseada na seleção
             if tipo_analise_diag == "Tipos de Erro":
                 st.markdown("### 🔍 Análise de Tipos de Erro")
                 
-                # Distribuição por tipo
                 tipos_erro = df_diag['Tipo_Chamado'].value_counts().reset_index()
                 tipos_erro.columns = ['Tipo', 'Frequência']
                 tipos_erro['Percentual'] = (tipos_erro['Frequência'] / len(df_diag) * 100).round(1)
@@ -3738,7 +3326,6 @@ if st.session_state.df_original is not None:
                 col_tipo1, col_tipo2 = st.columns([2, 1])
                 
                 with col_tipo1:
-                    # Gráfico de pizza
                     fig_pizza = px.pie(
                         tipos_erro.head(10),
                         values='Frequência',
@@ -3768,7 +3355,6 @@ if st.session_state.df_original is not None:
                         </div>
                         """, unsafe_allow_html=True)
                 
-                # Análise de severidade (baseada em revisões)
                 if 'Revisões' in df_diag.columns:
                     st.markdown("### ⚠️ Análise de Severidade")
                     
@@ -3780,29 +3366,21 @@ if st.session_state.df_original is not None:
                     severidade.columns = ['Média_Revisões', 'Max_Revisões', 'Total_Revisões', 'Contagem']
                     severidade = severidade.sort_values('Média_Revisões', ascending=False)
                     
-                    # CORREÇÃO APLICADA: Tratamento para evitar erro do pd.qcut
-                    # Identificar tipos problemáticos com tratamento de erro
                     try:
-                        # Tentar criar 3 quantis
                         severidade['Severidade'] = pd.qcut(
                             severidade['Média_Revisões'],
                             q=3,
                             labels=['Baixa', 'Média', 'Alta'],
-                            duplicates='drop'  # Permite descartar bordas duplicadas
+                            duplicates='drop'
                         )
                     except ValueError:
-                        # Se ainda falhar, usar uma abordagem baseada em percentis manuais
-                        # Calcular percentis manualmente
                         if len(severidade) >= 3:
-                            # Usar quantis aproximados
                             bins = severidade['Média_Revisões'].quantile([0, 0.33, 0.67, 1]).values
                             
-                            # Garantir que os bins são únicos
                             bins = sorted(set(bins))
                             
-                            if len(bins) >= 2:  # Pelo menos 2 bins
+                            if len(bins) >= 2:
                                 if len(bins) == 2:
-                                    # Apenas dois grupos possíveis
                                     severidade['Severidade'] = pd.cut(
                                         severidade['Média_Revisões'],
                                         bins=bins,
@@ -3810,7 +3388,6 @@ if st.session_state.df_original is not None:
                                         include_lowest=True
                                     )
                                 elif len(bins) >= 3:
-                                    # Três grupos
                                     severidade['Severidade'] = pd.cut(
                                         severidade['Média_Revisões'],
                                         bins=bins,
@@ -3818,10 +3395,8 @@ if st.session_state.df_original is not None:
                                         include_lowest=True
                                     )
                             else:
-                                # Todos os valores são iguais
                                 severidade['Severidade'] = 'Média'
                         else:
-                            # Poucos dados, classificação simples
                             media_global = severidade['Média_Revisões'].median()
                             
                             def classificar_severidade(valor):
@@ -3850,17 +3425,14 @@ if st.session_state.df_original is not None:
                 st.markdown("### 📈 Tendências Temporais de Erros")
                 
                 if 'Criado' in df_diag.columns:
-                    # Agrupar por mês
                     df_diag['Mes_Ano'] = df_diag['Criado'].dt.strftime('%Y-%m')
                     
                     evolucao = df_diag.groupby(['Mes_Ano', 'Tipo_Chamado']).size().reset_index()
                     evolucao.columns = ['Mês_Ano', 'Tipo', 'Quantidade']
                     
-                    # Top 5 tipos para análise
                     top_tipos = df_diag['Tipo_Chamado'].value_counts().head(5).index.tolist()
                     evol_top = evolucao[evolucao['Tipo'].isin(top_tipos)]
                     
-                    # Gráfico de linha
                     fig_tendencia = px.line(
                         evol_top,
                         x='Mês_Ano',
@@ -3880,10 +3452,8 @@ if st.session_state.df_original is not None:
                     
                     st.plotly_chart(fig_tendencia, use_container_width=True)
                     
-                    # Detecção de tendências
                     st.markdown("### 🔍 Detecção de Tendências")
                     
-                    # Calcular crescimento para cada tipo
                     tendencias = []
                     for tipo in top_tipos:
                         tipo_data = evol_top[evol_top['Tipo'] == tipo].sort_values('Mês_Ano')
@@ -3928,7 +3498,6 @@ if st.session_state.df_original is not None:
                 st.markdown("### 👥 Impacto nos SREs")
                 
                 if 'SRE' in df_diag.columns and 'Revisões' in df_diag.columns:
-                    # Análise por SRE
                     impacto_sre = df_diag.groupby('SRE').agg({
                         'Tipo_Chamado': lambda x: x.value_counts().index[0] if len(x) > 0 else 'N/A',
                         'Revisões': ['mean', 'sum'],
@@ -3941,7 +3510,6 @@ if st.session_state.df_original is not None:
                     col_impacto1, col_impacto2 = st.columns(2)
                     
                     with col_impacto1:
-                        # Gráfico de impacto
                         fig_impacto = px.bar(
                             impacto_sre.head(10),
                             x=impacto_sre.head(10).index,
@@ -3963,7 +3531,6 @@ if st.session_state.df_original is not None:
                     with col_impacto2:
                         st.markdown("### 🎯 Foco de Melhoria")
                         
-                        # Identificar SREs que precisam de atenção
                         sre_atencao = impacto_sre[
                             (impacto_sre['Média_Revisões'] > impacto_sre['Média_Revisões'].median()) &
                             (impacto_sre['Qtd_Chamados'] > 5)
@@ -3980,7 +3547,6 @@ if st.session_state.df_original is not None:
                                 </div>
                                 """, unsafe_allow_html=True)
                         
-                        # SREs com melhor performance
                         sre_melhor = impacto_sre[
                             (impacto_sre['Média_Revisões'] < impacto_sre['Média_Revisões'].quantile(0.25)) &
                             (impacto_sre['Qtd_Chamados'] > 5)
@@ -4000,20 +3566,17 @@ if st.session_state.df_original is not None:
             elif tipo_analise_diag == "Recomendações":
                 st.markdown("### 💡 Recomendações Inteligentes")
                 
-                # Gerar recomendações baseadas nos dados
                 recomendacoes = []
                 
-                # 1. Análise de tipos frequentes
                 tipos_frequentes = df_diag['Tipo_Chamado'].value_counts().head(3)
                 for tipo, count in tipos_frequentes.items():
-                    if count > len(df_diag) * 0.1:  # Mais de 10% do total
+                    if count > len(df_diag) * 0.1:
                         recomendacoes.append({
                             'Prioridade': '🔴 ALTA',
                             'Recomendação': f'Investigar causa raiz do tipo "{tipo}"',
                             'Justificativa': f'Responsável por {count} ocorrências ({count/len(df_diag)*100:.1f}% do total)'
                         })
                 
-                # 2. Análise temporal
                 if 'Criado' in df_diag.columns:
                     df_diag['Dia_Semana'] = df_diag['Criado'].dt.day_name()
                     dia_pico = df_diag['Dia_Semana'].value_counts().index[0]
@@ -4024,7 +3587,6 @@ if st.session_state.df_original is not None:
                         'Justificativa': f'Dia com maior volume de chamados'
                     })
                 
-                # 3. Análise de revisões
                 if 'Revisões' in df_diag.columns:
                     media_revisoes = df_diag['Revisões'].mean()
                     if media_revisoes > 2:
@@ -4034,7 +3596,6 @@ if st.session_state.df_original is not None:
                             'Justificativa': f'Média de {media_revisoes:.1f} revisões por chamado'
                         })
                 
-                # 4. Análise de SRE
                 if 'SRE' in df_diag.columns:
                     sre_performance = df_diag.groupby('SRE')['Revisões'].mean()
                     if len(sre_performance) > 0:
@@ -4048,7 +3609,6 @@ if st.session_state.df_original is not None:
                                 'Justificativa': f'Média de {maior_media:.1f} revisões por chamado'
                             })
                 
-                # Exibir recomendações
                 if recomendacoes:
                     df_recomendacoes = pd.DataFrame(recomendacoes)
                     
@@ -4059,13 +3619,12 @@ if st.session_state.df_original is not None:
                             <div style="display: flex; justify-content: space-between; align-items: start;">
                                 <div>
                                     <strong style="font-size: 1.1rem;">{row['Prioridade']} - {row['Recomendação']}</strong><br>
-                                    <small style="color: #6c757d;">{row['Justificativa']}</small>
+                                    <small style="color: {COR_ENERGISA_CINZA_ESCURO};">{row['Justificativa']}</small>
                                 </div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Ações sugeridas
                     st.markdown("### 🚀 Plano de Ação Sugerido")
                     
                     acoes = [
@@ -4078,21 +3637,18 @@ if st.session_state.df_original is not None:
                     
                     for acao in acoes:
                         st.markdown(f"""
-                        <div style="padding: 10px; margin-bottom: 8px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #1e3799;">
+                        <div style="padding: 10px; margin-bottom: 8px; background: {COR_ENERGISA_CINZA_CLARO}; border-radius: 5px; border-left: 3px solid {COR_ENERGISA_PRINCIPAL};">
                             {acao}
                         </div>
                         """, unsafe_allow_html=True)
                 else:
                     st.info("Não foram identificadas recomendações específicas com os filtros atuais.")
     
-    # ============================================
-    # TOP 10 RESPONSÁVEIS
-    # ============================================
     st.markdown("---")
     col_top, col_dist = st.columns([2, 1])
     
     with col_top:
-        st.markdown('<div class="section-title-exec">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title-exec">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
         
         if 'Responsável_Formatado' in df.columns:
             top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
@@ -4111,7 +3667,7 @@ if st.session_state.df_original is not None:
             fig_top.update_traces(
                 texttemplate='%{text}',
                 textposition='outside',
-                marker_line_color='#0c2461',
+                marker_line_color=COR_ENERGISA_SECUNDARIO,
                 marker_line_width=1.5,
                 opacity=0.9
             )
@@ -4129,17 +3685,14 @@ if st.session_state.df_original is not None:
             st.plotly_chart(fig_top, use_container_width=True)
     
     with col_dist:
-        st.markdown('<div class="section-title-exec">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title-exec">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
         
         if 'Tipo_Chamado' in df.columns:
-            # Agrupar por tipo de chamado
             tipos_chamado = df['Tipo_Chamado'].value_counts().reset_index()
             tipos_chamado.columns = ['Tipo', 'Quantidade']
             
-            # Ordenar por quantidade
             tipos_chamado = tipos_chamado.sort_values('Quantidade', ascending=True)
             
-            # Criar gráfico de barras horizontais
             fig_tipos = px.bar(
                 tipos_chamado,
                 x='Quantidade',
@@ -4154,7 +3707,7 @@ if st.session_state.df_original is not None:
             fig_tipos.update_traces(
                 texttemplate='%{text}',
                 textposition='outside',
-                marker_line_color='rgb(8,48,107)',
+                marker_line_color=COR_ENERGISA_PRINCIPAL,
                 marker_line_width=1,
                 opacity=0.9
             )
@@ -4171,21 +3724,16 @@ if st.session_state.df_original is not None:
             
             st.plotly_chart(fig_tipos, use_container_width=True)
     
-    # ============================================
-    # ÚLTIMAS DEMANDAS REGISTRADAS COM FILTROS (ORIGINAL)
-    # ============================================
     st.markdown("---")
-    st.markdown('<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title-exec">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
     
     if 'Criado' in df.columns:
-        # FILTRO DE BUSCA POR CHAMADO ESPECÍFICO - MANTIDO
         filtro_chamado_principal = st.text_input(
             "🔎 Buscar chamado específico:",
             placeholder="Digite o número do chamado...",
             key="filtro_chamado_principal"
         )
         
-        # Filtros para a tabela
         col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
         
         with col_filtro1:
@@ -4206,7 +3754,6 @@ if st.session_state.df_original is not None:
             )
         
         with col_filtro3:
-            # Mantendo todas as colunas originais
             mostrar_colunas = st.multiselect(
                 "Colunas a mostrar:",
                 options=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status', 'Prioridade', 
@@ -4216,17 +3763,14 @@ if st.session_state.df_original is not None:
             )
         
         with col_filtro4:
-            # Filtro de busca por chamado específico (adicional ao filtro principal)
             filtro_chamado_tabela = st.text_input(
                 "Filtro adicional:",
                 placeholder="Ex: 12345",
                 key="input_filtro_chamado"
             )
         
-        # Aplicar ordenação
         ultimas_demandas = df.copy()
         
-        # Aplicar filtro principal de busca por chamado
         if filtro_chamado_principal:
             ultimas_demandas = ultimas_demandas[
                 ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_principal, na=False)
@@ -4241,16 +3785,13 @@ if st.session_state.df_original is not None:
         elif ordenar_por == 'Revisões (Menor)':
             ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=True)
         
-        # Aplicar filtro de busca por chamado adicional
         if filtro_chamado_tabela:
             ultimas_demandas = ultimas_demandas[
                 ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_tabela, na=False)
             ]
         
-        # Limitar quantidade
         ultimas_demandas = ultimas_demandas.head(qtd_demandas)
         
-        # Preparar dados para exibição
         display_data = pd.DataFrame()
         
         if 'Chamado' in mostrar_colunas and 'Chamado' in ultimas_demandas.columns:
@@ -4290,7 +3831,6 @@ if st.session_state.df_original is not None:
                 height=400
             )
             
-            # Botão de exportação
             csv = display_data.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
                 label="📥 Exportar esta tabela",
@@ -4304,7 +3844,6 @@ if st.session_state.df_original is not None:
             st.info("Nenhum resultado encontrado com os filtros aplicados.")
 
 else:
-    # TELA INICIAL
     st.markdown("""
     <div style="text-align: center; padding: 4rem; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
         <h3 style="color: #495057;">📊 Esteira ADMS Dashboard</h3>
@@ -4312,7 +3851,7 @@ else:
             Sistema de análise e monitoramento de chamados - Setor SRE
         </p>
         <div style="margin-top: 2rem; padding: 2rem; background: white; border-radius: 8px; display: inline-block;">
-            <h4 style="color: #1e3799;">📋 Para começar:</h4>
+            <h4 style="color: #0033A0;">📋 Para começar:</h4>
             <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
             <p>2. <strong>Use a seção "Importar Dados"</strong> no final da barra lateral</p>
             <p>3. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
@@ -4320,29 +3859,25 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-# ============================================
-# RODAPÉ COM HORÁRIO DE ATUALIZAÇÃO
-# ============================================
 st.markdown("---")
 
-# Obter horário da última atualização
 ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
 
 st.markdown(f"""
 <div class="footer-exec">
     <div style="margin-bottom: 1rem;">
         <p style="margin: 0; color: #495057; font-weight: 600;">
-        Desenvolvido por: <span style="color: #1e3799;">Kewin Marcel Ramirez Ferreira | GEAT</span>
+        Desenvolvido por: <span style="color: {COR_ENERGISA_PRINCIPAL};">Kewin Marcel Ramirez Ferreira | GEAT</span>
         </p>
-        <p style="margin: 0.3rem 0 0 0; color: #6c757d; font-size: 0.85rem;">
-        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: #1e3799; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
+        <p style="margin: 0.3rem 0 0 0; color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.85rem;">
+        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: {COR_ENERGISA_PRINCIPAL}; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
         </p>
     </div>
     <div style="margin-top: 0.5rem;">
-        <p style="margin: 0; color: #6c757d; font-size: 0.8rem;">
+        <p style="margin: 0; color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.8rem;">
         © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
         </p>
-        <p style="margin: 0.2rem 0 0 0; color: #adb5bd; font-size: 0.75rem;">
+        <p style="margin: 0.2rem 0 0 0; color: {COR_ENERGISA_CINZA_ESCURO}; font-size: 0.75rem;">
         Versão 5.5 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
         </p>
     </div>
