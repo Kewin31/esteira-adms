@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime
 import io
 import os
 import warnings
@@ -25,7 +25,6 @@ COR_PRETO_SUAVE = "#212529"
 # ============================================
 # MAPEAMENTO COMPLETO DAS EMPRESAS
 # ============================================
-# Estrutura: Empresa -> {sigla_estado, nome_estado, regiao, nome_completo}
 MAPEAMENTO_EMPRESAS = {
     'EMR': {
         'sigla': 'MG',
@@ -52,7 +51,7 @@ MAPEAMENTO_EMPRESAS = {
         'longitude': -37.1
     },
     'ESS': {
-        'sigla': 'SP',  # Sul/Sudeste - usando SP como referência
+        'sigla': 'SP',
         'estado': 'São Paulo',
         'regiao': 'Sudeste',
         'nome_completo': 'Energisa Sul/Sudeste',
@@ -135,6 +134,13 @@ st.markdown(f"""
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         border: 1px solid {COR_CINZA_BORDA};
         text-align: center;
+        transition: all 0.3s ease;
+    }}
+    
+    .metric-card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 89, 115, 0.1);
+        border-color: {COR_AZUL_PETROLEO};
     }}
     
     .metric-value {{
@@ -163,6 +169,8 @@ st.markdown(f"""
         margin-bottom: 1.5rem;
         font-size: 1.2rem;
         font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }}
     
     .footer {{
@@ -172,6 +180,22 @@ st.markdown(f"""
         border-top: 2px solid {COR_CINZA_BORDA};
         color: {COR_CINZA_TEXTO};
         font-size: 0.85rem;
+    }}
+    
+    .stButton > button {{
+        background: {COR_AZUL_ESCURO};
+        color: {COR_BRANCO};
+        border: none;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }}
+    
+    .stButton > button:hover {{
+        background: {COR_AZUL_PETROLEO};
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 89, 115, 0.3);
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -231,7 +255,6 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             df['Criado'] = pd.to_datetime(df['Criado'], errors='coerce')
             df['Ano'] = df['Criado'].dt.year
             df['Mês'] = df['Criado'].dt.month
-            df['Data'] = df['Criado'].dt.date
         
         # Converter Revisões para numérico
         if 'Revisões' in df.columns:
@@ -314,9 +337,7 @@ def criar_mapa_coropletico(df_mapa):
         hover_name='estado',
         hover_data={
             'empresa_nome': True,
-            'empresa': False,
             'sincronismos': True,
-            'sigla': False,
             'regiao': True
         },
         color_continuous_scale=[
@@ -504,7 +525,7 @@ with st.sidebar:
     caminhos_possiveis = [
         "esteira_demandas.csv",
         "data/esteira_demandas.csv",
-        "dados/esteira_demandas.csv"
+        "dados/esteira_demandas.csv",
     ]
     
     arquivo_local = None
@@ -678,7 +699,7 @@ if 'df' in st.session_state:
         
         fig_coropletico = criar_mapa_coropletico(df_mapa)
         if fig_coropletico:
-            st.plotly_chart(fig_coropletico, use_container_width=True)
+            st.plotly_chart(fig_coropletico, use_container_width=True, config={'displayModeBar': True})
         else:
             st.warning("⚠️ Não há dados suficientes para gerar o mapa coroplético.")
     
@@ -690,7 +711,7 @@ if 'df' in st.session_state:
         
         fig_bolhas = criar_mapa_bolhas(df_mapa)
         if fig_bolhas:
-            st.plotly_chart(fig_bolhas, use_container_width=True)
+            st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
         else:
             st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa de bolhas.")
     
@@ -699,7 +720,7 @@ if 'df' in st.session_state:
     
     fig_barras = criar_grafico_barras(df_mapa)
     if fig_barras:
-        st.plotly_chart(fig_barras, use_container_width=True)
+        st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
     
     # Tabela detalhada
     with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
@@ -752,15 +773,21 @@ if 'df' in st.session_state:
         - Combine diferentes visualizações para insights mais profundos
         
         **Empresas Mapeadas:**
-        - EMR - Energisa Minas Gerais
-        - EPB - Energisa Paraíba
-        - ESE - Energisa Sergipe
-        - ESS - Energisa Sul/Sudeste
-        - EMS - Energisa Mato Grosso do Sul
-        - EMT - Energisa Mato Grosso
-        - ETO - Energisa Tocantins
-        - ERO - Energisa Rondônia
-        - EAC - Energisa Acre
+        - **EMR** - Energisa Minas Gerais (MG)
+        - **EPB** - Energisa Paraíba (PB)
+        - **ESE** - Energisa Sergipe (SE)
+        - **ESS** - Energisa Sul/Sudeste (SP)
+        - **EMS** - Energisa Mato Grosso do Sul (MS)
+        - **EMT** - Energisa Mato Grosso (MT)
+        - **ETO** - Energisa Tocantins (TO)
+        - **ERO** - Energisa Rondônia (RO)
+        - **EAC** - Energisa Acre (AC)
+        
+        **Regiões:**
+        - **Sudeste**: MG, SP
+        - **Nordeste**: PB, SE
+        - **Centro-Oeste**: MS, MT
+        - **Norte**: TO, RO, AC
         """)
     
 else:
@@ -789,8 +816,21 @@ else:
 # ============================================
 st.markdown(f"""
 <div class="footer">
-    <p>Desenvolvido por: <strong>Kewin Marcel Ramirez Ferreira | GEAT</strong></p>
-    <p>📧 kewin.ferreira@energisa.com.br</p>
-    <p style="font-size: 0.7rem;">© 2024 Mapa de Sincronismos - Energisa Group | Versão 1.0</p>
+    <div style="margin-bottom: 0.8rem;">
+        <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 500;">
+        Desenvolvido por: <span style="color: {COR_AZUL_ESCURO};">Kewin Marcel Ramirez Ferreira | GEAT</span>
+        </p>
+        <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">
+        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: {COR_AZUL_ESCURO}; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
+        </p>
+    </div>
+    <div>
+        <p style="margin: 0; color: {COR_CINZA_TEXTO}; font-size: 0.75rem;">
+        © 2024 Mapa de Sincronismos | Sistema proprietário - Energisa Group
+        </p>
+        <p style="margin: 0.2rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.7rem;">
+        Versão 1.0 | Mapa Interativo de Sincronizações | Atualizado em {datetime.now().strftime('%d/%m/%Y %H:%M')}
+        </p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
