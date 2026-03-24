@@ -1681,11 +1681,12 @@ if st.session_state.df_original is not None:
     
     st.markdown("---")
     
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📅 Evolução de Demandas", 
         "📊 Análise de Revisões", 
         "📈 Chamados Sincronizados por Dia",
         "🏆 Performance dos SREs"
+        "🗺️ Mapa de Sincronismos"
     ])
     
     with tab1:
