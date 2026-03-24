@@ -1170,7 +1170,43 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
+# ⬇️⬇️⬇️ COLE O CÓDIGO DO BOTÃO AQUI ⬇️⬇️⬇️
+# ============================================
+# BOTÃO PARA ABRIR O MAPA DE SINCRONISMOS
+# ============================================
+col_btn1, col_btn2, col_btn3 = st.columns([8, 2, 2])
 
+with col_btn2:
+    st.markdown("""
+    <a href="http://localhost:8502" target="_blank">
+        <button style="
+            background: linear-gradient(135deg, #2E7D32, #1B5E20);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            letter-spacing: 0.5px;
+        ">
+            🗺️ ABRIR MAPA DE SINCRONISMOS
+        </button>
+    </a>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <style>
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.4) !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+# ⬆️⬆️⬆️ FIM DO CÓDIGO DO BOTÃO ⬆️⬆️⬆️
 # ============================================
 # BOTÃO MANCHETE E DASHBOARD PRINCIPAL
 # ============================================
@@ -1681,12 +1717,11 @@ if st.session_state.df_original is not None:
     
     st.markdown("---")
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📅 Evolução de Demandas", 
         "📊 Análise de Revisões", 
         "📈 Chamados Sincronizados por Dia",
         "🏆 Performance dos SREs"
-        "🗺️ Mapa de Sincronismos"
     ])
     
     with tab1:
