@@ -1438,7 +1438,7 @@ st.markdown(f"""
                 font-size: 0.85rem;
                 font-weight: 400;
             ">
-                Acompanhamento de Demandas - EMS | EMR | ESS | ESE
+                Acompanhamento de Demandas - EAC | EMR | EMS | EMT | EPB | ERO | ESE | ESS | ETO
             </p>
         </div>
         <div style="text-align: right;">
