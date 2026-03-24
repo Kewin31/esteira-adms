@@ -918,141 +918,82 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     return dados_mes
 
 # ============================================
-# FUNÇÕES DO MAPA - COM GEOJSON BRASIL
+# FUNÇÕES DO MAPA
 # ============================================
-import requests
-import json
-
-@st.cache_data(ttl=86400)  # Cache por 24 horas
-def carregar_geojson_brasil():
-    """
-    Carrega o GeoJSON dos estados brasileiros
-    Fonte: IBGE (via GitHub)
-    """
-    try:
-        # URL do GeoJSON dos estados brasileiros (fonte confiável)
-        url = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson"
-        
-        response = requests.get(url)
-        response.raise_for_status()
-        
-        geojson = response.json()
-        
-        # Criar mapeamento entre nome do estado e sigla
-        estado_para_sigla = {
-            'Acre': 'AC', 'Alagoas': 'AL', 'Amapá': 'AP', 'Amazonas': 'AM',
-            'Bahia': 'BA', 'Ceará': 'CE', 'Distrito Federal': 'DF', 'Espírito Santo': 'ES',
-            'Goiás': 'GO', 'Maranhão': 'MA', 'Mato Grosso': 'MT', 'Mato Grosso do Sul': 'MS',
-            'Minas Gerais': 'MG', 'Pará': 'PA', 'Paraíba': 'PB', 'Paraná': 'PR',
-            'Pernambuco': 'PE', 'Piauí': 'PI', 'Rio de Janeiro': 'RJ', 'Rio Grande do Norte': 'RN',
-            'Rio Grande do Sul': 'RS', 'Rondônia': 'RO', 'Roraima': 'RR', 'Santa Catarina': 'SC',
-            'São Paulo': 'SP', 'Sergipe': 'SE', 'Tocantins': 'TO'
-        }
-        
-        # Adicionar sigla como propriedade no geojson para facilitar matching
-        for feature in geojson['features']:
-            nome_estado = feature['properties']['name']
-            feature['properties']['sigla'] = estado_para_sigla.get(nome_estado, nome_estado[:2])
-        
-        return geojson, estado_para_sigla
-        
-    except Exception as e:
-        st.error(f"Erro ao carregar GeoJSON: {str(e)}")
-        return None, None
+def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_filtro=None):
+    """Processa os dados para gerar as métricas do mapa"""
+    
+    # Filtrar apenas sincronizados
+    df_sinc = df[df['Status'] == 'Sincronizado'].copy()
+    
+    # Aplicar filtros de data
+    if ano_filtro and ano_filtro != 'Todos':
+        df_sinc = df_sinc[df_sinc['Ano'] == int(ano_filtro)]
+    
+    if mes_filtro and mes_filtro != 'Todos':
+        df_sinc = df_sinc[df_sinc['Mês'] == int(mes_filtro)]
+    
+    # Filtrar empresas selecionadas
+    if empresas_selecionadas and 'Todas' not in empresas_selecionadas:
+        df_sinc = df_sinc[df_sinc['Empresa'].isin(empresas_selecionadas)]
+    
+    # Contar sincronismos por empresa
+    sinc_por_empresa = df_sinc['Empresa'].value_counts().reset_index()
+    sinc_por_empresa.columns = ['Empresa', 'Sincronismos']
+    
+    # Preparar dados para o mapa
+    dados_mapa = []
+    total_sinc = 0
+    
+    for empresa in sinc_por_empresa['Empresa']:
+        if empresa in MAPEAMENTO_EMPRESAS:
+            info = MAPEAMENTO_EMPRESAS[empresa]
+            qtd = sinc_por_empresa[sinc_por_empresa['Empresa'] == empresa]['Sincronismos'].values[0]
+            dados_mapa.append({
+                'sigla': info['sigla'],
+                'estado': info['estado'],
+                'regiao': info['regiao'],
+                'empresa': empresa,
+                'empresa_nome': info['nome_completo'],
+                'sincronismos': qtd,
+                'latitude': info['latitude'],
+                'longitude': info['longitude']
+            })
+            total_sinc += qtd
+    
+    # Adicionar empresas com zero sincronismos se estiverem selecionadas
+    if empresas_selecionadas and 'Todas' not in empresas_selecionadas:
+        for empresa in empresas_selecionadas:
+            if empresa in MAPEAMENTO_EMPRESAS and empresa not in sinc_por_empresa['Empresa'].values:
+                info = MAPEAMENTO_EMPRESAS[empresa]
+                dados_mapa.append({
+                    'sigla': info['sigla'],
+                    'estado': info['estado'],
+                    'regiao': info['regiao'],
+                    'empresa': empresa,
+                    'empresa_nome': info['nome_completo'],
+                    'sincronismos': 0,
+                    'latitude': info['latitude'],
+                    'longitude': info['longitude']
+                })
+    
+    return pd.DataFrame(dados_mapa), total_sinc
 
 def criar_mapa_coropletico(df_mapa):
-    """
-    Cria o mapa coroplético verdadeiro dos estados brasileiros
-    """
+    """Cria o mapa coroplético (por estados)"""
     if df_mapa.empty:
         return None
     
-    # Carregar GeoJSON dos estados
-    geojson, estado_para_sigla = carregar_geojson_brasil()
-    
-    if geojson is None:
-        # Fallback: se não conseguir carregar o geojson, usa mapa de bolhas
-        st.warning("⚠️ Não foi possível carregar o mapa dos estados. Usando visualização alternativa com bolhas.")
-        return criar_mapa_bolhas_alternativo(df_mapa)
-    
-    # Criar o mapa coroplético
-    fig = px.choropleth_mapbox(
+    fig = px.choropleth(
         df_mapa,
-        geojson=geojson,
         locations='sigla',
-        featureidkey="properties.sigla",
-        color='sincronismos',
-        color_continuous_scale=[
-            (0.0, COR_CINZA_TEXTO),
-            (0.33, COR_AZUL_PETROLEO),
-            (0.66, COR_AZUL_ESCURO),
-            (1.0, COR_VERDE_ESCURO)
-        ],
-        range_color=(0, df_mapa['sincronismos'].max() if df_mapa['sincronismos'].max() > 0 else 100),
-        mapbox_style="carto-positron",
-        zoom=3,
-        center={"lat": -15.5, "lon": -55},
-        opacity=0.8,
-        title="<b>Mapa de Sincronizações por Estado</b>",
-        labels={'sincronismos': 'Nº de Sincronizações'},
-        hover_data={
-            'sigla': True,
-            'estado': True,
-            'sincronismos': True,
-            'regiao': True,
-            'empresa_nome': True
-        }
-    )
-    
-    # Personalizar o hover (popup)
-    fig.update_traces(
-        hovertemplate="<b>%{customdata[1]}</b><br>" +
-                      "UF: %{customdata[0]}<br>" +
-                      "Empresa: %{customdata[4]}<br>" +
-                      "Sincronizações: <b>%{customdata[2]}</b><br>" +
-                      "Região: %{customdata[3]}<extra></extra>",
-        customdata=df_mapa[['sigla', 'estado', 'sincronismos', 'regiao', 'empresa_nome']].values
-    )
-    
-    # Ajustar layout
-    fig.update_layout(
-        height=600,
-        margin={"r": 0, "t": 50, "l": 0, "b": 0},
-        coloraxis_colorbar=dict(
-            title="Sincronizações",
-            thicknessmode="pixels",
-            thickness=25,
-            lenmode="pixels",
-            len=350,
-            yanchor="middle",
-            y=0.5,
-            bgcolor="rgba(255,255,255,0.8)",
-            bordercolor=COR_AZUL_ESCURO,
-            borderwidth=1
-        )
-    )
-    
-    return fig
-
-def criar_mapa_bolhas_alternativo(df_mapa):
-    """
-    Versão alternativa do mapa de bolhas (fallback quando o geojson não carrega)
-    Esta função é usada apenas se houver erro no carregamento do mapa coroplético
-    """
-    if df_mapa.empty:
-        return None
-    
-    fig = px.scatter_geo(
-        df_mapa,
-        lat='latitude',
-        lon='longitude',
+        locationmode="USA-states",
         color='sincronismos',
         hover_name='estado',
         hover_data={
             'empresa_nome': True,
             'sincronismos': True,
-            'regiao': True,
-            'sigla': True
+            'regiao': True
         },
         color_continuous_scale=[
             [0.0, COR_CINZA_TEXTO],
@@ -1060,25 +1001,22 @@ def criar_mapa_bolhas_alternativo(df_mapa):
             [0.66, COR_AZUL_ESCURO],
             [1.0, COR_VERDE_ESCURO]
         ],
-        size='sincronismos',
-        size_max=50,
-        title="<b>Mapa de Sincronizações por Estado (Alternativo)</b>",
+        title="<b>Mapa de Sincronizações por Estado</b>",
         labels={'sincronismos': 'Nº de Sincronizações'}
     )
     
+    # Personalizar o popup
+    fig.update_traces(
+        hovertemplate="<b>%{hovertext}</b><br>" +
+                      "Empresa: %{customdata[0]}<br>" +
+                      "Sincronizações: <b>%{customdata[1]}</b><br>" +
+                      "Região: %{customdata[2]}<extra></extra>"
+    )
+    
     fig.update_geos(
-        projection_type="mercator",
-        showcountries=True,
-        countrycolor='rgb(200, 200, 200)',
-        showsubunits=True,
-        subunitcolor='rgb(150, 150, 150)',
-        showland=True,
-        landcolor='rgb(240, 240, 240)',
-        showocean=True,
-        oceancolor='rgb(220, 240, 255)',
-        showframe=False,
-        lataxis_range=[-35, 5],
-        lonaxis_range=[-75, -34]
+        fitbounds="locations",
+        visible=False,
+        projection_type="mercator"
     )
     
     fig.update_layout(
@@ -1098,10 +1036,7 @@ def criar_mapa_bolhas_alternativo(df_mapa):
     return fig
 
 def criar_mapa_bolhas(df_mapa):
-    """
-    Cria um mapa de bolhas (scatter geo) para visualização alternativa
-    Esta é a função original que já existia no seu código
-    """
+    """Cria um mapa de bolhas (scatter geo) para visualização alternativa"""
     if df_mapa.empty:
         return None
     
