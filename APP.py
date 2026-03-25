@@ -11,6 +11,7 @@ import warnings
 from pytz import timezone
 import numpy as np
 import streamlit.components.v1 as components
+import json
 warnings.filterwarnings('ignore')
 
 # ============================================
@@ -918,8 +919,27 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     return dados_mes
 
 # ============================================
-# FUNÇÕES DO MAPA
+# FUNÇÕES DO MAPA - VERSÃO COM GEOJSON LOCAL
 # ============================================
+
+@st.cache_resource(ttl=86400)
+def carregar_geojson_local():
+    """Carrega o GeoJSON dos estados brasileiros do arquivo local"""
+    try:
+        # Tentar carregar de arquivo local
+        caminho_geojson = "estados_brasil.geojson"
+        
+        if os.path.exists(caminho_geojson):
+            with open(caminho_geojson, 'r', encoding='utf-8') as f:
+                geojson = json.load(f)
+            return geojson
+        else:
+            st.error(f"❌ Arquivo '{caminho_geojson}' não encontrado!")
+            return None
+    except Exception as e:
+        st.error(f"❌ Erro ao carregar GeoJSON: {e}")
+        return None
+
 def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_filtro=None):
     """Processa os dados para gerar as métricas do mapa"""
     
@@ -979,48 +999,40 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     
     return pd.DataFrame(dados_mapa), total_sinc
 
-def criar_mapa_coropletico(df_mapa):
-    """Cria o mapa coroplético (por estados)"""
-    if df_mapa.empty:
+def criar_mapa_coropletico(df_mapa, geojson):
+    """Cria o mapa coroplético usando GeoJSON"""
+    if df_mapa.empty or geojson is None:
         return None
     
+    # Criar o mapa choropleth com GeoJSON
     fig = px.choropleth(
         df_mapa,
+        geojson=geojson,
         locations='sigla',
-        locationmode="USA-states",
         color='sincronismos',
+        featureidkey='properties.sigla',
         hover_name='estado',
         hover_data={
             'empresa_nome': True,
             'sincronismos': True,
-            'regiao': True
+            'regiao': True,
+            'sigla': False
         },
-        color_continuous_scale=[
-            [0.0, COR_CINZA_TEXTO],
-            [0.33, COR_AZUL_PETROLEO],
-            [0.66, COR_AZUL_ESCURO],
-            [1.0, COR_VERDE_ESCURO]
-        ],
+        color_continuous_scale='Reds',
         title="<b>Mapa de Sincronizações por Estado</b>",
         labels={'sincronismos': 'Nº de Sincronizações'}
     )
     
-    # Personalizar o popup
-    fig.update_traces(
-        hovertemplate="<b>%{hovertext}</b><br>" +
-                      "Empresa: %{customdata[0]}<br>" +
-                      "Sincronizações: <b>%{customdata[1]}</b><br>" +
-                      "Região: %{customdata[2]}<extra></extra>"
-    )
-    
+    # Ajustar a geometria do mapa
     fig.update_geos(
         fitbounds="locations",
         visible=False,
         projection_type="mercator"
     )
     
+    # Configurar o layout
     fig.update_layout(
-        height=550,
+        height=600,
         margin={"r": 0, "t": 50, "l": 0, "b": 0},
         coloraxis_colorbar=dict(
             title="Sincronizações",
@@ -1029,18 +1041,19 @@ def criar_mapa_coropletico(df_mapa):
             lenmode="pixels",
             len=300,
             yanchor="middle",
-            y=0.5
+            y=0.5,
+            title_font=dict(size=12)
         )
     )
     
     return fig
 
 def criar_mapa_bolhas(df_mapa):
-    """Cria um mapa de bolhas (scatter geo) para visualização alternativa"""
+    """Cria um mapa de bolhas com divisas dos estados"""
     if df_mapa.empty:
         return None
     
-    # Filtrar apenas empresas com sincronismos > 0 para as bolhas
+    # Filtrar apenas empresas com sincronismos > 0
     df_bolhas = df_mapa[df_mapa['sincronismos'] > 0].copy()
     
     if df_bolhas.empty:
@@ -1054,47 +1067,50 @@ def criar_mapa_bolhas(df_mapa):
         hover_name='estado',
         text='empresa',
         color='sincronismos',
-        color_continuous_scale=[
-            [0.0, COR_AZUL_PETROLEO],
-            [0.5, COR_AZUL_ESCURO],
-            [1.0, COR_VERDE_ESCURO]
-        ],
+        color_continuous_scale='Reds',
         size_max=50,
         title="<b>Mapa de Bolhas - Volume de Sincronizações</b>",
         labels={'sincronismos': 'Nº de Sincronizações'}
     )
     
-    # Personalizar o popup
-    fig.update_traces(
-        hovertemplate="<b>%{hovertext}</b><br>" +
-                      "Empresa: %{text}<br>" +
-                      "Sincronizações: <b>%{marker.size}</b><br>" +
-                      "<extra></extra>"
-    )
-    
+    # Configurar o mapa com divisas dos estados
     fig.update_geos(
         projection_type="natural earth",
-        showcountries=False,
+        showcountries=True,
+        countrycolor='rgba(0,0,0,0.4)',
+        countrywidth=1.5,
         showsubunits=True,
+        subunitcolor='rgba(0,0,0,0.6)',
+        subunitwidth=2.0,
+        showcoastlines=True,
+        coastlinecolor='rgba(0,0,0,0.4)',
         showland=True,
-        landcolor='rgb(243, 243, 243)',
-        subunitcolor='rgb(217, 217, 217)'
+        landcolor='rgb(245, 245, 245)',
+        showocean=True,
+        oceancolor='rgba(200, 220, 240, 0.3)',
+        showframe=False
     )
     
+    # Ajustar o centro do mapa para o Brasil
     fig.update_layout(
-        height=550,
+        height=600,
         margin={"r": 0, "t": 50, "l": 0, "b": 0},
+        geo=dict(
+            center=dict(lon=-55, lat=-14),
+            projection_scale=3.5
+        ),
         coloraxis_colorbar=dict(
             title="Sincronizações",
             thicknessmode="pixels",
-            thickness=20
+            thickness=20,
+            title_font=dict(size=12)
         )
     )
     
     return fig
 
 def criar_grafico_barras(df_mapa):
-    """Cria gráfico de barras comparativo"""
+    """Cria gráfico de barras comparativo com escala vermelha"""
     if df_mapa.empty:
         return None
     
@@ -1105,13 +1121,13 @@ def criar_grafico_barras(df_mapa):
     cores = []
     for val in df_barras['sincronismos']:
         if val == 0:
-            cores.append(COR_CINZA_TEXTO)
+            cores.append('#FFE5E5')
         elif val < 10:
-            cores.append(COR_AZUL_PETROLEO)
+            cores.append('#FFB3B3')
         elif val < 30:
-            cores.append(COR_AZUL_ESCURO)
+            cores.append('#FF8080')
         else:
-            cores.append(COR_VERDE_ESCURO)
+            cores.append('#FF4D4D')
     
     fig.add_trace(go.Bar(
         x=df_barras['sincronismos'],
@@ -1120,7 +1136,7 @@ def criar_grafico_barras(df_mapa):
         text=df_barras['sincronismos'],
         textposition='outside',
         marker_color=cores,
-        marker_line_color=COR_AZUL_ESCURO,
+        marker_line_color='#FF1A1A',
         marker_line_width=1,
         hovertemplate="Empresa: %{y}<br>Sincronizações: %{x}<extra></extra>"
     ))
@@ -4182,6 +4198,24 @@ if st.session_state.df_original is not None:
     with tab_mapa:
         st.markdown("## 🗺️ Mapa de Sincronizações por Empresa")
         
+        # Carregar GeoJSON local
+        with st.spinner("Carregando mapa do Brasil..."):
+            geojson = carregar_geojson_local()
+        
+        if geojson is None:
+            st.error("""
+            ❌ **Não foi possível carregar o mapa do Brasil**
+            
+            Verifique se o arquivo 'estados_brasil.geojson' está na mesma pasta do aplicativo.
+            
+            **Solução:**
+            1. Certifique-se que o arquivo 'estados_brasil.geojson' existe
+            2. Verifique se o arquivo tem a estrutura JSON correta
+            3. O arquivo deve conter as geometrias dos estados com a propriedade 'sigla'
+            """)
+        else:
+            st.success("✅ Mapa do Brasil carregado com sucesso!")
+        
         # Filtros para o mapa
         col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
         
@@ -4223,10 +4257,10 @@ if st.session_state.df_original is not None:
             else:
                 mes_filtro_mapa = 'Todos'
         
-        # Tipo de visualização
+        # Tipo de visualização - apenas duas opções
         tipo_mapa = st.radio(
             "🗺️ Tipo de Visualização",
-            options=["Coroplético (Estados)", "Bolhas (Pontos)", "Ambos"],
+            options=["Coroplético (Estados)", "Bolhas (Pontos)"],
             index=0,
             horizontal=True,
             key="mapa_tipo"
@@ -4297,25 +4331,28 @@ if st.session_state.df_original is not None:
         
         st.markdown("---")
         
-        # Mapas
-        if tipo_mapa in ["Coroplético (Estados)", "Ambos"]:
-            st.markdown('<div class="section-title">🗺️ MAPA COROPLÉTICO</div>', unsafe_allow_html=True)
+        # Mapa Coroplético
+        if tipo_mapa == "Coroplético (Estados)":
+            st.markdown('<div class="section-title">🗺️ MAPA COROPLÉTICO - ESTADOS BRASILEIROS</div>', unsafe_allow_html=True)
             
-            fig_coropletico = criar_mapa_coropletico(df_mapa)
-            if fig_coropletico:
-                st.plotly_chart(fig_coropletico, use_container_width=True, config={'displayModeBar': True})
+            if geojson:
+                fig_coropletico = criar_mapa_coropletico(df_mapa, geojson)
+                if fig_coropletico:
+                    st.plotly_chart(fig_coropletico, use_container_width=True, config={'displayModeBar': True})
+                    st.caption("📌 Mapa baseado em dados geoespaciais dos estados brasileiros")
+                else:
+                    st.warning("⚠️ Não há dados suficientes para gerar o mapa coroplético.")
             else:
-                st.warning("⚠️ Não há dados suficientes para gerar o mapa coroplético.")
+                st.error("❌ Mapa não disponível. GeoJSON não carregado.")
         
-        if tipo_mapa in ["Bolhas (Pontos)", "Ambos"]:
-            if tipo_mapa == "Ambos":
-                st.markdown('<div class="section-title" style="margin-top: 2rem;">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="section-title">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
+        # Mapa de Bolhas
+        elif tipo_mapa == "Bolhas (Pontos)":
+            st.markdown('<div class="section-title">📍 MAPA DE BOLHAS - COM DIVISAS DOS ESTADOS</div>', unsafe_allow_html=True)
             
             fig_bolhas = criar_mapa_bolhas(df_mapa)
             if fig_bolhas:
                 st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
+                st.caption("📌 As linhas escuras representam as divisas entre os estados brasileiros")
             else:
                 st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa de bolhas.")
         
@@ -4358,15 +4395,20 @@ if st.session_state.df_original is not None:
             st.markdown("""
             **🗺️ Mapa de Sincronismos - Guia Rápido**
             
-            Este mapa visualiza geograficamente os sincronismos por empresa da Energisa.
+            Este mapa visualiza geograficamente os sincronismos por empresa da Energisa usando dados geoespaciais reais do Brasil.
+            
+            **Como funciona:**
+            - O mapa é gerado usando um arquivo GeoJSON com as coordenadas geográficas dos estados brasileiros
+            - O arquivo deve estar na mesma pasta do aplicativo com o nome `estados_brasil.geojson`
             
             **Tipos de Visualização:**
-            - **Mapa Coroplético**: Cores nos estados representam o volume de sincronizações
-            - **Mapa de Bolhas**: Círculos proporcionais ao volume, posicionados geograficamente
+            - **Mapa Coroplético**: Os estados são coloridos conforme o volume de sincronizações
+            - **Mapa de Bolhas**: Círculos proporcionais ao volume, posicionados nas capitais das empresas
             
-            **Interpretação:**
-            - 🟢 **Verde escuro**: Alto volume de sincronizações
-            - 🔵 **Azul**: Volume médio
+            **Interpretação das Cores (Vermelho):**
+            - 🔴 **Vermelho escuro**: Alto volume de sincronizações
+            - 🟠 **Vermelho médio**: Volume médio
+            - 🟡 **Vermelho claro**: Baixo volume
             - ⚪ **Cinza**: Sem sincronizações no período
             
             **Filtros Disponíveis:**
