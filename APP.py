@@ -918,7 +918,7 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     return dados_mes
 
 # ============================================
-# FUNÇÕES DO MAPA - VERSÃO ATUALIZADA COM CORES DE MAR
+# FUNÇÕES DO MAPA
 # ============================================
 def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_filtro=None):
     """Processa os dados para gerar as métricas do mapa"""
@@ -980,7 +980,7 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     return pd.DataFrame(dados_mapa), total_sinc
 
 def criar_mapa_bolhas(df_mapa):
-    """Cria um mapa de bolhas (scatter geo) com gradiente em tons de azul mar (oceano)"""
+    """Cria um mapa de bolhas (scatter geo) - modificado para usar gradiente com vermelho para maiores valores"""
     if df_mapa.empty:
         return None
     
@@ -990,15 +990,21 @@ def criar_mapa_bolhas(df_mapa):
     if df_bolhas.empty:
         return None
     
-    # Escala de cores em tons de azul mar (oceano)
-    # Do azul mais claro (águas rasas) ao azul profundo (mar profundo)
-    color_scale = [
-        [0.0, "#7FCDCD"],   # Azul turquesa claro (águas rasas)
-        [0.25, "#4F9F9F"],  # Azul esverdeado
-        [0.5, "#2F7F8F"],   # Azul petróleo médio
-        [0.75, "#1F5F6F"],  # Azul mar profundo
-        [1.0, "#0F3F4F"]    # Azul abissal escuro
-    ]
+    # Criar escala de cores personalizada - do azul petróleo ao vermelho claro
+    # Valores mais altos -> mais próximo do vermelho claro
+    max_sinc = df_bolhas['sincronismos'].max()
+    min_sinc = df_bolhas['sincronismos'].min()
+    
+    if max_sinc == min_sinc:
+        # Se todos têm o mesmo valor, usar azul padrão
+        color_scale = [[0.0, COR_AZUL_PETROLEO], [1.0, COR_AZUL_PETROLEO]]
+    else:
+        # Criar escala do azul petróleo ao vermelho claro
+        color_scale = [
+            [0.0, COR_AZUL_PETROLEO],  # Menor valor
+            [0.5, COR_AZUL_ESCURO],    # Valor médio
+            [1.0, COR_VERMELHO]        # Maior valor
+        ]
     
     fig = px.scatter_geo(
         df_bolhas,
@@ -1009,7 +1015,7 @@ def criar_mapa_bolhas(df_mapa):
         text='empresa',
         color='sincronismos',
         color_continuous_scale=color_scale,
-        size_max=55,
+        size_max=50,
         title="<b>Mapa de Bolhas - Volume de Sincronizações</b>",
         labels={'sincronismos': 'Nº de Sincronizações'}
     )
@@ -1019,11 +1025,7 @@ def criar_mapa_bolhas(df_mapa):
         hovertemplate="<b>%{hovertext}</b><br>" +
                       "Empresa: %{text}<br>" +
                       "Sincronizações: <b>%{marker.size}</b><br>" +
-                      "<extra></extra>",
-        marker=dict(
-            opacity=0.85,
-            line=dict(width=1.5, color='white')
-        )
+                      "<extra></extra>"
     )
     
     fig.update_geos(
@@ -1031,10 +1033,8 @@ def criar_mapa_bolhas(df_mapa):
         showcountries=False,
         showsubunits=True,
         showland=True,
-        landcolor='rgb(245, 245, 240)',
-        subunitcolor='rgb(200, 200, 200)',
-        coastlinecolor='rgb(150, 150, 150)',
-        oceancolor='rgb(220, 240, 255)'
+        landcolor='rgb(243, 243, 243)',
+        subunitcolor='rgb(217, 217, 217)'
     )
     
     fig.update_layout(
@@ -1043,21 +1043,19 @@ def criar_mapa_bolhas(df_mapa):
         coloraxis_colorbar=dict(
             title="Sincronizações",
             thicknessmode="pixels",
-            thickness=25,
+            thickness=20,
             lenmode="pixels",
             len=300,
             yanchor="middle",
             y=0.5,
-            tickformat="d",
-            title_font=dict(size=12, color=COR_AZUL_ESCURO),
-            tickfont=dict(size=10)
+            tickformat="d"
         )
     )
     
     return fig
 
 def criar_grafico_barras(df_mapa):
-    """Cria gráfico de barras comparativo com cores em tons de azul mar"""
+    """Cria gráfico de barras comparativo"""
     if df_mapa.empty:
         return None
     
@@ -1065,7 +1063,7 @@ def criar_grafico_barras(df_mapa):
     
     fig = go.Figure()
     
-    # Cores baseadas no valor (maior valor = azul mais escuro)
+    # Cores baseadas no valor (maior valor = mais vermelho)
     max_val = df_barras['sincronismos'].max()
     min_val = df_barras['sincronismos'].min()
     
@@ -1076,10 +1074,10 @@ def criar_grafico_barras(df_mapa):
         else:
             # Normalizar o valor entre 0 e 1
             normalized = (val - min_val) / (max_val - min_val) if max_val > min_val else 0
-            # Interpolação entre azul turquesa claro e azul abissal
-            r = int(int("#0F3F4F"[1:3], 16) * normalized + int("#7FCDCD"[1:3], 16) * (1 - normalized))
-            g = int(int("#0F3F4F"[3:5], 16) * normalized + int("#7FCDCD"[3:5], 16) * (1 - normalized))
-            b = int(int("#0F3F4F"[5:7], 16) * normalized + int("#7FCDCD"[5:7], 16) * (1 - normalized))
+            # Interpolação entre azul petróleo (0) e vermelho (1)
+            r = int(int(COR_VERMELHO[1:3], 16) * normalized + int(COR_AZUL_PETROLEO[1:3], 16) * (1 - normalized))
+            g = int(int(COR_VERMELHO[3:5], 16) * normalized + int(COR_AZUL_PETROLEO[3:5], 16) * (1 - normalized))
+            b = int(int(COR_VERMELHO[5:7], 16) * normalized + int(COR_AZUL_PETROLEO[5:7], 16) * (1 - normalized))
             cores.append(f'rgb({r}, {g}, {b})')
     
     fig.add_trace(go.Bar(
@@ -4192,6 +4190,15 @@ if st.session_state.df_original is not None:
             else:
                 mes_filtro_mapa = 'Todos'
         
+        # Tipo de visualização - removido Coroplético e Ambos
+        tipo_mapa = st.radio(
+            "🗺️ Visualização",
+            options=["Mapa de Bolhas"],
+            index=0,
+            horizontal=True,
+            key="mapa_tipo"
+        )
+        
         # Processar dados para o mapa
         df_mapa, total_sinc_filtrado = processar_dados_mapa(
             df,
@@ -4257,8 +4264,8 @@ if st.session_state.df_original is not None:
         
         st.markdown("---")
         
-        # Mapa de Bolhas com cores de mar
-        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS - TONS DE MAR (OCEANO)</div>', unsafe_allow_html=True)
+        # Mapa de Bolhas (única opção)
+        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
         
         fig_bolhas = criar_mapa_bolhas(df_mapa)
         if fig_bolhas:
@@ -4280,10 +4287,6 @@ if st.session_state.df_original is not None:
                 tabela_detalhes.columns = ['Empresa', 'UF', 'Região', 'Sincronizações']
                 tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False)
                 
-                # Adicionar percentual
-                total_geral = tabela_detalhes['Sincronizações'].sum()
-                tabela_detalhes['Percentual'] = (tabela_detalhes['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
-                
                 st.dataframe(
                     tabela_detalhes,
                     use_container_width=True,
@@ -4291,8 +4294,7 @@ if st.session_state.df_original is not None:
                         "Empresa": st.column_config.TextColumn("Empresa", width="large"),
                         "UF": st.column_config.TextColumn("UF", width="small"),
                         "Região": st.column_config.TextColumn("Região", width="medium"),
-                        "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d"),
-                        "Percentual": st.column_config.NumberColumn("% Total", format="%.1f%%")
+                        "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d")
                     }
                 )
                 
@@ -4305,25 +4307,24 @@ if st.session_state.df_original is not None:
                     use_container_width=True
                 )
         
-        # Legenda das cores
-        with st.expander("🌊 Sobre as Cores do Mapa (Tons de Mar)", expanded=False):
+        # Legenda
+        with st.expander("ℹ️ Sobre o Mapa de Sincronizações", expanded=False):
             st.markdown("""
-            **🌊 Mapa de Bolhas - Cores do Oceano**
+            **🗺️ Mapa de Sincronismos - Guia Rápido**
             
-            As cores das bolhas representam o volume de sincronizações, em uma escala que vai do azul claro (águas rasas) ao azul profundo (mar abissal):
+            Este mapa visualiza geograficamente os sincronismos por empresa da Energisa.
             
-            | Cor | Significado | Volume |
-            |-----|-------------|--------|
-            | 🔵 **#7FCDCD** (Azul Turquesa) | Águas Rasas - Baixo volume | 0-25% do máximo |
-            | 🔷 **#4F9F9F** (Azul Esverdeado) | Costa - Médio-baixo | 25-50% do máximo |
-            | 🔷 **#2F7F8F** (Azul Petróleo) | Mar Aberto - Médio | 50-75% do máximo |
-            | 🔷 **#1F5F6F** (Azul Profundo) | Mar Profundo - Médio-alto | 75-90% do máximo |
-            | 🔷 **#0F3F4F** (Azul Abissal) | Fossa Oceânica - Alto volume | >90% do máximo |
+            **Visualização:**
+            - **Mapa de Bolhas**: Círculos proporcionais ao volume, posicionados geograficamente
+            - Cores do gradiente: **Azul petróleo** (menor volume) → **Vermelho claro** (maior volume)
             
             **Interpretação:**
-            - Quanto mais **escura** a bolha (azul profundo), maior o número de sincronizações
-            - Quanto mais **clara** a bolha (azul turquesa), menor o número de sincronizações
-            - O tamanho da bolha também é proporcional ao volume
+            - 🔴 **Vermelho**: Alto volume de sincronizações
+            - 🔵 **Azul petróleo**: Baixo volume de sincronizações
+            
+            **Filtros Disponíveis:**
+            - Selecione empresas específicas para análise focada
+            - Filtre por ano e mês para análise temporal
             
             **Empresas Mapeadas:**
             - **EMR** - Energisa Minas Gerais (MG)
