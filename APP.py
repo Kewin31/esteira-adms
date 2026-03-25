@@ -918,7 +918,7 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     return dados_mes
 
 # ============================================
-# FUNÇÕES DO MAPA
+# FUNÇÕES DO MAPA - VERSÃO ATUALIZADA
 # ============================================
 def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_filtro=None):
     """Processa os dados para gerar as métricas do mapa"""
@@ -980,27 +980,40 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     return pd.DataFrame(dados_mapa), total_sinc
 
 def criar_mapa_coropletico(df_mapa):
-    """Cria o mapa coroplético (por estados)"""
+    """Cria o mapa coroplético (por estados) com nomes completos dos estados"""
     if df_mapa.empty:
         return None
     
+    # Nomes completos dos estados para correspondência
+    nomes_estados = {
+        'MG': 'Minas Gerais',
+        'PB': 'Paraíba',
+        'SE': 'Sergipe',
+        'SP': 'São Paulo',
+        'MS': 'Mato Grosso do Sul',
+        'MT': 'Mato Grosso',
+        'TO': 'Tocantins',
+        'RO': 'Rondônia',
+        'AC': 'Acre'
+    }
+    
+    # Adicionar coluna com nome completo do estado
+    df_mapa['estado_nome_completo'] = df_mapa['sigla'].map(nomes_estados)
+    
+    # Usar locationmode com nomes de países
     fig = px.choropleth(
         df_mapa,
-        locations='sigla',
-        locationmode="USA-states",
+        locations='estado_nome_completo',
+        locationmode="country names",
         color='sincronismos',
-        hover_name='estado',
+        hover_name='estado_nome_completo',
         hover_data={
             'empresa_nome': True,
             'sincronismos': True,
-            'regiao': True
+            'regiao': True,
+            'estado_nome_completo': False
         },
-        color_continuous_scale=[
-            [0.0, COR_CINZA_TEXTO],
-            [0.33, COR_AZUL_PETROLEO],
-            [0.66, COR_AZUL_ESCURO],
-            [1.0, COR_VERDE_ESCURO]
-        ],
+        color_continuous_scale='Reds',  # Escala vermelha (maior = mais vermelho)
         title="<b>Mapa de Sincronizações por Estado</b>",
         labels={'sincronismos': 'Nº de Sincronizações'}
     )
@@ -1016,7 +1029,13 @@ def criar_mapa_coropletico(df_mapa):
     fig.update_geos(
         fitbounds="locations",
         visible=False,
-        projection_type="mercator"
+        projection_type="mercator",
+        showcountries=True,
+        countrycolor='rgba(0,0,0,0.2)',
+        showsubunits=True,
+        subunitcolor='rgba(0,0,0,0.3)',
+        showcoastlines=True,
+        coastlinecolor='rgba(0,0,0,0.2)'
     )
     
     fig.update_layout(
@@ -1029,14 +1048,15 @@ def criar_mapa_coropletico(df_mapa):
             lenmode="pixels",
             len=300,
             yanchor="middle",
-            y=0.5
+            y=0.5,
+            title_font=dict(size=12)
         )
     )
     
     return fig
 
 def criar_mapa_bolhas(df_mapa):
-    """Cria um mapa de bolhas (scatter geo) para visualização alternativa"""
+    """Cria um mapa de bolhas (scatter geo) com linhas de divisas"""
     if df_mapa.empty:
         return None
     
@@ -1054,11 +1074,7 @@ def criar_mapa_bolhas(df_mapa):
         hover_name='estado',
         text='empresa',
         color='sincronismos',
-        color_continuous_scale=[
-            [0.0, COR_AZUL_PETROLEO],
-            [0.5, COR_AZUL_ESCURO],
-            [1.0, COR_VERDE_ESCURO]
-        ],
+        color_continuous_scale='Reds',  # Escala vermelha (maior = mais vermelho)
         size_max=50,
         title="<b>Mapa de Bolhas - Volume de Sincronizações</b>",
         labels={'sincronismos': 'Nº de Sincronizações'}
@@ -1074,11 +1090,17 @@ def criar_mapa_bolhas(df_mapa):
     
     fig.update_geos(
         projection_type="natural earth",
-        showcountries=False,
+        showcountries=True,
+        countrycolor='rgba(0,0,0,0.3)',      # Linhas dos países mais visíveis
         showsubunits=True,
+        subunitcolor='rgba(0,0,0,0.5)',      # LINHAS DAS DIVISAS INTERNAS (estados) - MAIS VISÍVEIS
+        subunitwidth=1.5,                    # Espessura das linhas das divisas
+        showcoastlines=True,
+        coastlinecolor='rgba(0,0,0,0.4)',
         showland=True,
-        landcolor='rgb(243, 243, 243)',
-        subunitcolor='rgb(217, 217, 217)'
+        landcolor='rgb(250, 250, 250)',
+        showocean=True,
+        oceancolor='rgba(200, 220, 240, 0.3)'
     )
     
     fig.update_layout(
@@ -1087,14 +1109,15 @@ def criar_mapa_bolhas(df_mapa):
         coloraxis_colorbar=dict(
             title="Sincronizações",
             thicknessmode="pixels",
-            thickness=20
+            thickness=20,
+            title_font=dict(size=12)
         )
     )
     
     return fig
 
 def criar_grafico_barras(df_mapa):
-    """Cria gráfico de barras comparativo"""
+    """Cria gráfico de barras comparativo com escala vermelha"""
     if df_mapa.empty:
         return None
     
@@ -1105,13 +1128,13 @@ def criar_grafico_barras(df_mapa):
     cores = []
     for val in df_barras['sincronismos']:
         if val == 0:
-            cores.append(COR_CINZA_TEXTO)
+            cores.append('#FFE5E5')  # Vermelho muito claro
         elif val < 10:
-            cores.append(COR_AZUL_PETROLEO)
+            cores.append('#FFB3B3')  # Vermelho claro
         elif val < 30:
-            cores.append(COR_AZUL_ESCURO)
+            cores.append('#FF8080')  # Vermelho médio
         else:
-            cores.append(COR_VERDE_ESCURO)
+            cores.append('#FF4D4D')  # Vermelho forte
     
     fig.add_trace(go.Bar(
         x=df_barras['sincronismos'],
@@ -1120,7 +1143,7 @@ def criar_grafico_barras(df_mapa):
         text=df_barras['sincronismos'],
         textposition='outside',
         marker_color=cores,
-        marker_line_color=COR_AZUL_ESCURO,
+        marker_line_color='#FF1A1A',
         marker_line_width=1,
         hovertemplate="Empresa: %{y}<br>Sincronizações: %{x}<extra></extra>"
     ))
@@ -4223,10 +4246,10 @@ if st.session_state.df_original is not None:
             else:
                 mes_filtro_mapa = 'Todos'
         
-        # Tipo de visualização
+        # Tipo de visualização - REMOVIDA OPÇÃO "AMBOS"
         tipo_mapa = st.radio(
             "🗺️ Tipo de Visualização",
-            options=["Coroplético (Estados)", "Bolhas (Pontos)", "Ambos"],
+            options=["Coroplético (Estados)", "Bolhas (Pontos)"],
             index=0,
             horizontal=True,
             key="mapa_tipo"
@@ -4297,8 +4320,8 @@ if st.session_state.df_original is not None:
         
         st.markdown("---")
         
-        # Mapas
-        if tipo_mapa in ["Coroplético (Estados)", "Ambos"]:
+        # Mapas - SEM OPÇÃO "AMBOS"
+        if tipo_mapa == "Coroplético (Estados)":
             st.markdown('<div class="section-title">🗺️ MAPA COROPLÉTICO</div>', unsafe_allow_html=True)
             
             fig_coropletico = criar_mapa_coropletico(df_mapa)
@@ -4307,11 +4330,8 @@ if st.session_state.df_original is not None:
             else:
                 st.warning("⚠️ Não há dados suficientes para gerar o mapa coroplético.")
         
-        if tipo_mapa in ["Bolhas (Pontos)", "Ambos"]:
-            if tipo_mapa == "Ambos":
-                st.markdown('<div class="section-title" style="margin-top: 2rem;">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="section-title">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
+        elif tipo_mapa == "Bolhas (Pontos)":
+            st.markdown('<div class="section-title">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
             
             fig_bolhas = criar_mapa_bolhas(df_mapa)
             if fig_bolhas:
@@ -4365,8 +4385,9 @@ if st.session_state.df_original is not None:
             - **Mapa de Bolhas**: Círculos proporcionais ao volume, posicionados geograficamente
             
             **Interpretação:**
-            - 🟢 **Verde escuro**: Alto volume de sincronizações
-            - 🔵 **Azul**: Volume médio
+            - 🔴 **Vermelho escuro**: Alto volume de sincronizações
+            - 🟠 **Vermelho médio**: Volume médio
+            - 🟡 **Vermelho claro**: Baixo volume
             - ⚪ **Cinza**: Sem sincronizações no período
             
             **Filtros Disponíveis:**
