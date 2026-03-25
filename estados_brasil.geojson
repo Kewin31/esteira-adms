@@ -1,61 +1,32 @@
-def criar_mapa_coropletico(df_mapa, geojson):
-    """Cria o mapa coroplético usando GeoJSON com layout otimizado"""
-    if df_mapa.empty or geojson is None:
-        return None
-    
-    # Criar o mapa choropleth com GeoJSON
-    fig = px.choropleth(
-        df_mapa,
-        geojson=geojson,
-        locations='sigla',
-        color='sincronismos',
-        featureidkey='properties.sigla',
-        hover_name='estado',
-        hover_data={
-            'empresa_nome': True,
-            'sincronismos': True,
-            'regiao': True,
-            'sigla': False
-        },
-        color_continuous_scale='Reds',
-        title="<b>Mapa de Sincronizações por Estado</b>",
-        labels={'sincronismos': 'Nº de Sincronizações'}
-    )
-    
-    # Ajustar a projeção e o centro do mapa para o Brasil
-    fig.update_geos(
-        projection_type="mercator",
-        center=dict(lon=-55, lat=-15),
-        projection_scale=3.2,
-        visible=True,
-        showcountries=True,
-        countrycolor='rgba(0,0,0,0.3)',
-        showsubunits=True,
-        subunitcolor='rgba(0,0,0,0.2)',
-        showcoastlines=True,
-        coastlinecolor='rgba(0,0,0,0.3)',
-        showland=True,
-        landcolor='rgb(245, 245, 245)',
-        showocean=True,
-        oceancolor='rgba(200, 220, 240, 0.5)'
-    )
-    
-    # Configurar o layout
-    fig.update_layout(
-        height=650,
-        margin={"r": 10, "t": 50, "l": 10, "b": 10},
-        coloraxis_colorbar=dict(
-            title="Sincronizações",
-            thicknessmode="pixels",
-            thickness=25,
-            lenmode="pixels",
-            len=350,
-            yanchor="middle",
-            y=0.5,
-            title_font=dict(size=12, color=COR_AZUL_ESCURO),
-            tickfont=dict(size=10)
-        ),
-        title_font=dict(size=14, color=COR_AZUL_ESCURO)
-    )
-    
-    return fig
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "properties": {"sigla": "AC", "name": "Acre"}, "geometry": {"type": "Point", "coordinates": [-70.0, -9.0]}},
+    {"type": "Feature", "properties": {"sigla": "AL", "name": "Alagoas"}, "geometry": {"type": "Point", "coordinates": [-36.5, -9.5]}},
+    {"type": "Feature", "properties": {"sigla": "AP", "name": "Amapá"}, "geometry": {"type": "Point", "coordinates": [-52.0, 1.0]}},
+    {"type": "Feature", "properties": {"sigla": "AM", "name": "Amazonas"}, "geometry": {"type": "Point", "coordinates": [-63.0, -3.0]}},
+    {"type": "Feature", "properties": {"sigla": "BA", "name": "Bahia"}, "geometry": {"type": "Point", "coordinates": [-41.5, -12.5]}},
+    {"type": "Feature", "properties": {"sigla": "CE", "name": "Ceará"}, "geometry": {"type": "Point", "coordinates": [-39.0, -5.0]}},
+    {"type": "Feature", "properties": {"sigla": "DF", "name": "Distrito Federal"}, "geometry": {"type": "Point", "coordinates": [-47.5, -15.5]}},
+    {"type": "Feature", "properties": {"sigla": "ES", "name": "Espírito Santo"}, "geometry": {"type": "Point", "coordinates": [-40.5, -19.5]}},
+    {"type": "Feature", "properties": {"sigla": "GO", "name": "Goiás"}, "geometry": {"type": "Point", "coordinates": [-49.0, -16.0]}},
+    {"type": "Feature", "properties": {"sigla": "MA", "name": "Maranhão"}, "geometry": {"type": "Point", "coordinates": [-45.0, -5.0]}},
+    {"type": "Feature", "properties": {"sigla": "MT", "name": "Mato Grosso"}, "geometry": {"type": "Point", "coordinates": [-55.0, -12.5]}},
+    {"type": "Feature", "properties": {"sigla": "MS", "name": "Mato Grosso do Sul"}, "geometry": {"type": "Point", "coordinates": [-54.5, -20.5]}},
+    {"type": "Feature", "properties": {"sigla": "MG", "name": "Minas Gerais"}, "geometry": {"type": "Point", "coordinates": [-44.5, -19.5]}},
+    {"type": "Feature", "properties": {"sigla": "PA", "name": "Pará"}, "geometry": {"type": "Point", "coordinates": [-53.0, -5.0]}},
+    {"type": "Feature", "properties": {"sigla": "PB", "name": "Paraíba"}, "geometry": {"type": "Point", "coordinates": [-36.5, -7.0]}},
+    {"type": "Feature", "properties": {"sigla": "PR", "name": "Paraná"}, "geometry": {"type": "Point", "coordinates": [-51.5, -24.5]}},
+    {"type": "Feature", "properties": {"sigla": "PE", "name": "Pernambuco"}, "geometry": {"type": "Point", "coordinates": [-38.0, -8.5]}},
+    {"type": "Feature", "properties": {"sigla": "PI", "name": "Piauí"}, "geometry": {"type": "Point", "coordinates": [-42.0, -7.0]}},
+    {"type": "Feature", "properties": {"sigla": "RJ", "name": "Rio de Janeiro"}, "geometry": {"type": "Point", "coordinates": [-43.0, -22.5]}},
+    {"type": "Feature", "properties": {"sigla": "RN", "name": "Rio Grande do Norte"}, "geometry": {"type": "Point", "coordinates": [-36.0, -5.5]}},
+    {"type": "Feature", "properties": {"sigla": "RS", "name": "Rio Grande do Sul"}, "geometry": {"type": "Point", "coordinates": [-53.0, -30.0]}},
+    {"type": "Feature", "properties": {"sigla": "RO", "name": "Rondônia"}, "geometry": {"type": "Point", "coordinates": [-63.0, -10.5]}},
+    {"type": "Feature", "properties": {"sigla": "RR", "name": "Roraima"}, "geometry": {"type": "Point", "coordinates": [-62.0, 2.0]}},
+    {"type": "Feature", "properties": {"sigla": "SC", "name": "Santa Catarina"}, "geometry": {"type": "Point", "coordinates": [-50.5, -27.0]}},
+    {"type": "Feature", "properties": {"sigla": "SP", "name": "São Paulo"}, "geometry": {"type": "Point", "coordinates": [-46.5, -23.5]}},
+    {"type": "Feature", "properties": {"sigla": "SE", "name": "Sergipe"}, "geometry": {"type": "Point", "coordinates": [-37.0, -10.5]}},
+    {"type": "Feature", "properties": {"sigla": "TO", "name": "Tocantins"}, "geometry": {"type": "Point", "coordinates": [-48.0, -10.0]}}
+  ]
+}
