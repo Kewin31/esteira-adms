@@ -918,7 +918,7 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     return dados_mes
 
 # ============================================
-# FUNÇÕES DO MAPA
+# FUNÇÕES DO MAPA - VERSÃO ATUALIZADA COM CORES DE MAR
 # ============================================
 def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_filtro=None):
     """Processa os dados para gerar as métricas do mapa"""
@@ -980,7 +980,7 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     return pd.DataFrame(dados_mapa), total_sinc
 
 def criar_mapa_bolhas(df_mapa):
-    """Cria um mapa de bolhas (scatter geo) - modificado para usar gradiente com vermelho para maiores valores"""
+    """Cria um mapa de bolhas (scatter geo) com gradiente em tons de azul mar (oceano)"""
     if df_mapa.empty:
         return None
     
@@ -990,21 +990,15 @@ def criar_mapa_bolhas(df_mapa):
     if df_bolhas.empty:
         return None
     
-    # Criar escala de cores personalizada - do azul petróleo ao vermelho claro
-    # Valores mais altos -> mais próximo do vermelho claro
-    max_sinc = df_bolhas['sincronismos'].max()
-    min_sinc = df_bolhas['sincronismos'].min()
-    
-    if max_sinc == min_sinc:
-        # Se todos têm o mesmo valor, usar azul padrão
-        color_scale = [[0.0, COR_AZUL_PETROLEO], [1.0, COR_AZUL_PETROLEO]]
-    else:
-        # Criar escala do azul petróleo ao vermelho claro
-        color_scale = [
-            [0.0, COR_AZUL_PETROLEO],  # Menor valor
-            [0.5, COR_AZUL_ESCURO],    # Valor médio
-            [1.0, COR_VERMELHO]        # Maior valor
-        ]
+    # Escala de cores em tons de azul mar (oceano)
+    # Do azul mais claro (águas rasas) ao azul profundo (mar profundo)
+    color_scale = [
+        [0.0, "#7FCDCD"],   # Azul turquesa claro (águas rasas)
+        [0.25, "#4F9F9F"],  # Azul esverdeado
+        [0.5, "#2F7F8F"],   # Azul petróleo médio
+        [0.75, "#1F5F6F"],  # Azul mar profundo
+        [1.0, "#0F3F4F"]    # Azul abissal escuro
+    ]
     
     fig = px.scatter_geo(
         df_bolhas,
@@ -1015,7 +1009,7 @@ def criar_mapa_bolhas(df_mapa):
         text='empresa',
         color='sincronismos',
         color_continuous_scale=color_scale,
-        size_max=50,
+        size_max=55,
         title="<b>Mapa de Bolhas - Volume de Sincronizações</b>",
         labels={'sincronismos': 'Nº de Sincronizações'}
     )
@@ -1025,7 +1019,11 @@ def criar_mapa_bolhas(df_mapa):
         hovertemplate="<b>%{hovertext}</b><br>" +
                       "Empresa: %{text}<br>" +
                       "Sincronizações: <b>%{marker.size}</b><br>" +
-                      "<extra></extra>"
+                      "<extra></extra>",
+        marker=dict(
+            opacity=0.85,
+            line=dict(width=1.5, color='white')
+        )
     )
     
     fig.update_geos(
@@ -1033,8 +1031,10 @@ def criar_mapa_bolhas(df_mapa):
         showcountries=False,
         showsubunits=True,
         showland=True,
-        landcolor='rgb(243, 243, 243)',
-        subunitcolor='rgb(217, 217, 217)'
+        landcolor='rgb(245, 245, 240)',
+        subunitcolor='rgb(200, 200, 200)',
+        coastlinecolor='rgb(150, 150, 150)',
+        oceancolor='rgb(220, 240, 255)'
     )
     
     fig.update_layout(
@@ -1043,19 +1043,21 @@ def criar_mapa_bolhas(df_mapa):
         coloraxis_colorbar=dict(
             title="Sincronizações",
             thicknessmode="pixels",
-            thickness=20,
+            thickness=25,
             lenmode="pixels",
             len=300,
             yanchor="middle",
             y=0.5,
-            tickformat="d"
+            tickformat="d",
+            title_font=dict(size=12, color=COR_AZUL_ESCURO),
+            tickfont=dict(size=10)
         )
     )
     
     return fig
 
 def criar_grafico_barras(df_mapa):
-    """Cria gráfico de barras comparativo"""
+    """Cria gráfico de barras comparativo com cores em tons de azul mar"""
     if df_mapa.empty:
         return None
     
@@ -1063,7 +1065,7 @@ def criar_grafico_barras(df_mapa):
     
     fig = go.Figure()
     
-    # Cores baseadas no valor (maior valor = mais vermelho)
+    # Cores baseadas no valor (maior valor = azul mais escuro)
     max_val = df_barras['sincronismos'].max()
     min_val = df_barras['sincronismos'].min()
     
@@ -1074,10 +1076,10 @@ def criar_grafico_barras(df_mapa):
         else:
             # Normalizar o valor entre 0 e 1
             normalized = (val - min_val) / (max_val - min_val) if max_val > min_val else 0
-            # Interpolação entre azul petróleo (0) e vermelho (1)
-            r = int(int(COR_VERMELHO[1:3], 16) * normalized + int(COR_AZUL_PETROLEO[1:3], 16) * (1 - normalized))
-            g = int(int(COR_VERMELHO[3:5], 16) * normalized + int(COR_AZUL_PETROLEO[3:5], 16) * (1 - normalized))
-            b = int(int(COR_VERMELHO[5:7], 16) * normalized + int(COR_AZUL_PETROLEO[5:7], 16) * (1 - normalized))
+            # Interpolação entre azul turquesa claro e azul abissal
+            r = int(int("#0F3F4F"[1:3], 16) * normalized + int("#7FCDCD"[1:3], 16) * (1 - normalized))
+            g = int(int("#0F3F4F"[3:5], 16) * normalized + int("#7FCDCD"[3:5], 16) * (1 - normalized))
+            b = int(int("#0F3F4F"[5:7], 16) * normalized + int("#7FCDCD"[5:7], 16) * (1 - normalized))
             cores.append(f'rgb({r}, {g}, {b})')
     
     fig.add_trace(go.Bar(
@@ -4147,193 +4149,193 @@ if st.session_state.df_original is not None:
                         st.info("Nenhum resultado encontrado com os filtros aplicados.")
     
     with tab_mapa:
-    st.markdown("## 🗺️ Mapa de Sincronizações por Empresa")
-    
-    # Filtros para o mapa
-    col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
-    
-    with col_mapa_filtro1:
-        empresas_disponiveis = df['Empresa'].dropna().unique()
-        empresas_opcoes = ['Todas'] + sorted([e for e in empresas_disponiveis if e in MAPEAMENTO_EMPRESAS])
+        st.markdown("## 🗺️ Mapa de Sincronizações por Empresa")
         
-        empresas_selecionadas_mapa = st.multiselect(
-            "🏢 Empresas",
-            options=empresas_opcoes,
-            default=['Todas'],
-            key="mapa_empresas"
+        # Filtros para o mapa
+        col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
+        
+        with col_mapa_filtro1:
+            empresas_disponiveis = df['Empresa'].dropna().unique()
+            empresas_opcoes = ['Todas'] + sorted([e for e in empresas_disponiveis if e in MAPEAMENTO_EMPRESAS])
+            
+            empresas_selecionadas_mapa = st.multiselect(
+                "🏢 Empresas",
+                options=empresas_opcoes,
+                default=['Todas'],
+                key="mapa_empresas"
+            )
+        
+        with col_mapa_filtro2:
+            if 'Ano' in df.columns:
+                anos_disponiveis_mapa = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_mapa = ['Todos'] + list(anos_disponiveis_mapa)
+                ano_filtro_mapa = st.selectbox(
+                    "📅 Ano",
+                    options=anos_opcoes_mapa,
+                    index=0,
+                    key="mapa_ano"
+                )
+            else:
+                ano_filtro_mapa = 'Todos'
+        
+        with col_mapa_filtro3:
+            if 'Mês' in df.columns and ano_filtro_mapa != 'Todos':
+                df_ano_mapa = df[df['Ano'] == int(ano_filtro_mapa)]
+                meses_disponiveis_mapa = sorted(df_ano_mapa['Mês'].dropna().unique().astype(int))
+                meses_opcoes_mapa = ['Todos'] + [f"{m:02d}" for m in meses_disponiveis_mapa]
+                mes_filtro_mapa = st.selectbox(
+                    "📆 Mês",
+                    options=meses_opcoes_mapa,
+                    index=0,
+                    key="mapa_mes"
+                )
+            else:
+                mes_filtro_mapa = 'Todos'
+        
+        # Processar dados para o mapa
+        df_mapa, total_sinc_filtrado = processar_dados_mapa(
+            df,
+            empresas_selecionadas=empresas_selecionadas_mapa,
+            ano_filtro=ano_filtro_mapa,
+            mes_filtro=mes_filtro_mapa
         )
-    
-    with col_mapa_filtro2:
-        if 'Ano' in df.columns:
-            anos_disponiveis_mapa = sorted(df['Ano'].dropna().unique().astype(int))
-            anos_opcoes_mapa = ['Todos'] + list(anos_disponiveis_mapa)
-            ano_filtro_mapa = st.selectbox(
-                "📅 Ano",
-                options=anos_opcoes_mapa,
-                index=0,
-                key="mapa_ano"
-            )
-        else:
-            ano_filtro_mapa = 'Todos'
-    
-    with col_mapa_filtro3:
-        if 'Mês' in df.columns and ano_filtro_mapa != 'Todos':
-            df_ano_mapa = df[df['Ano'] == int(ano_filtro_mapa)]
-            meses_disponiveis_mapa = sorted(df_ano_mapa['Mês'].dropna().unique().astype(int))
-            meses_opcoes_mapa = ['Todos'] + [f"{m:02d}" for m in meses_disponiveis_mapa]
-            mes_filtro_mapa = st.selectbox(
-                "📆 Mês",
-                options=meses_opcoes_mapa,
-                index=0,
-                key="mapa_mes"
-            )
-        else:
-            mes_filtro_mapa = 'Todos'
-    
-    # Processar dados para o mapa
-    df_mapa, total_sinc_filtrado = processar_dados_mapa(
-        df,
-        empresas_selecionadas=empresas_selecionadas_mapa,
-        ano_filtro=ano_filtro_mapa,
-        mes_filtro=mes_filtro_mapa
-    )
-    
-    # Métricas do mapa
-    col_metrica1, col_metrica2, col_metrica3, col_metrica4 = st.columns(4)
-    
-    with col_metrica1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{total_sinc_filtrado:,}</div>
-            <div class="metric-label">Total Sincronizações</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col_metrica2:
-        empresas_ativas = len(df_mapa[df_mapa['sincronismos'] > 0])
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{empresas_ativas}</div>
-            <div class="metric-label">Empresas com Sinc.</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col_metrica3:
-        if not df_mapa.empty:
-            media_sinc = df_mapa['sincronismos'].mean()
+        
+        # Métricas do mapa
+        col_metrica1, col_metrica2, col_metrica3, col_metrica4 = st.columns(4)
+        
+        with col_metrica1:
             st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-value">{media_sinc:.1f}</div>
-                <div class="metric-label">Média por Empresa</div>
+                <div class="metric-value">{total_sinc_filtrado:,}</div>
+                <div class="metric-label">Total Sincronizações</div>
             </div>
             """, unsafe_allow_html=True)
+        
+        with col_metrica2:
+            empresas_ativas = len(df_mapa[df_mapa['sincronismos'] > 0])
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{empresas_ativas}</div>
+                <div class="metric-label">Empresas com Sinc.</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_metrica3:
+            if not df_mapa.empty:
+                media_sinc = df_mapa['sincronismos'].mean()
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{media_sinc:.1f}</div>
+                    <div class="metric-label">Média por Empresa</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">0</div>
+                    <div class="metric-label">Média por Empresa</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col_metrica4:
+            if not df_mapa.empty and df_mapa['sincronismos'].max() > 0:
+                max_sinc = df_mapa['sincronismos'].max()
+                empresa_max = df_mapa[df_mapa['sincronismos'] == max_sinc]['empresa_nome'].values[0]
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{max_sinc:,}</div>
+                    <div class="metric-label">🏆 Maior: {empresa_max[:20]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">0</div>
+                    <div class="metric-label">Maior Sincronização</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Mapa de Bolhas com cores de mar
+        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS - TONS DE MAR (OCEANO)</div>', unsafe_allow_html=True)
+        
+        fig_bolhas = criar_mapa_bolhas(df_mapa)
+        if fig_bolhas:
+            st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
         else:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">0</div>
-                <div class="metric-label">Média por Empresa</div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col_metrica4:
-        if not df_mapa.empty and df_mapa['sincronismos'].max() > 0:
-            max_sinc = df_mapa['sincronismos'].max()
-            empresa_max = df_mapa[df_mapa['sincronismos'] == max_sinc]['empresa_nome'].values[0]
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{max_sinc:,}</div>
-                <div class="metric-label">🏆 Maior: {empresa_max[:20]}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">0</div>
-                <div class="metric-label">Maior Sincronização</div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Mapa de Bolhas (com nova cor azul mar)
-    st.markdown('<div class="section-title">📍 MAPA DE BOLHAS - VOLUME DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
-    
-    fig_bolhas = criar_mapa_bolhas(df_mapa)
-    if fig_bolhas:
-        st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
-    else:
-        st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa de bolhas.")
-    
-    # Gráfico de barras
-    st.markdown('<div class="section-title" style="margin-top: 2rem;">📊 RANKING DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
-    
-    fig_barras = criar_grafico_barras(df_mapa)
-    if fig_barras:
-        st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
-    
-    # Tabela detalhada
-    with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
-        if not df_mapa.empty:
-            tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'regiao', 'sincronismos']].copy()
-            tabela_detalhes.columns = ['Empresa', 'UF', 'Região', 'Sincronizações']
-            tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False)
+            st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa de bolhas.")
+        
+        # Gráfico de barras
+        st.markdown('<div class="section-title" style="margin-top: 2rem;">📊 RANKING DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
+        
+        fig_barras = criar_grafico_barras(df_mapa)
+        if fig_barras:
+            st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
+        
+        # Tabela detalhada
+        with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
+            if not df_mapa.empty:
+                tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'regiao', 'sincronismos']].copy()
+                tabela_detalhes.columns = ['Empresa', 'UF', 'Região', 'Sincronizações']
+                tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False)
+                
+                # Adicionar percentual
+                total_geral = tabela_detalhes['Sincronizações'].sum()
+                tabela_detalhes['Percentual'] = (tabela_detalhes['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
+                
+                st.dataframe(
+                    tabela_detalhes,
+                    use_container_width=True,
+                    column_config={
+                        "Empresa": st.column_config.TextColumn("Empresa", width="large"),
+                        "UF": st.column_config.TextColumn("UF", width="small"),
+                        "Região": st.column_config.TextColumn("Região", width="medium"),
+                        "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d"),
+                        "Percentual": st.column_config.NumberColumn("% Total", format="%.1f%%")
+                    }
+                )
+                
+                csv = tabela_detalhes.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(
+                    label="📥 Exportar dados para CSV",
+                    data=csv,
+                    file_name=f"sincronismos_empresas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+        
+        # Legenda das cores
+        with st.expander("🌊 Sobre as Cores do Mapa (Tons de Mar)", expanded=False):
+            st.markdown("""
+            **🌊 Mapa de Bolhas - Cores do Oceano**
             
-            # Adicionar percentual
-            total_geral = tabela_detalhes['Sincronizações'].sum()
-            tabela_detalhes['Percentual'] = (tabela_detalhes['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
+            As cores das bolhas representam o volume de sincronizações, em uma escala que vai do azul claro (águas rasas) ao azul profundo (mar abissal):
             
-            st.dataframe(
-                tabela_detalhes,
-                use_container_width=True,
-                column_config={
-                    "Empresa": st.column_config.TextColumn("Empresa", width="large"),
-                    "UF": st.column_config.TextColumn("UF", width="small"),
-                    "Região": st.column_config.TextColumn("Região", width="medium"),
-                    "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d"),
-                    "Percentual": st.column_config.NumberColumn("% Total", format="%.1f%%")
-                }
-            )
+            | Cor | Significado | Volume |
+            |-----|-------------|--------|
+            | 🔵 **#7FCDCD** (Azul Turquesa) | Águas Rasas - Baixo volume | 0-25% do máximo |
+            | 🔷 **#4F9F9F** (Azul Esverdeado) | Costa - Médio-baixo | 25-50% do máximo |
+            | 🔷 **#2F7F8F** (Azul Petróleo) | Mar Aberto - Médio | 50-75% do máximo |
+            | 🔷 **#1F5F6F** (Azul Profundo) | Mar Profundo - Médio-alto | 75-90% do máximo |
+            | 🔷 **#0F3F4F** (Azul Abissal) | Fossa Oceânica - Alto volume | >90% do máximo |
             
-            csv = tabela_detalhes.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                label="📥 Exportar dados para CSV",
-                data=csv,
-                file_name=f"sincronismos_empresas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-    
-    # Legenda
-    with st.expander("🌊 Sobre as Cores do Mapa", expanded=False):
-        st.markdown("""
-        **🌊 Mapa de Bolhas - Cores do Oceano**
-        
-        As cores das bolhas representam o volume de sincronizações:
-        
-        | Cor | Significado | Volume |
-        |-----|-------------|--------|
-        | 🔵 **#7FCDCD** (Azul Turquesa) | Baixo volume | 0-25% do máximo |
-        | 🔷 **#4F9F9F** (Azul Esverdeado) | Médio-baixo | 25-50% do máximo |
-        | 🔷 **#2F7F8F** (Azul Petróleo) | Médio | 50-75% do máximo |
-        | 🔷 **#1F5F6F** (Azul Profundo) | Médio-alto | 75-90% do máximo |
-        | 🔷 **#0F3F4F** (Azul Abissal) | Alto volume | >90% do máximo |
-        
-        **Interpretação:**
-        - Quanto mais **escura** a bolha (azul profundo), maior o número de sincronizações
-        - Quanto mais **clara** a bolha (azul turquesa), menor o número de sincronizações
-        - O tamanho da bolha também é proporcional ao volume
-        
-        **Empresas Mapeadas:**
-        - **EMR** - Energisa Minas Gerais (MG)
-        - **EPB** - Energisa Paraíba (PB)
-        - **ESE** - Energisa Sergipe (SE)
-        - **ESS** - Energisa Sul/Sudeste (SP)
-        - **EMS** - Energisa Mato Grosso do Sul (MS)
-        - **EMT** - Energisa Mato Grosso (MT)
-        - **ETO** - Energisa Tocantins (TO)
-        - **ERO** - Energisa Rondônia (RO)
-        - **EAC** - Energisa Acre (AC)
-        """)
+            **Interpretação:**
+            - Quanto mais **escura** a bolha (azul profundo), maior o número de sincronizações
+            - Quanto mais **clara** a bolha (azul turquesa), menor o número de sincronizações
+            - O tamanho da bolha também é proporcional ao volume
+            
+            **Empresas Mapeadas:**
+            - **EMR** - Energisa Minas Gerais (MG)
+            - **EPB** - Energisa Paraíba (PB)
+            - **ESE** - Energisa Sergipe (SE)
+            - **ESS** - Energisa Sul/Sudeste (SP)
+            - **EMS** - Energisa Mato Grosso do Sul (MS)
+            - **EMT** - Energisa Mato Grosso (MT)
+            - **ETO** - Energisa Tocantins (TO)
+            - **ERO** - Energisa Rondônia (RO)
+            - **EAC** - Energisa Acre (AC)
+            """)
 
 else:
     st.markdown(f"""
