@@ -1,0 +1,77 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "sigla": "MG", "nome": "Minas Gerais" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-48.0, -22.0], [-44.0, -22.0], [-44.0, -18.0], [-48.0, -18.0], [-48.0, -22.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "sigla": "PB", "nome": "Paraíba" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-38.0, -8.0], [-36.0, -8.0], [-36.0, -6.0], [-38.0, -6.0], [-38.0, -8.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "sigla": "SE", "nome": "Sergipe" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-38.0, -11.0], [-36.0, -11.0], [-36.0, -10.0], [-38.0, -10.0], [-38.0, -11.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "sigla": "SP", "nome": "São Paulo" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-52.0, -25.0], [-44.0, -25.0], [-44.0, -20.0], [-52.0, -20.0], [-52.0, -25.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "sigla": "MS", "nome": "Mato Grosso do Sul" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-58.0, -23.0], [-52.0, -23.0], [-52.0, -18.0], [-58.0, -18.0], [-58.0, -23.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "sigla": "MT", "nome": "Mato Grosso" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-62.0, -18.0], [-52.0, -18.0], [-52.0, -8.0], [-62.0, -8.0], [-62.0, -18.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "sigla": "TO", "nome": "Tocantins" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-52.0, -13.0], [-46.0, -13.0], [-46.0, -6.0], [-52.0, -6.0], [-52.0, -13.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "sigla": "RO", "nome": "Rondônia" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-66.0, -14.0], [-60.0, -14.0], [-60.0, -8.0], [-66.0, -8.0], [-66.0, -14.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "sigla": "AC", "nome": "Acre" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-74.0, -11.0], [-68.0, -11.0], [-68.0, -7.0], [-74.0, -7.0], [-74.0, -11.0]]]
+      }
+    }
+  ]
+}
