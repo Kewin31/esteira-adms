@@ -979,64 +979,8 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     
     return pd.DataFrame(dados_mapa), total_sinc
 
-def criar_mapa_coropletico(df_mapa):
-    """Cria o mapa coroplético (por estados)"""
-    if df_mapa.empty:
-        return None
-    
-    fig = px.choropleth(
-        df_mapa,
-        locations='sigla',
-        locationmode="USA-states",
-        color='sincronismos',
-        hover_name='estado',
-        hover_data={
-            'empresa_nome': True,
-            'sincronismos': True,
-            'regiao': True
-        },
-        color_continuous_scale=[
-            [0.0, COR_CINZA_TEXTO],
-            [0.33, COR_AZUL_PETROLEO],
-            [0.66, COR_AZUL_ESCURO],
-            [1.0, COR_VERDE_ESCURO]
-        ],
-        title="<b>Mapa de Sincronizações por Estado</b>",
-        labels={'sincronismos': 'Nº de Sincronizações'}
-    )
-    
-    # Personalizar o popup
-    fig.update_traces(
-        hovertemplate="<b>%{hovertext}</b><br>" +
-                      "Empresa: %{customdata[0]}<br>" +
-                      "Sincronizações: <b>%{customdata[1]}</b><br>" +
-                      "Região: %{customdata[2]}<extra></extra>"
-    )
-    
-    fig.update_geos(
-        fitbounds="locations",
-        visible=False,
-        projection_type="mercator"
-    )
-    
-    fig.update_layout(
-        height=550,
-        margin={"r": 0, "t": 50, "l": 0, "b": 0},
-        coloraxis_colorbar=dict(
-            title="Sincronizações",
-            thicknessmode="pixels",
-            thickness=20,
-            lenmode="pixels",
-            len=300,
-            yanchor="middle",
-            y=0.5
-        )
-    )
-    
-    return fig
-
 def criar_mapa_bolhas(df_mapa):
-    """Cria um mapa de bolhas (scatter geo) para visualização alternativa"""
+    """Cria um mapa de bolhas (scatter geo) - modificado para usar gradiente com vermelho para maiores valores"""
     if df_mapa.empty:
         return None
     
@@ -1046,6 +990,22 @@ def criar_mapa_bolhas(df_mapa):
     if df_bolhas.empty:
         return None
     
+    # Criar escala de cores personalizada - do azul petróleo ao vermelho claro
+    # Valores mais altos -> mais próximo do vermelho claro
+    max_sinc = df_bolhas['sincronismos'].max()
+    min_sinc = df_bolhas['sincronismos'].min()
+    
+    if max_sinc == min_sinc:
+        # Se todos têm o mesmo valor, usar azul padrão
+        color_scale = [[0.0, COR_AZUL_PETROLEO], [1.0, COR_AZUL_PETROLEO]]
+    else:
+        # Criar escala do azul petróleo ao vermelho claro
+        color_scale = [
+            [0.0, COR_AZUL_PETROLEO],  # Menor valor
+            [0.5, COR_AZUL_ESCURO],    # Valor médio
+            [1.0, COR_VERMELHO]        # Maior valor
+        ]
+    
     fig = px.scatter_geo(
         df_bolhas,
         lat='latitude',
@@ -1054,11 +1014,7 @@ def criar_mapa_bolhas(df_mapa):
         hover_name='estado',
         text='empresa',
         color='sincronismos',
-        color_continuous_scale=[
-            [0.0, COR_AZUL_PETROLEO],
-            [0.5, COR_AZUL_ESCURO],
-            [1.0, COR_VERDE_ESCURO]
-        ],
+        color_continuous_scale=color_scale,
         size_max=50,
         title="<b>Mapa de Bolhas - Volume de Sincronizações</b>",
         labels={'sincronismos': 'Nº de Sincronizações'}
@@ -1087,7 +1043,12 @@ def criar_mapa_bolhas(df_mapa):
         coloraxis_colorbar=dict(
             title="Sincronizações",
             thicknessmode="pixels",
-            thickness=20
+            thickness=20,
+            lenmode="pixels",
+            len=300,
+            yanchor="middle",
+            y=0.5,
+            tickformat="d"
         )
     )
     
@@ -1102,16 +1063,22 @@ def criar_grafico_barras(df_mapa):
     
     fig = go.Figure()
     
+    # Cores baseadas no valor (maior valor = mais vermelho)
+    max_val = df_barras['sincronismos'].max()
+    min_val = df_barras['sincronismos'].min()
+    
     cores = []
     for val in df_barras['sincronismos']:
-        if val == 0:
-            cores.append(COR_CINZA_TEXTO)
-        elif val < 10:
+        if max_val == min_val:
             cores.append(COR_AZUL_PETROLEO)
-        elif val < 30:
-            cores.append(COR_AZUL_ESCURO)
         else:
-            cores.append(COR_VERDE_ESCURO)
+            # Normalizar o valor entre 0 e 1
+            normalized = (val - min_val) / (max_val - min_val) if max_val > min_val else 0
+            # Interpolação entre azul petróleo (0) e vermelho (1)
+            r = int(int(COR_VERMELHO[1:3], 16) * normalized + int(COR_AZUL_PETROLEO[1:3], 16) * (1 - normalized))
+            g = int(int(COR_VERMELHO[3:5], 16) * normalized + int(COR_AZUL_PETROLEO[3:5], 16) * (1 - normalized))
+            b = int(int(COR_VERMELHO[5:7], 16) * normalized + int(COR_AZUL_PETROLEO[5:7], 16) * (1 - normalized))
+            cores.append(f'rgb({r}, {g}, {b})')
     
     fig.add_trace(go.Bar(
         x=df_barras['sincronismos'],
@@ -4223,10 +4190,10 @@ if st.session_state.df_original is not None:
             else:
                 mes_filtro_mapa = 'Todos'
         
-        # Tipo de visualização
+        # Tipo de visualização - removido Coroplético e Ambos
         tipo_mapa = st.radio(
-            "🗺️ Tipo de Visualização",
-            options=["Coroplético (Estados)", "Bolhas (Pontos)", "Ambos"],
+            "🗺️ Visualização",
+            options=["Mapa de Bolhas"],
             index=0,
             horizontal=True,
             key="mapa_tipo"
@@ -4297,27 +4264,14 @@ if st.session_state.df_original is not None:
         
         st.markdown("---")
         
-        # Mapas
-        if tipo_mapa in ["Coroplético (Estados)", "Ambos"]:
-            st.markdown('<div class="section-title">🗺️ MAPA COROPLÉTICO</div>', unsafe_allow_html=True)
-            
-            fig_coropletico = criar_mapa_coropletico(df_mapa)
-            if fig_coropletico:
-                st.plotly_chart(fig_coropletico, use_container_width=True, config={'displayModeBar': True})
-            else:
-                st.warning("⚠️ Não há dados suficientes para gerar o mapa coroplético.")
+        # Mapa de Bolhas (única opção)
+        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
         
-        if tipo_mapa in ["Bolhas (Pontos)", "Ambos"]:
-            if tipo_mapa == "Ambos":
-                st.markdown('<div class="section-title" style="margin-top: 2rem;">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="section-title">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
-            
-            fig_bolhas = criar_mapa_bolhas(df_mapa)
-            if fig_bolhas:
-                st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
-            else:
-                st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa de bolhas.")
+        fig_bolhas = criar_mapa_bolhas(df_mapa)
+        if fig_bolhas:
+            st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
+        else:
+            st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa de bolhas.")
         
         # Gráfico de barras
         st.markdown('<div class="section-title" style="margin-top: 2rem;">📊 RANKING DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
@@ -4360,14 +4314,13 @@ if st.session_state.df_original is not None:
             
             Este mapa visualiza geograficamente os sincronismos por empresa da Energisa.
             
-            **Tipos de Visualização:**
-            - **Mapa Coroplético**: Cores nos estados representam o volume de sincronizações
+            **Visualização:**
             - **Mapa de Bolhas**: Círculos proporcionais ao volume, posicionados geograficamente
+            - Cores do gradiente: **Azul petróleo** (menor volume) → **Vermelho claro** (maior volume)
             
             **Interpretação:**
-            - 🟢 **Verde escuro**: Alto volume de sincronizações
-            - 🔵 **Azul**: Volume médio
-            - ⚪ **Cinza**: Sem sincronizações no período
+            - 🔴 **Vermelho**: Alto volume de sincronizações
+            - 🔵 **Azul petróleo**: Baixo volume de sincronizações
             
             **Filtros Disponíveis:**
             - Selecione empresas específicas para análise focada
