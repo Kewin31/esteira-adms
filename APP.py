@@ -4147,196 +4147,193 @@ if st.session_state.df_original is not None:
                         st.info("Nenhum resultado encontrado com os filtros aplicados.")
     
     with tab_mapa:
-        st.markdown("## 🗺️ Mapa de Sincronizações por Empresa")
+    st.markdown("## 🗺️ Mapa de Sincronizações por Empresa")
+    
+    # Filtros para o mapa
+    col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
+    
+    with col_mapa_filtro1:
+        empresas_disponiveis = df['Empresa'].dropna().unique()
+        empresas_opcoes = ['Todas'] + sorted([e for e in empresas_disponiveis if e in MAPEAMENTO_EMPRESAS])
         
-        # Filtros para o mapa
-        col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
-        
-        with col_mapa_filtro1:
-            empresas_disponiveis = df['Empresa'].dropna().unique()
-            empresas_opcoes = ['Todas'] + sorted([e for e in empresas_disponiveis if e in MAPEAMENTO_EMPRESAS])
-            
-            empresas_selecionadas_mapa = st.multiselect(
-                "🏢 Empresas",
-                options=empresas_opcoes,
-                default=['Todas'],
-                key="mapa_empresas"
+        empresas_selecionadas_mapa = st.multiselect(
+            "🏢 Empresas",
+            options=empresas_opcoes,
+            default=['Todas'],
+            key="mapa_empresas"
+        )
+    
+    with col_mapa_filtro2:
+        if 'Ano' in df.columns:
+            anos_disponiveis_mapa = sorted(df['Ano'].dropna().unique().astype(int))
+            anos_opcoes_mapa = ['Todos'] + list(anos_disponiveis_mapa)
+            ano_filtro_mapa = st.selectbox(
+                "📅 Ano",
+                options=anos_opcoes_mapa,
+                index=0,
+                key="mapa_ano"
             )
-        
-        with col_mapa_filtro2:
-            if 'Ano' in df.columns:
-                anos_disponiveis_mapa = sorted(df['Ano'].dropna().unique().astype(int))
-                anos_opcoes_mapa = ['Todos'] + list(anos_disponiveis_mapa)
-                ano_filtro_mapa = st.selectbox(
-                    "📅 Ano",
-                    options=anos_opcoes_mapa,
-                    index=0,
-                    key="mapa_ano"
-                )
-            else:
-                ano_filtro_mapa = 'Todos'
-        
-        with col_mapa_filtro3:
-            if 'Mês' in df.columns and ano_filtro_mapa != 'Todos':
-                df_ano_mapa = df[df['Ano'] == int(ano_filtro_mapa)]
-                meses_disponiveis_mapa = sorted(df_ano_mapa['Mês'].dropna().unique().astype(int))
-                meses_opcoes_mapa = ['Todos'] + [f"{m:02d}" for m in meses_disponiveis_mapa]
-                mes_filtro_mapa = st.selectbox(
-                    "📆 Mês",
-                    options=meses_opcoes_mapa,
-                    index=0,
-                    key="mapa_mes"
-                )
-            else:
-                mes_filtro_mapa = 'Todos'
-        
-        # Tipo de visualização - removido Coroplético e Ambos
-        tipo_mapa = st.radio(
-            "🗺️ Visualização",
-            options=["Mapa de Bolhas"],
-            index=0,
-            horizontal=True,
-            key="mapa_tipo"
-        )
-        
-        # Processar dados para o mapa
-        df_mapa, total_sinc_filtrado = processar_dados_mapa(
-            df,
-            empresas_selecionadas=empresas_selecionadas_mapa,
-            ano_filtro=ano_filtro_mapa,
-            mes_filtro=mes_filtro_mapa
-        )
-        
-        # Métricas do mapa
-        col_metrica1, col_metrica2, col_metrica3, col_metrica4 = st.columns(4)
-        
-        with col_metrica1:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{total_sinc_filtrado:,}</div>
-                <div class="metric-label">Total Sincronizações</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col_metrica2:
-            empresas_ativas = len(df_mapa[df_mapa['sincronismos'] > 0])
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{empresas_ativas}</div>
-                <div class="metric-label">Empresas com Sinc.</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col_metrica3:
-            if not df_mapa.empty:
-                media_sinc = df_mapa['sincronismos'].mean()
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">{media_sinc:.1f}</div>
-                    <div class="metric-label">Média por Empresa</div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">0</div>
-                    <div class="metric-label">Média por Empresa</div>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        with col_metrica4:
-            if not df_mapa.empty and df_mapa['sincronismos'].max() > 0:
-                max_sinc = df_mapa['sincronismos'].max()
-                empresa_max = df_mapa[df_mapa['sincronismos'] == max_sinc]['empresa_nome'].values[0]
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">{max_sinc:,}</div>
-                    <div class="metric-label">🏆 Maior: {empresa_max[:20]}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">0</div>
-                    <div class="metric-label">Maior Sincronização</div>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        st.markdown("---")
-        
-        # Mapa de Bolhas (única opção)
-        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
-        
-        fig_bolhas = criar_mapa_bolhas(df_mapa)
-        if fig_bolhas:
-            st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
         else:
-            st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa de bolhas.")
+            ano_filtro_mapa = 'Todos'
+    
+    with col_mapa_filtro3:
+        if 'Mês' in df.columns and ano_filtro_mapa != 'Todos':
+            df_ano_mapa = df[df['Ano'] == int(ano_filtro_mapa)]
+            meses_disponiveis_mapa = sorted(df_ano_mapa['Mês'].dropna().unique().astype(int))
+            meses_opcoes_mapa = ['Todos'] + [f"{m:02d}" for m in meses_disponiveis_mapa]
+            mes_filtro_mapa = st.selectbox(
+                "📆 Mês",
+                options=meses_opcoes_mapa,
+                index=0,
+                key="mapa_mes"
+            )
+        else:
+            mes_filtro_mapa = 'Todos'
+    
+    # Processar dados para o mapa
+    df_mapa, total_sinc_filtrado = processar_dados_mapa(
+        df,
+        empresas_selecionadas=empresas_selecionadas_mapa,
+        ano_filtro=ano_filtro_mapa,
+        mes_filtro=mes_filtro_mapa
+    )
+    
+    # Métricas do mapa
+    col_metrica1, col_metrica2, col_metrica3, col_metrica4 = st.columns(4)
+    
+    with col_metrica1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{total_sinc_filtrado:,}</div>
+            <div class="metric-label">Total Sincronizações</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_metrica2:
+        empresas_ativas = len(df_mapa[df_mapa['sincronismos'] > 0])
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{empresas_ativas}</div>
+            <div class="metric-label">Empresas com Sinc.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_metrica3:
+        if not df_mapa.empty:
+            media_sinc = df_mapa['sincronismos'].mean()
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{media_sinc:.1f}</div>
+                <div class="metric-label">Média por Empresa</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">0</div>
+                <div class="metric-label">Média por Empresa</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col_metrica4:
+        if not df_mapa.empty and df_mapa['sincronismos'].max() > 0:
+            max_sinc = df_mapa['sincronismos'].max()
+            empresa_max = df_mapa[df_mapa['sincronismos'] == max_sinc]['empresa_nome'].values[0]
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{max_sinc:,}</div>
+                <div class="metric-label">🏆 Maior: {empresa_max[:20]}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">0</div>
+                <div class="metric-label">Maior Sincronização</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Mapa de Bolhas (com nova cor azul mar)
+    st.markdown('<div class="section-title">📍 MAPA DE BOLHAS - VOLUME DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
+    
+    fig_bolhas = criar_mapa_bolhas(df_mapa)
+    if fig_bolhas:
+        st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
+    else:
+        st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa de bolhas.")
+    
+    # Gráfico de barras
+    st.markdown('<div class="section-title" style="margin-top: 2rem;">📊 RANKING DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
+    
+    fig_barras = criar_grafico_barras(df_mapa)
+    if fig_barras:
+        st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
+    
+    # Tabela detalhada
+    with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
+        if not df_mapa.empty:
+            tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'regiao', 'sincronismos']].copy()
+            tabela_detalhes.columns = ['Empresa', 'UF', 'Região', 'Sincronizações']
+            tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False)
+            
+            # Adicionar percentual
+            total_geral = tabela_detalhes['Sincronizações'].sum()
+            tabela_detalhes['Percentual'] = (tabela_detalhes['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
+            
+            st.dataframe(
+                tabela_detalhes,
+                use_container_width=True,
+                column_config={
+                    "Empresa": st.column_config.TextColumn("Empresa", width="large"),
+                    "UF": st.column_config.TextColumn("UF", width="small"),
+                    "Região": st.column_config.TextColumn("Região", width="medium"),
+                    "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d"),
+                    "Percentual": st.column_config.NumberColumn("% Total", format="%.1f%%")
+                }
+            )
+            
+            csv = tabela_detalhes.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 Exportar dados para CSV",
+                data=csv,
+                file_name=f"sincronismos_empresas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+    
+    # Legenda
+    with st.expander("🌊 Sobre as Cores do Mapa", expanded=False):
+        st.markdown("""
+        **🌊 Mapa de Bolhas - Cores do Oceano**
         
-        # Gráfico de barras
-        st.markdown('<div class="section-title" style="margin-top: 2rem;">📊 RANKING DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
+        As cores das bolhas representam o volume de sincronizações:
         
-        fig_barras = criar_grafico_barras(df_mapa)
-        if fig_barras:
-            st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
+        | Cor | Significado | Volume |
+        |-----|-------------|--------|
+        | 🔵 **#7FCDCD** (Azul Turquesa) | Baixo volume | 0-25% do máximo |
+        | 🔷 **#4F9F9F** (Azul Esverdeado) | Médio-baixo | 25-50% do máximo |
+        | 🔷 **#2F7F8F** (Azul Petróleo) | Médio | 50-75% do máximo |
+        | 🔷 **#1F5F6F** (Azul Profundo) | Médio-alto | 75-90% do máximo |
+        | 🔷 **#0F3F4F** (Azul Abissal) | Alto volume | >90% do máximo |
         
-        # Tabela detalhada
-        with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
-            if not df_mapa.empty:
-                tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'regiao', 'sincronismos']].copy()
-                tabela_detalhes.columns = ['Empresa', 'UF', 'Região', 'Sincronizações']
-                tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False)
-                
-                st.dataframe(
-                    tabela_detalhes,
-                    use_container_width=True,
-                    column_config={
-                        "Empresa": st.column_config.TextColumn("Empresa", width="large"),
-                        "UF": st.column_config.TextColumn("UF", width="small"),
-                        "Região": st.column_config.TextColumn("Região", width="medium"),
-                        "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d")
-                    }
-                )
-                
-                csv = tabela_detalhes.to_csv(index=False).encode('utf-8-sig')
-                st.download_button(
-                    label="📥 Exportar dados para CSV",
-                    data=csv,
-                    file_name=f"sincronismos_empresas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
+        **Interpretação:**
+        - Quanto mais **escura** a bolha (azul profundo), maior o número de sincronizações
+        - Quanto mais **clara** a bolha (azul turquesa), menor o número de sincronizações
+        - O tamanho da bolha também é proporcional ao volume
         
-        # Legenda
-        with st.expander("ℹ️ Sobre o Mapa de Sincronizações", expanded=False):
-            st.markdown("""
-            **🗺️ Mapa de Sincronismos - Guia Rápido**
-            
-            Este mapa visualiza geograficamente os sincronismos por empresa da Energisa.
-            
-            **Visualização:**
-            - **Mapa de Bolhas**: Círculos proporcionais ao volume, posicionados geograficamente
-            - Cores do gradiente: **Azul petróleo** (menor volume) → **Vermelho claro** (maior volume)
-            
-            **Interpretação:**
-            - 🔴 **Vermelho**: Alto volume de sincronizações
-            - 🔵 **Azul petróleo**: Baixo volume de sincronizações
-            
-            **Filtros Disponíveis:**
-            - Selecione empresas específicas para análise focada
-            - Filtre por ano e mês para análise temporal
-            
-            **Empresas Mapeadas:**
-            - **EMR** - Energisa Minas Gerais (MG)
-            - **EPB** - Energisa Paraíba (PB)
-            - **ESE** - Energisa Sergipe (SE)
-            - **ESS** - Energisa Sul/Sudeste (SP)
-            - **EMS** - Energisa Mato Grosso do Sul (MS)
-            - **EMT** - Energisa Mato Grosso (MT)
-            - **ETO** - Energisa Tocantins (TO)
-            - **ERO** - Energisa Rondônia (RO)
-            - **EAC** - Energisa Acre (AC)
-            """)
+        **Empresas Mapeadas:**
+        - **EMR** - Energisa Minas Gerais (MG)
+        - **EPB** - Energisa Paraíba (PB)
+        - **ESE** - Energisa Sergipe (SE)
+        - **ESS** - Energisa Sul/Sudeste (SP)
+        - **EMS** - Energisa Mato Grosso do Sul (MS)
+        - **EMT** - Energisa Mato Grosso (MT)
+        - **ETO** - Energisa Tocantins (TO)
+        - **ERO** - Energisa Rondônia (RO)
+        - **EAC** - Energisa Acre (AC)
+        """)
 
 else:
     st.markdown(f"""
