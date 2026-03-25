@@ -11,7 +11,6 @@ import warnings
 from pytz import timezone
 import numpy as np
 import streamlit.components.v1 as components
-import requests
 import json
 warnings.filterwarnings('ignore')
 
@@ -920,43 +919,26 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     return dados_mes
 
 # ============================================
-# FUNÇÕES DO MAPA - VERSÃO COM GEOJSON
+# FUNÇÕES DO MAPA - VERSÃO COM GEOJSON LOCAL
 # ============================================
 
 @st.cache_resource(ttl=86400)
-def carregar_geojson_estados():
-    """Carrega o GeoJSON dos estados brasileiros"""
-    # URLs alternativas para GeoJSON dos estados
-    urls = [
-        "https://raw.githubusercontent.com/fititnt/geojson-brasil/master/estados.geojson",
-        "https://raw.githubusercontent.com/codeforbrasil/brazil-geojson/master/estados.geojson",
-        "https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-100-mun.json"
-    ]
-    
-    for url in urls:
-        try:
-            response = requests.get(url, timeout=10)
-            if response.status_code == 200:
-                geojson = response.json()
-                
-                # Verificar se o GeoJSON tem a estrutura correta
-                if 'features' in geojson and len(geojson['features']) > 0:
-                    # Verificar qual propriedade contém a sigla do estado
-                    first_feature = geojson['features'][0]['properties']
-                    
-                    # Possíveis nomes da propriedade com a sigla
-                    for prop in ['sigla', 'UF', 'uf', 'code', 'id', 'state_code', 'abbrev']:
-                        if prop in first_feature:
-                            st.session_state.geojson_key = prop
-                            break
-                    else:
-                        st.session_state.geojson_key = 'sigla'
-                    
-                    return geojson
-        except:
-            continue
-    
-    return None
+def carregar_geojson_local():
+    """Carrega o GeoJSON dos estados brasileiros do arquivo local"""
+    try:
+        # Tentar carregar de arquivo local
+        caminho_geojson = "estados_brasil.geojson"
+        
+        if os.path.exists(caminho_geojson):
+            with open(caminho_geojson, 'r', encoding='utf-8') as f:
+                geojson = json.load(f)
+            return geojson
+        else:
+            st.error(f"❌ Arquivo '{caminho_geojson}' não encontrado!")
+            return None
+    except Exception as e:
+        st.error(f"❌ Erro ao carregar GeoJSON: {e}")
+        return None
 
 def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_filtro=None):
     """Processa os dados para gerar as métricas do mapa"""
@@ -1022,16 +1004,13 @@ def criar_mapa_coropletico(df_mapa, geojson):
     if df_mapa.empty or geojson is None:
         return None
     
-    # Garantir que temos a chave correta para o GeoJSON
-    geojson_key = getattr(st.session_state, 'geojson_key', 'sigla')
-    
     # Criar o mapa choropleth com GeoJSON
     fig = px.choropleth(
         df_mapa,
         geojson=geojson,
         locations='sigla',
         color='sincronismos',
-        featureidkey=f'properties.{geojson_key}',
+        featureidkey='properties.sigla',
         hover_name='estado',
         hover_data={
             'empresa_nome': True,
@@ -1101,8 +1080,8 @@ def criar_mapa_bolhas(df_mapa):
         countrycolor='rgba(0,0,0,0.4)',
         countrywidth=1.5,
         showsubunits=True,
-        subunitcolor='rgba(0,0,0,0.6)',      # COR DAS DIVISAS DOS ESTADOS
-        subunitwidth=2.0,                    # ESPESSURA DAS DIVISAS
+        subunitcolor='rgba(0,0,0,0.6)',
+        subunitwidth=2.0,
         showcoastlines=True,
         coastlinecolor='rgba(0,0,0,0.4)',
         showland=True,
@@ -1195,7 +1174,6 @@ with st.sidebar:
         st.session_state.file_hash = None
         st.session_state.uploaded_file_name = None
         st.session_state.ultima_atualizacao = None
-        st.session_state.geojson_key = 'sigla'
     
     if st.session_state.df_original is not None:
         with st.container():
@@ -4220,20 +4198,20 @@ if st.session_state.df_original is not None:
     with tab_mapa:
         st.markdown("## 🗺️ Mapa de Sincronizações por Empresa")
         
-        # Carregar GeoJSON dos estados brasileiros
+        # Carregar GeoJSON local
         with st.spinner("Carregando mapa do Brasil..."):
-            geojson = carregar_geojson_estados()
+            geojson = carregar_geojson_local()
         
         if geojson is None:
             st.error("""
             ❌ **Não foi possível carregar o mapa do Brasil**
             
-            Verifique sua conexão com a internet. O aplicativo precisa acessar um repositório online com as coordenadas geográficas dos estados brasileiros.
+            Verifique se o arquivo 'estados_brasil.geojson' está na mesma pasta do aplicativo.
             
-            **Solução alternativa:**
-            1. Verifique se está conectado à internet
-            2. Aguarde alguns segundos e tente novamente
-            3. Se o problema persistir, verifique se os repositórios GitHub estão acessíveis
+            **Solução:**
+            1. Certifique-se que o arquivo 'estados_brasil.geojson' existe
+            2. Verifique se o arquivo tem a estrutura JSON correta
+            3. O arquivo deve conter as geometrias dos estados com a propriedade 'sigla'
             """)
         else:
             st.success("✅ Mapa do Brasil carregado com sucesso!")
@@ -4279,7 +4257,7 @@ if st.session_state.df_original is not None:
             else:
                 mes_filtro_mapa = 'Todos'
         
-        # Tipo de visualização
+        # Tipo de visualização - apenas duas opções
         tipo_mapa = st.radio(
             "🗺️ Tipo de Visualização",
             options=["Coroplético (Estados)", "Bolhas (Pontos)"],
@@ -4361,7 +4339,7 @@ if st.session_state.df_original is not None:
                 fig_coropletico = criar_mapa_coropletico(df_mapa, geojson)
                 if fig_coropletico:
                     st.plotly_chart(fig_coropletico, use_container_width=True, config={'displayModeBar': True})
-                    st.caption("📌 Mapa baseado em dados geoespaciais do IBGE | Fonte: geojson-brasil")
+                    st.caption("📌 Mapa baseado em dados geoespaciais dos estados brasileiros")
                 else:
                     st.warning("⚠️ Não há dados suficientes para gerar o mapa coroplético.")
             else:
@@ -4420,8 +4398,8 @@ if st.session_state.df_original is not None:
             Este mapa visualiza geograficamente os sincronismos por empresa da Energisa usando dados geoespaciais reais do Brasil.
             
             **Como funciona:**
-            - O mapa é gerado usando um arquivo GeoJSON com as coordenadas geográficas reais dos estados brasileiros
-            - Os dados são baixados automaticamente de um repositório público
+            - O mapa é gerado usando um arquivo GeoJSON com as coordenadas geográficas dos estados brasileiros
+            - O arquivo deve estar na mesma pasta do aplicativo com o nome `estados_brasil.geojson`
             
             **Tipos de Visualização:**
             - **Mapa Coroplético**: Os estados são coloridos conforme o volume de sincronizações
