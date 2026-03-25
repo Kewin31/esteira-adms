@@ -10,25 +10,39 @@ import hashlib
 import warnings
 from pytz import timezone
 import numpy as np
+import streamlit.components.v1 as components
 import json
 warnings.filterwarnings('ignore')
 
 # ============================================
-# PALETA DE CORES
+# PALETA DE CORES - NOVA IDENTIDADE VISUAL
 # ============================================
-COR_VERDE_ESCURO = "#2E7D32"
-COR_AZUL_PETROLEO = "#028a9f"
-COR_AZUL_ESCURO = "#005973"
-COR_LARANJA = "#F57C00"
-COR_VERMELHO = "#C62828"
-COR_CINZA_FUNDO = "#F8F9FA"
-COR_CINZA_BORDA = "#E9ECEF"
-COR_CINZA_TEXTO = "#6C757D"
-COR_BRANCO = "#FFFFFF"
-COR_PRETO_SUAVE = "#212529"
+# Cores principais
+COR_VERDE_ESCURO = "#2E7D32"      # Verde escuro - principal
+COR_AZUL_PETROLEO = "#028a9f"     # Azul petróleo - secundário
+COR_AZUL_ESCURO = "#005973"       # Azul escuro - destaque
+COR_LARANJA = "#F57C00"           # Laranja - alertas/positivo
+COR_VERMELHO = "#C62828"          # Vermelho - erros/negativo
+
+# Cores neutras
+COR_CINZA_FUNDO = "#F8F9FA"       # Cinza muito claro para fundos
+COR_CINZA_BORDA = "#E9ECEF"       # Cinza para bordas
+COR_CINZA_TEXTO = "#6C757D"       # Cinza para textos secundários
+COR_BRANCO = "#FFFFFF"            # Branco
+COR_PRETO_SUAVE = "#212529"       # Preto suave para textos principais
+
+# Cores para gráficos
+CORES_GRADIENTE = [
+    COR_VERDE_ESCURO,
+    COR_AZUL_PETROLEO,
+    COR_AZUL_ESCURO,
+    COR_LARANJA,
+    COR_VERMELHO,
+    "#1E88E5"  # Azul adicional
+]
 
 # ============================================
-# MAPEAMENTO DAS EMPRESAS COM COORDENADAS
+# MAPEAMENTO COMPLETO DAS EMPRESAS
 # ============================================
 MAPEAMENTO_EMPRESAS = {
     'EMR': {
@@ -106,7 +120,7 @@ MAPEAMENTO_EMPRESAS = {
 }
 
 # ============================================
-# VARIÁVEIS GLOBAIS
+# VARIÁVEIS GLOBAIS DE CONFIGURAÇÃO
 # ============================================
 CAMINHO_ARQUIVO_PRINCIPAL = "esteira_demandas.csv"
 CAMINHOS_ALTERNATIVOS = [
@@ -128,11 +142,21 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS PERSONALIZADO (VERSÃO SIMPLIFICADA)
+# CSS PERSONALIZADO
 # ============================================
 st.markdown(f"""
 <style>
-    .stApp {{ background-color: {COR_CINZA_FUNDO}; }}
+    .stApp {{
+        background-color: {COR_CINZA_FUNDO};
+    }}
+    
+    .main-header-monitoring {{
+        background: {COR_CINZA_FUNDO};
+        padding: 1.2rem 2rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 4px solid {COR_AZUL_ESCURO};
+        border-radius: 0;
+    }}
     
     .metric-card {{
         background: {COR_BRANCO};
@@ -141,6 +165,13 @@ st.markdown(f"""
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         border: 1px solid {COR_CINZA_BORDA};
         margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }}
+    
+    .metric-card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 89, 115, 0.1);
+        border-color: {COR_AZUL_PETROLEO};
     }}
     
     .metric-value {{
@@ -148,12 +179,14 @@ st.markdown(f"""
         font-weight: 700;
         color: {COR_AZUL_ESCURO};
         margin: 0;
+        line-height: 1.2;
     }}
     
     .metric-label {{
         font-size: 0.85rem;
         color: {COR_CINZA_TEXTO};
         margin: 0.5rem 0 0 0;
+        font-weight: 500;
     }}
     
     .section-title {{
@@ -163,6 +196,8 @@ st.markdown(f"""
         margin-bottom: 1.5rem;
         font-size: 1.2rem;
         font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }}
     
     [data-testid="stSidebar"] {{
@@ -201,6 +236,102 @@ st.markdown(f"""
         padding: 0.75rem;
         border-radius: 8px;
     }}
+    
+    .status-warning {{
+        background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+        border-left: 4px solid {COR_LARANJA};
+        padding: 0.75rem;
+        border-radius: 8px;
+    }}
+    
+    .status-danger {{
+        background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
+        border-left: 4px solid {COR_VERMELHO};
+        padding: 0.75rem;
+        border-radius: 8px;
+    }}
+    
+    .performance-card {{
+        background: linear-gradient(135deg, {COR_BRANCO}, #F1F8E9);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_VERDE_ESCURO};
+        margin-bottom: 1rem;
+    }}
+    
+    .warning-card {{
+        background: linear-gradient(135deg, {COR_BRANCO}, #FFF3E0);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_LARANJA};
+        margin-bottom: 1rem;
+    }}
+    
+    .alert-card {{
+        background: linear-gradient(135deg, {COR_BRANCO}, #FFEBEE);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_VERMELHO};
+        margin-bottom: 1rem;
+    }}
+    
+    .info-card {{
+        background: linear-gradient(135deg, {COR_BRANCO}, #E0F7FA);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_AZUL_PETROLEO};
+        margin-bottom: 1rem;
+    }}
+    
+    .badge-success {{
+        background-color: {COR_VERDE_ESCURO};
+        color: {COR_BRANCO};
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }}
+    
+    .badge-warning {{
+        background-color: {COR_LARANJA};
+        color: {COR_BRANCO};
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }}
+    
+    .matrix-quadrant {{
+        padding: 10px;
+        border-radius: 8px;
+        margin: 5px;
+        font-weight: bold;
+        text-align: center;
+    }}
+    
+    .quadrant-stars {{
+        background-color: #E8F5E9;
+        color: {COR_VERDE_ESCURO};
+        border: 2px solid {COR_VERDE_ESCURO};
+    }}
+    
+    .quadrant-efficient {{
+        background-color: #FFF3E0;
+        color: {COR_LARANJA};
+        border: 2px solid {COR_LARANJA};
+    }}
+    
+    .quadrant-careful {{
+        background-color: #E0F7FA;
+        color: {COR_AZUL_PETROLEO};
+        border: 2px solid {COR_AZUL_PETROLEO};
+    }}
+    
+    .quadrant-needs-help {{
+        background-color: #FFEBEE;
+        color: {COR_VERMELHO};
+        border: 2px solid {COR_VERMELHO};
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -208,6 +339,7 @@ st.markdown(f"""
 # FUNÇÕES AUXILIARES
 # ============================================
 def formatar_nome_responsavel(nome):
+    """Formata nomes dos responsáveis"""
     if pd.isna(nome):
         return "Não informado"
     
@@ -223,8 +355,12 @@ def formatar_nome_responsavel(nome):
         nome_formatado = ' '.join(palavras)
         
         correcoes = {
-            ' Da ': ' da ', ' De ': ' de ', ' Do ': ' do ',
-            ' Das ': ' das ', ' Dos ': ' dos ', ' E ': ' e ',
+            ' Da ': ' da ',
+            ' De ': ' de ',
+            ' Do ': ' do ',
+            ' Das ': ' das ',
+            ' Dos ': ' dos ',
+            ' E ': ' e ',
         }
         
         for errado, correto in correcoes.items():
@@ -235,6 +371,7 @@ def formatar_nome_responsavel(nome):
     return nome_str.title()
 
 def criar_card_indicador_simples(valor, label, icone="📊"):
+    """Cria card de indicador SIMPLES - sem delta"""
     if isinstance(valor, (int, float)):
         valor_formatado = f"{valor:,}"
     else:
@@ -253,10 +390,12 @@ def criar_card_indicador_simples(valor, label, icone="📊"):
     '''
 
 def calcular_hash_arquivo(conteudo):
+    """Calcula hash do conteúdo do arquivo para detectar mudanças"""
     return hashlib.md5(conteudo).hexdigest()
 
 @st.cache_data(ttl=300)
 def carregar_dados(uploaded_file=None, caminho_arquivo=None):
+    """Carrega e processa os dados"""
     try:
         if uploaded_file:
             conteudo_bytes = uploaded_file.getvalue()
@@ -316,25 +455,35 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         if 'Criado' in df.columns:
             df['Ano'] = df['Criado'].dt.year
             df['Mês'] = df['Criado'].dt.month
+            df['Mês_Num'] = df['Criado'].dt.month
             df['Dia'] = df['Criado'].dt.day
             df['Hora'] = df['Criado'].dt.hour
+            df['Mês_Ano'] = df['Criado'].dt.strftime('%b/%Y')
             df['Nome_Mês'] = df['Criado'].dt.month.map({
                 1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
                 5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
                 9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
             })
+            df['Nome_Mês_Completo'] = df['Criado'].dt.month.map({
+                1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+            })
+            df['Ano_Mês'] = df['Criado'].dt.strftime('%Y-%m')
         
         if 'Revisões' in df.columns:
             df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
         
         hash_conteudo = calcular_hash_arquivo(conteudo_bytes)
+        timestamp = time.time()
         
-        return df, "✅ Dados carregados com sucesso", hash_conteudo
+        return df, "✅ Dados carregados com sucesso", f"{hash_conteudo}_{timestamp}"
     
     except Exception as e:
         return None, f"Erro: {str(e)}", None
 
 def encontrar_arquivo_dados():
+    """Tenta encontrar o arquivo de dados em vários caminhos possíveis"""
     if os.path.exists(CAMINHO_ARQUIVO_PRINCIPAL):
         return CAMINHO_ARQUIVO_PRINCIPAL
     
@@ -345,6 +494,7 @@ def encontrar_arquivo_dados():
     return None
 
 def verificar_e_atualizar_arquivo():
+    """Verifica se o arquivo local foi modificado e atualiza se necessário"""
     caminho_arquivo = encontrar_arquivo_dados()
     
     if caminho_arquivo and os.path.exists(caminho_arquivo):
@@ -356,14 +506,21 @@ def verificar_e_atualizar_arquivo():
         
         if (modificacao_atual > st.session_state.ultima_modificacao and 
             st.session_state.df_original is not None):
-            st.session_state.ultima_modificacao = modificacao_atual
-            return True
+            
+            with open(caminho_arquivo, 'rb') as f:
+                conteudo_atual = f.read()
+            hash_atual = calcular_hash_arquivo(conteudo_atual)
+            
+            if 'file_hash' not in st.session_state or hash_atual != st.session_state.file_hash:
+                st.session_state.ultima_modificacao = modificacao_atual
+                return True
         
         st.session_state.ultima_modificacao = modificacao_atual
     
     return False
 
 def limpar_sessao_dados():
+    """Limpa todos os dados da sessão relacionados ao upload"""
     keys_to_clear = [
         'df_original', 'df_filtrado', 'arquivo_atual',
         'ultima_modificacao', 'file_hash', 'uploaded_file_name',
@@ -375,15 +532,114 @@ def limpar_sessao_dados():
             del st.session_state[key]
 
 def get_horario_brasilia():
+    """Retorna o horário atual de Brasília"""
     try:
         tz = timezone('America/Sao_Paulo')
         return datetime.now(tz).strftime('%d/%m/%Y %H:%M:%S')
     except:
         return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
+def criar_matriz_performance_dev(df):
+    """Cria matriz de performance (Eficiência vs Qualidade) para Desenvolvedores"""
+    devs = df['Responsável_Formatado'].dropna().unique()
+    matriz_data = []
+    
+    for dev in devs:
+        df_dev = df[df['Responsável_Formatado'] == dev].copy()
+        
+        if len(df_dev) == 0:
+            continue
+        
+        total_cards = len(df_dev)
+        
+        if 'Criado' in df_dev.columns:
+            meses_ativos = df_dev['Criado'].dt.to_period('M').nunique()
+            eficiencia = total_cards / max(meses_ativos, 1)
+        else:
+            eficiencia = total_cards
+        
+        if 'Revisões' in df_dev.columns:
+            cards_sem_revisao = len(df_dev[df_dev['Revisões'] == 0])
+            qualidade = (cards_sem_revisao / total_cards * 100) if total_cards > 0 else 0
+        else:
+            qualidade = 100
+        
+        score = (qualidade * 0.5) + (eficiencia * 5 * 0.3) + ((total_cards / max(len(df), 1)) * 100 * 0.2)
+        
+        matriz_data.append({
+            'Desenvolvedor': dev,
+            'Eficiencia': round(eficiencia, 1),
+            'Qualidade': round(qualidade, 1),
+            'Score': round(score, 1),
+            'Total_Cards': total_cards
+        })
+    
+    return pd.DataFrame(matriz_data)
+
 # ============================================
-# FUNÇÕES DO MAPA - VERSÃO SEM GEJSON
+# FUNÇÕES DO MAPA
 # ============================================
+
+def criar_geojson_fallback():
+    """Cria um GeoJSON simples como fallback com as coordenadas dos estados"""
+    geojson_fallback = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    
+    # Dados aproximados dos estados (centroides)
+    estados = {
+        'AC': [-9.0, -70.0], 'AL': [-9.5, -36.5], 'AP': [1.0, -52.0], 'AM': [-3.0, -63.0],
+        'BA': [-12.5, -41.5], 'CE': [-5.0, -39.0], 'DF': [-15.5, -47.5], 'ES': [-19.5, -40.5],
+        'GO': [-16.0, -49.0], 'MA': [-5.0, -45.0], 'MT': [-12.5, -55.0], 'MS': [-20.5, -54.5],
+        'MG': [-19.5, -44.5], 'PA': [-5.0, -53.0], 'PB': [-7.0, -36.5], 'PR': [-24.5, -51.5],
+        'PE': [-8.5, -38.0], 'PI': [-7.0, -42.0], 'RJ': [-22.5, -43.0], 'RN': [-5.5, -36.0],
+        'RS': [-30.0, -53.0], 'RO': [-10.5, -63.0], 'RR': [2.0, -62.0], 'SC': [-27.0, -50.5],
+        'SP': [-23.5, -46.5], 'SE': [-10.5, -37.0], 'TO': [-10.0, -48.0]
+    }
+    
+    for sigla, coords in estados.items():
+        geojson_fallback['features'].append({
+            "type": "Feature",
+            "properties": {
+                "sigla": sigla,
+                "name": sigla
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [coords[1], coords[0]]
+            }
+        })
+    
+    return geojson_fallback
+
+@st.cache_resource(ttl=86400)
+def carregar_geojson_local():
+    """Carrega o GeoJSON dos estados brasileiros com fallback"""
+    try:
+        caminho_geojson = "estados_brasil.geojson"
+        
+        if os.path.exists(caminho_geojson):
+            with open(caminho_geojson, 'r', encoding='utf-8') as f:
+                geojson = json.load(f)
+            
+            if 'features' in geojson and len(geojson['features']) > 0:
+                primeira_feature = geojson['features'][0]
+                if 'properties' in primeira_feature and 'sigla' in primeira_feature['properties']:
+                    return geojson
+                else:
+                    st.warning("⚠️ GeoJSON não contém a propriedade 'sigla'. Usando fallback.")
+                    return criar_geojson_fallback()
+            else:
+                st.warning("⚠️ GeoJSON vazio ou inválido. Usando fallback.")
+                return criar_geojson_fallback()
+        else:
+            st.info(f"ℹ️ Arquivo '{caminho_geojson}' não encontrado. Usando visualização alternativa.")
+            return criar_geojson_fallback()
+            
+    except Exception as e:
+        st.error(f"❌ Erro ao carregar GeoJSON: {e}")
+        return criar_geojson_fallback()
 
 def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_filtro=None):
     """Processa os dados para gerar as métricas do mapa"""
@@ -438,29 +694,75 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     
     return pd.DataFrame(dados_mapa), total_sinc
 
-def criar_mapa_bolhas(df_mapa):
-    """Cria um mapa de bolhas com os estados"""
+def criar_mapa_coropletico(df_mapa, geojson):
+    """Cria o mapa coroplético usando GeoJSON"""
     if df_mapa.empty:
         return None
     
-    # Filtrar apenas empresas com sincronismos
+    if geojson is None:
+        return criar_mapa_bolhas_alternativo(df_mapa)
+    
+    try:
+        fig = px.choropleth(
+            df_mapa,
+            geojson=geojson,
+            locations='sigla',
+            color='sincronismos',
+            featureidkey='properties.sigla',
+            hover_name='estado',
+            hover_data={
+                'empresa_nome': True,
+                'sincronismos': True,
+                'regiao': True,
+                'sigla': False
+            },
+            color_continuous_scale=[
+                (0.0, "#FFE5E5"),
+                (0.2, "#FFB3B3"),
+                (0.4, "#FF8080"),
+                (0.6, "#FF4D4D"),
+                (0.8, "#E63946"),
+                (1.0, "#C1121F")
+            ],
+            title="<b>Mapa de Sincronizações por Estado</b>",
+            labels={'sincronismos': 'Nº de Sincronizações'}
+        )
+        
+        fig.update_geos(
+            fitbounds="locations",
+            visible=False,
+            projection_type="mercator"
+        )
+        
+        fig.update_layout(
+            height=600,
+            margin={"r": 0, "t": 50, "l": 0, "b": 0},
+            coloraxis_colorbar=dict(
+                title="Sincronizações",
+                thicknessmode="pixels",
+                thickness=20,
+                lenmode="pixels",
+                len=300,
+                yanchor="middle",
+                y=0.5
+            )
+        )
+        
+        return fig
+        
+    except Exception as e:
+        st.error(f"❌ Erro ao criar mapa: {e}")
+        return criar_mapa_bolhas_alternativo(df_mapa)
+
+def criar_mapa_bolhas_alternativo(df_mapa):
+    """Cria um mapa de bolhas como alternativa"""
+    if df_mapa.empty:
+        return None
+    
     df_bolhas = df_mapa[df_mapa['sincronismos'] > 0].copy()
     
     if df_bolhas.empty:
-        # Se não houver dados, criar um mapa vazio com mensagem
-        fig = go.Figure()
-        fig.add_annotation(
-            x=0.5, y=0.5,
-            xref="paper", yref="paper",
-            text="Nenhuma sincronização encontrada com os filtros selecionados",
-            showarrow=False,
-            font=dict(size=14, color=COR_CINZA_TEXTO)
-        )
-        fig.update_layout(height=500)
-        return fig
-    
-    # Definir cores baseadas na quantidade
-    max_valor = df_bolhas['sincronismos'].max()
+        return None
     
     fig = px.scatter_geo(
         df_bolhas,
@@ -468,50 +770,35 @@ def criar_mapa_bolhas(df_mapa):
         lon='longitude',
         size='sincronismos',
         hover_name='estado',
-        text='empresa',
+        text='sigla',
         color='sincronismos',
-        color_continuous_scale=[
-            (0.0, "#FFE5E5"),
-            (0.2, "#FFB3B3"),
-            (0.4, "#FF8080"),
-            (0.6, "#FF4D4D"),
-            (0.8, "#E63946"),
-            (1.0, "#C1121F")
-        ],
-        size_max=60,
-        title="<b>Mapa de Sincronizações por Estado</b>",
-        labels={'sincronismos': 'Nº de Sincronizações'},
-        hover_data={'latitude': False, 'longitude': False}
+        color_continuous_scale='Reds',
+        size_max=50,
+        title="<b>Mapa de Bolhas - Volume de Sincronizações</b>",
+        labels={'sincronismos': 'Nº de Sincronizações'}
     )
     
-    # Configurar o mapa com divisas dos estados
     fig.update_geos(
         projection_type="natural earth",
         center=dict(lon=-55, lat=-14),
-        projection_scale=3.2,
+        projection_scale=3,
         showcountries=True,
-        countrycolor='rgba(0,0,0,0.3)',
+        countrycolor='rgba(0,0,0,0.4)',
         showsubunits=True,
-        subunitcolor='rgba(0,0,0,0.4)',
+        subunitcolor='rgba(0,0,0,0.6)',
         showland=True,
         landcolor='rgb(245, 245, 245)',
         showocean=True,
-        oceancolor='rgba(200, 220, 240, 0.5)',
-        showframe=False
+        oceancolor='rgba(200, 220, 240, 0.3)'
     )
     
-    # Ajustar layout
     fig.update_layout(
         height=600,
-        margin={"r": 10, "t": 50, "l": 10, "b": 10},
+        margin={"r": 0, "t": 50, "l": 0, "b": 0},
         coloraxis_colorbar=dict(
             title="Sincronizações",
             thicknessmode="pixels",
-            thickness=25,
-            len=300,
-            yanchor="middle",
-            y=0.5,
-            title_font=dict(size=12, color=COR_AZUL_ESCURO)
+            thickness=20
         )
     )
     
@@ -526,7 +813,6 @@ def criar_grafico_barras(df_mapa):
     
     fig = go.Figure()
     
-    # Definir cores baseadas nos valores
     cores = []
     for val in df_barras['sincronismos']:
         if val == 0:
@@ -563,56 +849,8 @@ def criar_grafico_barras(df_mapa):
     
     return fig
 
-def criar_grafico_pizza(df_mapa):
-    """Cria gráfico de pizza com distribuição por região"""
-    if df_mapa.empty:
-        return None
-    
-    # Agrupar por região
-    df_regiao = df_mapa.groupby('regiao')['sincronismos'].sum().reset_index()
-    df_regiao = df_regiao.sort_values('sincronismos', ascending=False)
-    
-    cores_regioes = {
-        'Sudeste': COR_AZUL_ESCURO,
-        'Nordeste': COR_VERDE_ESCURO,
-        'Centro-Oeste': COR_LARANJA,
-        'Norte': COR_VERMELHO
-    }
-    
-    cores = [cores_regioes.get(reg, COR_CINZA_TEXTO) for reg in df_regiao['regiao']]
-    
-    fig = px.pie(
-        df_regiao,
-        values='sincronismos',
-        names='regiao',
-        title='<b>Distribuição por Região</b>',
-        color_discrete_sequence=cores,
-        hole=0.4
-    )
-    
-    fig.update_traces(
-        textposition='inside',
-        textinfo='percent+label',
-        hoverinfo='label+percent+value',
-        pull=[0.05 if i == 0 else 0 for i in range(len(df_regiao))]
-    )
-    
-    fig.update_layout(
-        height=400,
-        showlegend=True,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.2,
-            xanchor="center",
-            x=0.5
-        )
-    )
-    
-    return fig
-
 # ============================================
-# SIDEBAR
+# SIDEBAR - FILTROS E CONTROLES
 # ============================================
 with st.sidebar:
     st.markdown(f"""
@@ -740,7 +978,7 @@ with st.sidebar:
                 st.markdown(f"""
                 <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
                     <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
-                    <p style="margin: 0; font-size: 0.85rem;">{os.path.basename(arquivo_atual)}</p>
+                    <p style="margin: 0; font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{os.path.basename(arquivo_atual)}</p>
                     <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: {COR_CINZA_TEXTO};">
                     📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
                     </p>
@@ -756,12 +994,13 @@ with st.sidebar:
                 if st.button("🔄 Recarregar Local", 
                            use_container_width=True,
                            type="primary",
+                           help="Recarrega os dados do arquivo local",
                            key="btn_recarregar"):
                     
                     caminho_atual = encontrar_arquivo_dados()
                     
                     if caminho_atual and os.path.exists(caminho_atual):
-                        with st.spinner('Recarregando dados...'):
+                        with st.spinner('Recarregando dados do arquivo local...'):
                             try:
                                 carregar_dados.clear()
                                 
@@ -773,6 +1012,7 @@ with st.sidebar:
                                     st.session_state.arquivo_atual = caminho_atual
                                     st.session_state.file_hash = hash_conteudo
                                     st.session_state.ultima_atualizacao = get_horario_brasilia()
+                                    
                                     st.session_state.ultima_modificacao = os.path.getmtime(caminho_atual)
                                     
                                     st.success(f"✅ Dados atualizados! {len(df_atualizado):,} registros")
@@ -789,6 +1029,7 @@ with st.sidebar:
                 if st.button("🗑️ Limpar Tudo", 
                            use_container_width=True,
                            type="secondary",
+                           help="Limpa todos os dados e cache",
                            key="btn_limpar"):
                     
                     st.cache_data.clear()
@@ -815,7 +1056,7 @@ with st.sidebar:
             "Selecione um arquivo CSV",
             type=['csv'],
             key="file_uploader",
-            help="Faça upload de um novo arquivo CSV",
+            help="Faça upload de um novo arquivo CSV para substituir os dados atuais",
             label_visibility="collapsed"
         )
         
@@ -845,7 +1086,11 @@ with st.sidebar:
                         st.session_state.uploaded_file_name = uploaded_file.name
                         st.session_state.ultima_atualizacao = get_horario_brasilia()
                         
+                        if 'filtros_aplicados' in st.session_state:
+                            del st.session_state.filtros_aplicados
+                        
                         st.success(f"✅ {len(df_novo):,} registros carregados!")
+                        
                         time.sleep(1)
                         st.rerun()
                     else:
@@ -879,11 +1124,12 @@ st.markdown(f"""
     background: linear-gradient(135deg, {COR_AZUL_PETROLEO} 0%, {COR_AZUL_ESCURO} 100%);
     padding: 1.5rem 2rem;
     margin-bottom: 1.5rem;
+    border-radius: 0;
     box-shadow: 0 4px 15px rgba(2, 138, 159, 0.3);
 ">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
         <div>
-            <h1 style="color: {COR_BRANCO}; margin: 0; font-size: 1.6rem;">
+            <h1 style="color: {COR_BRANCO}; margin: 0; font-size: 1.6rem; font-weight: 600;">
                 📊 ESTEIRA ADMS
             </h1>
             <p style="color: rgba(255,255,255,0.9); margin: 0.3rem 0 0 0; font-size: 0.85rem;">
@@ -906,7 +1152,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ============================================
-# DASHBOARD PRINCIPAL
+# EXIBIR DASHBOARD SE HOUVER DADOS
 # ============================================
 if st.session_state.df_original is not None:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
@@ -979,31 +1225,50 @@ if st.session_state.df_original is not None:
                 df_ano = df[df['Ano'] == ano_selecionado].copy()
                 
                 if not df_ano.empty:
-                    ordem_meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
-                                  'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                    ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                                             'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                     
-                    todos_meses = pd.DataFrame({'Mês_Num': range(1, 13), 'Nome_Mês': ordem_meses})
+                    todos_meses = pd.DataFrame({
+                        'Mês_Num': range(1, 13),
+                        'Nome_Mês': ordem_meses_abreviados
+                    })
+                    
                     demandas_por_mes = df_ano.groupby('Mês_Num').size().reset_index()
                     demandas_por_mes.columns = ['Mês_Num', 'Quantidade']
+                    
                     demandas_completas = pd.merge(todos_meses, demandas_por_mes, on='Mês_Num', how='left')
                     demandas_completas['Quantidade'] = demandas_completas['Quantidade'].fillna(0).astype(int)
                     
                     fig_mes = go.Figure()
-                    fig_mes.add_trace(go.Bar(
+                    
+                    fig_mes.add_trace(go.Scatter(
                         x=demandas_completas['Nome_Mês'],
                         y=demandas_completas['Quantidade'],
+                        mode='lines+markers+text',
                         name='Demandas',
-                        marker_color=COR_AZUL_ESCURO,
+                        line=dict(color=COR_AZUL_ESCURO, width=3),
+                        marker=dict(size=10, color=COR_AZUL_PETROLEO),
                         text=demandas_completas['Quantidade'],
-                        textposition='outside'
+                        textposition='top center'
                     ))
                     
                     fig_mes.update_layout(
                         title=f"Demandas em {ano_selecionado}",
                         xaxis_title="Mês",
                         yaxis_title="Número de Demandas",
+                        plot_bgcolor=COR_BRANCO,
                         height=450,
-                        showlegend=False
+                        showlegend=False,
+                        xaxis=dict(gridcolor='rgba(0,0,0,0.05)'),
+                        yaxis=dict(gridcolor='rgba(0,0,0,0.05)', rangemode='tozero')
+                    )
+                    
+                    total_ano = int(demandas_completas['Quantidade'].sum())
+                    fig_mes.add_annotation(
+                        x=0.5, y=0.95, xref="paper", yref="paper",
+                        text=f"Total no ano: {total_ano:,} demandas",
+                        showarrow=False,
+                        font=dict(size=12, color=COR_AZUL_ESCURO)
                     )
                     
                     st.plotly_chart(fig_mes, use_container_width=True)
@@ -1020,66 +1285,91 @@ if st.session_state.df_original is not None:
                         'Chamado': 'count'
                     }).reset_index()
                     
-                    revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados']
-                    revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False).head(15)
+                    revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
+                    revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
                     
-                    fig_rev = go.Figure()
-                    fig_rev.add_trace(go.Bar(
-                        x=revisoes_por_responsavel['Responsável'],
-                        y=revisoes_por_responsavel['Total_Revisões'],
-                        text=revisoes_por_responsavel['Total_Revisões'],
+                    fig_revisoes = go.Figure()
+                    
+                    fig_revisoes.add_trace(go.Bar(
+                        x=revisoes_por_responsavel['Responsável'].head(15),
+                        y=revisoes_por_responsavel['Total_Revisões'].head(15),
+                        name='Total de Revisões',
+                        text=revisoes_por_responsavel['Total_Revisões'].head(15),
                         textposition='outside',
-                        marker_color=COR_VERMELHO
+                        marker_color=COR_VERMELHO,
+                        marker_line_color=COR_PRETO_SUAVE,
+                        marker_line_width=1.5,
+                        opacity=0.8
                     ))
                     
-                    fig_rev.update_layout(
+                    fig_revisoes.update_layout(
                         title='Top 15 Responsáveis com Mais Revisões',
                         xaxis_title='Responsável',
                         yaxis_title='Total de Revisões',
+                        plot_bgcolor=COR_BRANCO,
                         height=500,
-                        xaxis_tickangle=45
+                        showlegend=False,
+                        xaxis=dict(tickangle=45, gridcolor='rgba(0,0,0,0.05)'),
+                        yaxis=dict(gridcolor='rgba(0,0,0,0.05)')
                     )
                     
-                    st.plotly_chart(fig_rev, use_container_width=True)
+                    st.plotly_chart(fig_revisoes, use_container_width=True)
         
         with tab3:
             st.markdown(f'<div class="section-title">📈 CHAMADOS SINCRONIZADOS POR DIA</div>', unsafe_allow_html=True)
             
             if 'Status' in df.columns and 'Criado' in df.columns:
-                df_sinc = df[df['Status'] == 'Sincronizado'].copy()
+                df_sincronizados = df[df['Status'] == 'Sincronizado'].copy()
                 
-                if not df_sinc.empty:
-                    df_sinc['Data'] = df_sinc['Criado'].dt.date
-                    sinc_por_dia = df_sinc.groupby('Data').size().reset_index()
-                    sinc_por_dia.columns = ['Data', 'Quantidade']
-                    sinc_por_dia = sinc_por_dia.sort_values('Data')
+                if not df_sincronizados.empty:
+                    df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
+                    sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
+                    sincronizados_por_dia.columns = ['Data', 'Quantidade']
+                    sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
                     
-                    total_sinc = int(sinc_por_dia['Quantidade'].sum())
-                    media_diaria = sinc_por_dia['Quantidade'].mean()
+                    st.markdown("### 📊 Indicadores Principais")
                     
-                    col_kpi1, col_kpi2 = st.columns(2)
+                    total_sincronizados = int(sincronizados_por_dia['Quantidade'].sum())
+                    media_diaria = sincronizados_por_dia['Quantidade'].mean()
+                    max_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmax()]
+                    
+                    col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
+                    
                     with col_kpi1:
-                        st.metric("✅ Total Sincronizado", f"{total_sinc:,}")
+                        st.metric("✅ Total Sincronizado", f"{total_sincronizados:,}")
+                    
                     with col_kpi2:
                         st.metric("📊 Média Diária", f"{media_diaria:.1f}")
                     
-                    sinc_recente = sinc_por_dia.tail(30)
-                    sinc_recente['Data_Str'] = sinc_recente['Data'].apply(lambda x: x.strftime('%d/%m'))
+                    with col_kpi3:
+                        st.metric("📈 Dia com Mais Sinc.", f"{int(max_dia['Quantidade']):,}", f"{max_dia['Data'].strftime('%d/%m')}")
+                    
+                    sinc_por_dia_recente = sincronizados_por_dia.tail(30)
+                    sinc_por_dia_recente['Data_Formatada'] = sinc_por_dia_recente['Data'].apply(lambda x: x.strftime('%d/%m'))
                     
                     fig_dias = go.Figure()
+                    
                     fig_dias.add_trace(go.Bar(
-                        x=sinc_recente['Data_Str'],
-                        y=sinc_recente['Quantidade'],
-                        text=sinc_recente['Quantidade'],
+                        x=sinc_por_dia_recente['Data_Formatada'],
+                        y=sinc_por_dia_recente['Quantidade'],
+                        name='Sincronizações',
+                        text=sinc_por_dia_recente['Quantidade'],
                         textposition='outside',
-                        marker_color=COR_VERDE_ESCURO
+                        marker_color=COR_VERDE_ESCURO,
+                        marker_line_color=COR_AZUL_PETROLEO,
+                        marker_line_width=1.5,
+                        opacity=0.8
                     ))
                     
                     fig_dias.update_layout(
                         title='Sincronizações por Dia (Últimos 30 dias)',
-                        xaxis_title='Data',
-                        yaxis_title='Quantidade',
-                        height=400
+                        xaxis_title='Data (Dia/Mês)',
+                        yaxis_title='Quantidade de Sincronizações',
+                        height=400,
+                        plot_bgcolor=COR_BRANCO,
+                        showlegend=False,
+                        xaxis=dict(tickangle=45, gridcolor='rgba(0,0,0,0.05)'),
+                        yaxis=dict(gridcolor='rgba(0,0,0,0.05)', rangemode='tozero')
                     )
                     
                     st.plotly_chart(fig_dias, use_container_width=True)
@@ -1088,40 +1378,52 @@ if st.session_state.df_original is not None:
             st.markdown(f'<div class="section-title">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
             
             if 'SRE' in df.columns and 'Status' in df.columns:
-                df_sinc = df[df['Status'] == 'Sincronizado'].copy()
+                df_sincronizados = df[df['Status'] == 'Sincronizado'].copy()
                 
-                if not df_sinc.empty and 'SRE' in df_sinc.columns:
-                    sinc_por_sre = df_sinc.groupby('SRE').size().reset_index()
+                if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
+                    sinc_por_sre = df_sincronizados.groupby('SRE').size().reset_index()
                     sinc_por_sre.columns = ['SRE', 'Sincronizados']
-                    sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False).head(10)
+                    sinc_por_sre = sinc_por_sre.sort_values('Sincronizados', ascending=False)
                     
-                    fig_sre = go.Figure()
-                    fig_sre.add_trace(go.Bar(
-                        x=sinc_por_sre['SRE'],
-                        y=sinc_por_sre['Sincronizados'],
-                        text=sinc_por_sre['Sincronizados'],
+                    fig_sinc_bar = go.Figure()
+                    
+                    fig_sinc_bar.add_trace(go.Bar(
+                        x=sinc_por_sre['SRE'].head(10),
+                        y=sinc_por_sre['Sincronizados'].head(10),
+                        name='Sincronizados',
+                        text=sinc_por_sre['Sincronizados'].head(10),
                         textposition='outside',
-                        marker_color=COR_AZUL_ESCURO
+                        marker_color=COR_AZUL_ESCURO,
+                        marker_line_color=COR_AZUL_PETROLEO,
+                        marker_line_width=1.5,
+                        opacity=0.8
                     ))
                     
-                    fig_sre.update_layout(
+                    fig_sinc_bar.update_layout(
                         title='Sincronizados por SRE',
                         xaxis_title='SRE',
                         yaxis_title='Número de Sincronizados',
+                        plot_bgcolor=COR_BRANCO,
                         height=500,
-                        xaxis_tickangle=45
+                        showlegend=False,
+                        xaxis=dict(tickangle=45, gridcolor='rgba(0,0,0,0.05)'),
+                        yaxis=dict(gridcolor='rgba(0,0,0,0.05)', rangemode='tozero')
                     )
                     
-                    st.plotly_chart(fig_sre, use_container_width=True)
+                    st.plotly_chart(fig_sinc_bar, use_container_width=True)
     
     with tab_mapa:
         st.markdown("## 🗺️ Mapa de Sincronizações por Empresa")
         
-        st.info("ℹ️ Mapa interativo baseado nas coordenadas das empresas. As bolhas representam o volume de sincronizações.")
+        with st.spinner("Carregando mapa do Brasil..."):
+            geojson = carregar_geojson_local()
         
-        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
+        if geojson:
+            st.success("✅ Mapa carregado com sucesso!")
         
-        with col_filtro1:
+        col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
+        
+        with col_mapa_filtro1:
             empresas_disponiveis = df['Empresa'].dropna().unique()
             empresas_opcoes = ['Todas'] + sorted([e for e in empresas_disponiveis if e in MAPEAMENTO_EMPRESAS])
             
@@ -1132,7 +1434,7 @@ if st.session_state.df_original is not None:
                 key="mapa_empresas"
             )
         
-        with col_filtro2:
+        with col_mapa_filtro2:
             if 'Ano' in df.columns:
                 anos_disponiveis_mapa = sorted(df['Ano'].dropna().unique().astype(int))
                 anos_opcoes_mapa = ['Todos'] + list(anos_disponiveis_mapa)
@@ -1145,7 +1447,7 @@ if st.session_state.df_original is not None:
             else:
                 ano_filtro_mapa = 'Todos'
         
-        with col_filtro3:
+        with col_mapa_filtro3:
             if 'Mês' in df.columns and ano_filtro_mapa != 'Todos':
                 df_ano_mapa = df[df['Ano'] == int(ano_filtro_mapa)]
                 meses_disponiveis_mapa = sorted(df_ano_mapa['Mês'].dropna().unique().astype(int))
@@ -1158,6 +1460,14 @@ if st.session_state.df_original is not None:
                 )
             else:
                 mes_filtro_mapa = 'Todos'
+        
+        tipo_mapa = st.radio(
+            "🗺️ Tipo de Visualização",
+            options=["Coroplético (Estados)", "Bolhas (Pontos)"],
+            index=0,
+            horizontal=True,
+            key="mapa_tipo"
+        )
         
         df_mapa, total_sinc_filtrado = processar_dados_mapa(
             df,
@@ -1208,24 +1518,27 @@ if st.session_state.df_original is not None:
         
         st.markdown("---")
         
-        st.markdown('<div class="section-title">🗺️ MAPA DE BOLHAS - ESTADOS BRASILEIROS</div>', unsafe_allow_html=True)
+        if tipo_mapa == "Coroplético (Estados)":
+            st.markdown('<div class="section-title">🗺️ MAPA COROPLÉTICO - ESTADOS BRASILEIROS</div>', unsafe_allow_html=True)
+            
+            fig_coropletico = criar_mapa_coropletico(df_mapa, geojson)
+            if fig_coropletico:
+                st.plotly_chart(fig_coropletico, use_container_width=True, config={'displayModeBar': True})
+                st.caption("📌 Mapa baseado em dados geoespaciais dos estados brasileiros")
         
-        fig_mapa = criar_mapa_bolhas(df_mapa)
-        if fig_mapa:
-            st.plotly_chart(fig_mapa, use_container_width=True, config={'displayModeBar': True})
-            st.caption("📌 As bolhas representam o volume de sincronizações por empresa")
+        elif tipo_mapa == "Bolhas (Pontos)":
+            st.markdown('<div class="section-title">📍 MAPA DE BOLHAS - COM DIVISAS DOS ESTADOS</div>', unsafe_allow_html=True)
+            
+            fig_bolhas = criar_mapa_bolhas_alternativo(df_mapa)
+            if fig_bolhas:
+                st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
+                st.caption("📌 As bolhas representam o volume de sincronizações por empresa")
         
         st.markdown('<div class="section-title" style="margin-top: 2rem;">📊 RANKING DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
         
         fig_barras = criar_grafico_barras(df_mapa)
         if fig_barras:
-            st.plotly_chart(fig_barras, use_container_width=True)
-        
-        st.markdown('<div class="section-title">🥧 DISTRIBUIÇÃO POR REGIÃO</div>', unsafe_allow_html=True)
-        
-        fig_pizza = criar_grafico_pizza(df_mapa)
-        if fig_pizza:
-            st.plotly_chart(fig_pizza, use_container_width=True)
+            st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
         
         with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
             if not df_mapa.empty:
