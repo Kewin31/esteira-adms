@@ -927,8 +927,8 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     df_sinc = df[df['Status'] == 'Sincronizado'].copy()
     
     # REMOVER PROJETOS INTERNOS DAS CONTAGENS
-    if 'Tipo_Chamado' in df_sinc.columns:
-        df_sinc = df_sinc[df_sinc['Tipo_Chamado'] != 'Projetos Internos']
+    #if 'Tipo_Chamado' in df_sinc.columns:
+        #df_sinc = df_sinc[df_sinc['Tipo_Chamado'] != 'Projetos Internos']
     
     # Aplicar filtros de data
     if ano_filtro and ano_filtro != 'Todos':
