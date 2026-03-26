@@ -2189,7 +2189,7 @@ if st.session_state.df_original is not None:
             "📅 Evolução de Demandas", 
             "📊 Análise de Revisões", 
             "📈 Chamados Sincronizados por Dia",
-            "🏆 Performance dos SREs"
+            "🏆 Performance dos SREs + Análise Avançada"
         ])
         
         with tab1:
