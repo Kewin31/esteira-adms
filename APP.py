@@ -49,72 +49,72 @@ MAPEAMENTO_EMPRESAS = {
         'estado': 'Minas Gerais',
         'regiao': 'Sudeste',
         'nome_completo': 'Energisa Minas Gerais',
-        'latitude': -19.5,
-        'longitude': -44.5
+        'latitude': -19.9167,
+        'longitude': -43.9345
     },
     'EPB': {
         'sigla': 'PB',
         'estado': 'Paraíba',
         'regiao': 'Nordeste',
         'nome_completo': 'Energisa Paraíba',
-        'latitude': -7.2,
-        'longitude': -36.8
+        'latitude': -7.1195,
+        'longitude': -36.7240
     },
     'ESE': {
         'sigla': 'SE',
         'estado': 'Sergipe',
         'regiao': 'Nordeste',
         'nome_completo': 'Energisa Sergipe',
-        'latitude': -10.9,
-        'longitude': -37.1
+        'latitude': -10.9472,
+        'longitude': -37.0731
     },
     'ESS': {
         'sigla': 'SP',
         'estado': 'São Paulo',
         'regiao': 'Sudeste',
         'nome_completo': 'Energisa Sul/Sudeste',
-        'latitude': -23.5,
-        'longitude': -46.6
+        'latitude': -23.5505,
+        'longitude': -46.6333
     },
     'EMS': {
         'sigla': 'MS',
         'estado': 'Mato Grosso do Sul',
         'regiao': 'Centro-Oeste',
         'nome_completo': 'Energisa Mato Grosso do Sul',
-        'latitude': -20.5,
-        'longitude': -54.6
+        'latitude': -20.4697,
+        'longitude': -54.6201
     },
     'EMT': {
         'sigla': 'MT',
         'estado': 'Mato Grosso',
         'regiao': 'Centro-Oeste',
         'nome_completo': 'Energisa Mato Grosso',
-        'latitude': -12.5,
-        'longitude': -55.0
+        'latitude': -12.6819,
+        'longitude': -56.9211
     },
     'ETO': {
         'sigla': 'TO',
         'estado': 'Tocantins',
         'regiao': 'Norte',
         'nome_completo': 'Energisa Tocantins',
-        'latitude': -10.2,
-        'longitude': -48.3
+        'latitude': -10.1753,
+        'longitude': -48.2982
     },
     'ERO': {
         'sigla': 'RO',
         'estado': 'Rondônia',
         'regiao': 'Norte',
         'nome_completo': 'Energisa Rondônia',
-        'latitude': -10.8,
-        'longitude': -63.5
+        'latitude': -10.9161,
+        'longitude': -61.8298
     },
     'EAC': {
         'sigla': 'AC',
         'estado': 'Acre',
         'regiao': 'Norte',
         'nome_completo': 'Energisa Acre',
-        'latitude': -9.0,
-        'longitude': -70.0
+        'latitude': -9.0238,
+        'longitude': -70.8120
     }
 }
 
@@ -918,7 +918,7 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     return dados_mes
 
 # ============================================
-# FUNÇÕES DO MAPA
+# FUNÇÕES DO MAPA - PROCESSAMENTO DE DADOS
 # ============================================
 def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_filtro=None):
     """Processa os dados para gerar as métricas do mapa"""
@@ -945,117 +945,30 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     dados_mapa = []
     total_sinc = 0
     
-    for empresa in sinc_por_empresa['Empresa']:
-        if empresa in MAPEAMENTO_EMPRESAS:
-            info = MAPEAMENTO_EMPRESAS[empresa]
-            qtd = sinc_por_empresa[sinc_por_empresa['Empresa'] == empresa]['Sincronismos'].values[0]
-            dados_mapa.append({
-                'sigla': info['sigla'],
-                'estado': info['estado'],
-                'regiao': info['regiao'],
-                'empresa': empresa,
-                'empresa_nome': info['nome_completo'],
-                'sincronismos': qtd,
-                'latitude': info['latitude'],
-                'longitude': info['longitude']
-            })
-            total_sinc += qtd
-    
-    # Adicionar empresas com zero sincronismos se estiverem selecionadas
-    if empresas_selecionadas and 'Todas' not in empresas_selecionadas:
-        for empresa in empresas_selecionadas:
-            if empresa in MAPEAMENTO_EMPRESAS and empresa not in sinc_por_empresa['Empresa'].values:
-                info = MAPEAMENTO_EMPRESAS[empresa]
-                dados_mapa.append({
-                    'sigla': info['sigla'],
-                    'estado': info['estado'],
-                    'regiao': info['regiao'],
-                    'empresa': empresa,
-                    'empresa_nome': info['nome_completo'],
-                    'sincronismos': 0,
-                    'latitude': info['latitude'],
-                    'longitude': info['longitude']
-                })
+    for empresa, info in MAPEAMENTO_EMPRESAS.items():
+        mask = sinc_por_empresa['Empresa'] == empresa
+        qtd = int(sinc_por_empresa[mask]['Sincronismos'].values[0]) if mask.any() else 0
+        
+        if empresas_selecionadas and 'Todas' not in empresas_selecionadas:
+            if empresa not in empresas_selecionadas:
+                continue
+        
+        dados_mapa.append({
+            'sigla': info['sigla'],
+            'estado': info['estado'],
+            'regiao': info['regiao'],
+            'empresa': empresa,
+            'empresa_nome': info['nome_completo'],
+            'sincronismos': qtd,
+            'latitude': info['latitude'],
+            'longitude': info['longitude']
+        })
+        total_sinc += qtd
     
     return pd.DataFrame(dados_mapa), total_sinc
 
-def criar_mapa_bolhas(df_mapa):
-    """Cria um mapa de bolhas (scatter geo) - modificado para usar gradiente com vermelho para maiores valores"""
-    if df_mapa.empty:
-        return None
-    
-    # Filtrar apenas empresas com sincronismos > 0 para as bolhas
-    df_bolhas = df_mapa[df_mapa['sincronismos'] > 0].copy()
-    
-    if df_bolhas.empty:
-        return None
-    
-    # Criar escala de cores personalizada - do azul petróleo ao vermelho claro
-    # Valores mais altos -> mais próximo do vermelho claro
-    max_sinc = df_bolhas['sincronismos'].max()
-    min_sinc = df_bolhas['sincronismos'].min()
-    
-    if max_sinc == min_sinc:
-        # Se todos têm o mesmo valor, usar azul padrão
-        color_scale = [[0.0, COR_AZUL_PETROLEO], [1.0, COR_AZUL_PETROLEO]]
-    else:
-        # Criar escala do azul petróleo ao vermelho claro
-        color_scale = [
-            [0.0, COR_AZUL_PETROLEO],  # Menor valor
-            [0.5, COR_AZUL_ESCURO],    # Valor médio
-            [1.0, COR_VERMELHO]        # Maior valor
-        ]
-    
-    fig = px.scatter_geo(
-        df_bolhas,
-        lat='latitude',
-        lon='longitude',
-        size='sincronismos',
-        hover_name='estado',
-        text='empresa',
-        color='sincronismos',
-        color_continuous_scale=color_scale,
-        size_max=50,
-        title="<b>Mapa de Bolhas - Volume de Sincronizações</b>",
-        labels={'sincronismos': 'Nº de Sincronizações'}
-    )
-    
-    # Personalizar o popup
-    fig.update_traces(
-        hovertemplate="<b>%{hovertext}</b><br>" +
-                      "Empresa: %{text}<br>" +
-                      "Sincronizações: <b>%{marker.size}</b><br>" +
-                      "<extra></extra>"
-    )
-    
-    fig.update_geos(
-        projection_type="natural earth",
-        showcountries=False,
-        showsubunits=True,
-        showland=True,
-        landcolor='rgb(243, 243, 243)',
-        subunitcolor='rgb(217, 217, 217)'
-    )
-    
-    fig.update_layout(
-        height=550,
-        margin={"r": 0, "t": 50, "l": 0, "b": 0},
-        coloraxis_colorbar=dict(
-            title="Sincronizações",
-            thicknessmode="pixels",
-            thickness=20,
-            lenmode="pixels",
-            len=300,
-            yanchor="middle",
-            y=0.5,
-            tickformat="d"
-        )
-    )
-    
-    return fig
-
 def criar_grafico_barras(df_mapa):
-    """Cria gráfico de barras comparativo"""
+    """Cria gráfico de barras comparativo com cores em tons de azul"""
     if df_mapa.empty:
         return None
     
@@ -1063,7 +976,7 @@ def criar_grafico_barras(df_mapa):
     
     fig = go.Figure()
     
-    # Cores baseadas no valor (maior valor = mais vermelho)
+    # Cores baseadas no valor
     max_val = df_barras['sincronismos'].max()
     min_val = df_barras['sincronismos'].min()
     
@@ -1072,12 +985,10 @@ def criar_grafico_barras(df_mapa):
         if max_val == min_val:
             cores.append(COR_AZUL_PETROLEO)
         else:
-            # Normalizar o valor entre 0 e 1
             normalized = (val - min_val) / (max_val - min_val) if max_val > min_val else 0
-            # Interpolação entre azul petróleo (0) e vermelho (1)
-            r = int(int(COR_VERMELHO[1:3], 16) * normalized + int(COR_AZUL_PETROLEO[1:3], 16) * (1 - normalized))
-            g = int(int(COR_VERMELHO[3:5], 16) * normalized + int(COR_AZUL_PETROLEO[3:5], 16) * (1 - normalized))
-            b = int(int(COR_VERMELHO[5:7], 16) * normalized + int(COR_AZUL_PETROLEO[5:7], 16) * (1 - normalized))
+            r = int(15 * normalized + 2 * (1 - normalized))
+            g = int(63 * normalized + 138 * (1 - normalized))
+            b = int(79 * normalized + 159 * (1 - normalized))
             cores.append(f'rgb({r}, {g}, {b})')
     
     fig.add_trace(go.Bar(
@@ -1104,6 +1015,291 @@ def criar_grafico_barras(df_mapa):
     )
     
     return fig
+
+# ============================================
+# FUNÇÕES DO MAPA FOLIUM
+# ============================================
+def cor_gradiente_folium(valor, min_val, max_val):
+    """
+    Retorna cor em hex interpolando entre azul petróleo e vermelho.
+    Valores mais ALTOS → mais VERMELHO
+    Valores mais BAIXOS → mais AZUL PETRÓLEO
+    """
+    if max_val == min_val:
+        return COR_AZUL_PETROLEO
+
+    t = (valor - min_val) / (max_val - min_val)  # normaliza 0..1
+
+    # Cores base
+    cor_baixo = (0x02, 0x8a, 0x9f)   # #028a9f  azul petróleo
+    cor_medio = (0xF5, 0x7C, 0x00)   # #F57C00  laranja
+    cor_alto  = (0xC6, 0x28, 0x28)   # #C62828  vermelho
+
+    if t < 0.5:
+        tt = t / 0.5
+        r = int(cor_baixo[0] + tt * (cor_medio[0] - cor_baixo[0]))
+        g = int(cor_baixo[1] + tt * (cor_medio[1] - cor_baixo[1]))
+        b = int(cor_baixo[2] + tt * (cor_medio[2] - cor_baixo[2]))
+    else:
+        tt = (t - 0.5) / 0.5
+        r = int(cor_medio[0] + tt * (cor_alto[0] - cor_medio[0]))
+        g = int(cor_medio[1] + tt * (cor_alto[1] - cor_medio[1]))
+        b = int(cor_medio[2] + tt * (cor_alto[2] - cor_medio[2]))
+
+    return f"#{r:02X}{g:02X}{b:02X}"
+
+
+def criar_mapa_folium(df_mapa):
+    """
+    Cria mapa Folium interativo centrado no Brasil com:
+    - Bolhas proporcionais ao volume
+    - Gradiente correto azul → laranja → vermelho
+    - Labels com sigla + número diretamente na bolha
+    - Tooltip rico com todas as informações
+    - Legenda visual
+    """
+    try:
+        import folium
+    except ImportError:
+        st.error("⚠️ Biblioteca 'folium' não instalada. Execute: pip install folium")
+        return None
+    
+    if df_mapa.empty:
+        return None
+
+    df_bolhas = df_mapa[df_mapa['sincronismos'] > 0].copy()
+
+    # Mapa base centrado no Brasil
+    m = folium.Map(
+        location=[-14.5, -51.5],
+        zoom_start=4,
+        tiles=None,
+        prefer_canvas=True
+    )
+
+    # Tile elegante (CartoDB Positron → visual limpo e profissional)
+    folium.TileLayer(
+        tiles='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        name='CartoDB Positron',
+        max_zoom=19,
+        subdomains='abcd'
+    ).add_to(m)
+
+    if df_bolhas.empty:
+        return m
+
+    max_sinc = df_bolhas['sincronismos'].max()
+    min_sinc = df_bolhas['sincronismos'].min()
+    total = df_bolhas['sincronismos'].sum()
+
+    # Escala de raio: mínimo 18px, máximo 65px
+    R_MIN, R_MAX = 18, 65
+
+    def raio(v):
+        if max_sinc == min_sinc:
+            return (R_MIN + R_MAX) / 2
+        return R_MIN + (v - min_sinc) / (max_sinc - min_sinc) * (R_MAX - R_MIN)
+
+    # Ranking para badge
+    df_bolhas_sorted = df_bolhas.sort_values('sincronismos', ascending=False).reset_index(drop=True)
+    rank_map = {row['empresa']: i + 1 for i, row in df_bolhas_sorted.iterrows()}
+
+    for _, row in df_bolhas.iterrows():
+        cor = cor_gradiente_folium(row['sincronismos'], min_sinc, max_sinc)
+        r = raio(row['sincronismos'])
+        rank = rank_map[row['empresa']]
+        pct = row['sincronismos'] / total * 100 if total > 0 else 0
+        medal = {1: '🥇', 2: '🥈', 3: '🥉'}.get(rank, f'#{rank}')
+
+        # Tooltip rico
+        tooltip_html = f"""
+        <div style="
+            font-family: 'Segoe UI', sans-serif;
+            min-width: 200px;
+            padding: 4px;
+        ">
+            <div style="
+                background: {COR_AZUL_ESCURO};
+                color: white;
+                padding: 8px 12px;
+                border-radius: 6px 6px 0 0;
+                font-weight: 700;
+                font-size: 13px;
+                letter-spacing: 0.3px;
+            ">{medal} {row['empresa_nome']}</div>
+            <div style="
+                background: white;
+                border: 1px solid #ddd;
+                border-top: none;
+                border-radius: 0 0 6px 6px;
+                padding: 10px 12px;
+            ">
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:3px 0;">Código</td>
+                        <td style="font-weight:600; text-align:right;">{row['empresa']}</td>
+                    </tr>
+                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:3px 0;">Estado</td>
+                        <td style="font-weight:600; text-align:right;">{row['estado']} ({row['sigla']})</td>
+                    </tr>
+                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:3px 0;">Região</td>
+                        <td style="font-weight:600; text-align:right;">{row['regiao']}</td>
+                    </tr>
+                    <tr style="border-top:1px solid #eee;">
+                        <td style="color:{COR_CINZA_TEXTO}; padding:5px 0 2px;">Sincronizações</td>
+                        <td style="font-weight:700; font-size:15px; color:{cor}; text-align:right;">
+                            {row['sincronismos']:,}
+                        </td>
+                    </tr>
+                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:2px 0;">% do Total</td>
+                        <td style="font-weight:600; text-align:right; color:{COR_AZUL_PETROLEO};">{pct:.1f}%</td>
+                    </tr>
+                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:2px 0;">Ranking</td>
+                        <td style="font-weight:600; text-align:right;">{medal} {rank}º lugar</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        """
+
+        # Círculo colorido (bolha)
+        folium.CircleMarker(
+            location=[row['latitude'], row['longitude']],
+            radius=r,
+            color=COR_BRANCO,
+            weight=2.5,
+            fill=True,
+            fill_color=cor,
+            fill_opacity=0.82,
+            tooltip=folium.Tooltip(tooltip_html, sticky=True),
+        ).add_to(m)
+
+        # Label: sigla + número diretamente na bolha
+        label_html = f"""
+        <div style="
+            font-family: 'Segoe UI', sans-serif;
+            text-align: center;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        ">
+            <div style="
+                font-size: {max(8, int(r * 0.38))}px;
+                font-weight: 800;
+                color: white;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+                line-height: 1.1;
+                letter-spacing: 0.5px;
+            ">{row['empresa']}</div>
+            <div style="
+                font-size: {max(7, int(r * 0.30))}px;
+                font-weight: 600;
+                color: rgba(255,255,255,0.95);
+                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            ">{row['sincronismos']:,}</div>
+        </div>
+        """
+
+        folium.Marker(
+            location=[row['latitude'], row['longitude']],
+            icon=folium.DivIcon(
+                html=label_html,
+                icon_size=(int(r * 2), int(r * 2)),
+                icon_anchor=(int(r), int(r)),
+            )
+        ).add_to(m)
+
+    # Legenda de gradiente
+    legenda_html = f"""
+    <div style="
+        position: fixed;
+        bottom: 30px;
+        left: 20px;
+        z-index: 9999;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        padding: 14px 18px;
+        font-family: 'Segoe UI', sans-serif;
+        min-width: 200px;
+        border: 1px solid {COR_CINZA_BORDA};
+    ">
+        <div style="font-weight:700; font-size:12px; color:{COR_PRETO_SUAVE}; margin-bottom:10px; letter-spacing:0.5px;">
+            📊 VOLUME DE SINCRONIZAÇÕES
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <div style="
+                width: 120px; height: 12px; border-radius: 6px;
+                background: linear-gradient(to right, {COR_AZUL_PETROLEO}, {COR_LARANJA}, {COR_VERMELHO});
+                border: 1px solid #ddd;
+            "></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:10px; color:{COR_CINZA_TEXTO}; margin-bottom:10px;">
+            <span>Menor</span>
+            <span>Maior</span>
+        </div>
+        <div style="border-top:1px solid {COR_CINZA_BORDA}; padding-top:8px; font-size:10px; color:{COR_CINZA_TEXTO};">
+            <div>Passe o mouse sobre uma bolha</div>
+            <div>para ver os detalhes completos</div>
+        </div>
+    </div>
+    """
+
+    m.get_root().html.add_child(folium.Element(legenda_html))
+
+    # Painel de top 3
+    if len(df_bolhas_sorted) >= 1:
+        top3_rows = df_bolhas_sorted.head(3)
+        top3_html_items = ""
+        medals = ['🥇', '🥈', '🥉']
+
+        for i, (_, row) in enumerate(top3_rows.iterrows()):
+            pct_t = row['sincronismos'] / total * 100 if total > 0 else 0
+            cor_top = cor_gradiente_folium(row['sincronismos'], min_sinc, max_sinc)
+            top3_html_items += f"""
+            <div style="
+                display:flex; align-items:center; gap:8px;
+                padding: 5px 0;
+                border-bottom: 1px solid {COR_CINZA_BORDA};
+            ">
+                <span style="font-size:16px;">{medals[i]}</span>
+                <div style="flex:1;">
+                    <div style="font-weight:700; font-size:11px; color:{COR_PRETO_SUAVE};">{row['empresa_nome'][:22]}</div>
+                    <div style="font-size:10px; color:{COR_CINZA_TEXTO};">{row['estado']}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-weight:700; font-size:12px; color:{cor_top};">{row['sincronismos']:,}</div>
+                    <div style="font-size:9px; color:{COR_CINZA_TEXTO};">{pct_t:.1f}%</div>
+                </div>
+            </div>
+            """
+
+        painel_html = f"""
+        <div style="
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 14px 16px;
+            font-family: 'Segoe UI', sans-serif;
+            min-width: 220px;
+            border: 1px solid {COR_CINZA_BORDA};
+        ">
+            <div style="font-weight:700; font-size:12px; color:{COR_PRETO_SUAVE}; margin-bottom:8px; letter-spacing:0.5px;">
+                🏆 TOP EMPRESAS
+            </div>
+            {top3_html_items}
+            <div style="padding-top:8px; font-size:11px; color:{COR_CINZA_TEXTO}; text-align:center;">
+                Total: <strong style="color:{COR_AZUL_ESCURO};">{total:,}</strong> sincronizações
+            </div>
+        </div>
+        """
+        m.get_root().html.add_child(folium.Element(painel_html))
+
+    return m
+
 
 # ============================================
 # SIDEBAR - FILTROS E CONTROLES
@@ -1957,7 +2153,7 @@ if st.session_state.df_original is not None:
             "📅 Evolução de Demandas", 
             "📊 Análise de Revisões", 
             "📈 Chamados Sincronizados por Dia",
-            "🏆 Performance dos SREs + Análise Avançada"
+            "🏆 Performance dos SREs"
         ])
         
         with tab1:
@@ -4160,7 +4356,7 @@ if st.session_state.df_original is not None:
                 "🏢 Empresas",
                 options=empresas_opcoes,
                 default=['Todas'],
-                key="mapa_empresas"
+                key="mapa_empresas_folium"
             )
         
         with col_mapa_filtro2:
@@ -4171,7 +4367,7 @@ if st.session_state.df_original is not None:
                     "📅 Ano",
                     options=anos_opcoes_mapa,
                     index=0,
-                    key="mapa_ano"
+                    key="mapa_ano_folium"
                 )
             else:
                 ano_filtro_mapa = 'Todos'
@@ -4185,19 +4381,10 @@ if st.session_state.df_original is not None:
                     "📆 Mês",
                     options=meses_opcoes_mapa,
                     index=0,
-                    key="mapa_mes"
+                    key="mapa_mes_folium"
                 )
             else:
                 mes_filtro_mapa = 'Todos'
-        
-        # Tipo de visualização - removido Coroplético e Ambos
-        tipo_mapa = st.radio(
-            "🗺️ Visualização",
-            options=["Mapa de Bolhas"],
-            index=0,
-            horizontal=True,
-            key="mapa_tipo"
-        )
         
         # Processar dados para o mapa
         df_mapa, total_sinc_filtrado = processar_dados_mapa(
@@ -4264,17 +4451,30 @@ if st.session_state.df_original is not None:
         
         st.markdown("---")
         
-        # Mapa de Bolhas (única opção)
-        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS</div>', unsafe_allow_html=True)
+        # Mapa Folium
+        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS - TONS DE MAR (OCEANO)</div>', unsafe_allow_html=True)
         
-        fig_bolhas = criar_mapa_bolhas(df_mapa)
-        if fig_bolhas:
-            st.plotly_chart(fig_bolhas, use_container_width=True, config={'displayModeBar': True})
+        m = criar_mapa_folium(df_mapa)
+        if m:
+            mapa_html = m._repr_html_()
+            
+            wrapper = f"""
+            <div style="
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 20px rgba(0,89,115,0.12);
+                border: 1px solid {COR_CINZA_BORDA};
+                margin-bottom: 20px;
+            ">
+                {mapa_html}
+            </div>
+            """
+            st.components.v1.html(wrapper, height=600)
         else:
-            st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa de bolhas.")
+            st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa.")
         
         # Gráfico de barras
-        st.markdown('<div class="section-title" style="margin-top: 2rem;">📊 RANKING DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">📊 RANKING DE SINCRONIZAÇÕES</div>', unsafe_allow_html=True)
         
         fig_barras = criar_grafico_barras(df_mapa)
         if fig_barras:
@@ -4287,6 +4487,9 @@ if st.session_state.df_original is not None:
                 tabela_detalhes.columns = ['Empresa', 'UF', 'Região', 'Sincronizações']
                 tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False)
                 
+                total_geral = tabela_detalhes['Sincronizações'].sum()
+                tabela_detalhes['Percentual'] = (tabela_detalhes['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
+                
                 st.dataframe(
                     tabela_detalhes,
                     use_container_width=True,
@@ -4294,7 +4497,8 @@ if st.session_state.df_original is not None:
                         "Empresa": st.column_config.TextColumn("Empresa", width="large"),
                         "UF": st.column_config.TextColumn("UF", width="small"),
                         "Região": st.column_config.TextColumn("Região", width="medium"),
-                        "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d")
+                        "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d"),
+                        "Percentual": st.column_config.NumberColumn("% Total", format="%.1f%%")
                     }
                 )
                 
@@ -4308,23 +4512,23 @@ if st.session_state.df_original is not None:
                 )
         
         # Legenda
-        with st.expander("ℹ️ Sobre o Mapa de Sincronizações", expanded=False):
+        with st.expander("🌊 Sobre as Cores do Mapa (Tons de Mar)", expanded=False):
             st.markdown("""
-            **🗺️ Mapa de Sincronismos - Guia Rápido**
+            **🌊 Mapa de Bolhas - Cores do Oceano**
             
-            Este mapa visualiza geograficamente os sincronismos por empresa da Energisa.
+            As cores das bolhas representam o volume de sincronizações, em uma escala que vai do azul claro (águas rasas) ao vermelho (alto volume):
             
-            **Visualização:**
-            - **Mapa de Bolhas**: Círculos proporcionais ao volume, posicionados geograficamente
-            - Cores do gradiente: **Azul petróleo** (menor volume) → **Vermelho claro** (maior volume)
+            | Cor | Significado | Volume |
+            |-----|-------------|--------|
+            | 🔵 **Azul Petróleo** | Águas Rasas - Baixo volume | 0-25% do máximo |
+            | 🟠 **Laranja** | Mar Aberto - Médio | 25-75% do máximo |
+            | 🔴 **Vermelho** | Alto Volume - Destaque | >75% do máximo |
             
             **Interpretação:**
-            - 🔴 **Vermelho**: Alto volume de sincronizações
-            - 🔵 **Azul petróleo**: Baixo volume de sincronizações
-            
-            **Filtros Disponíveis:**
-            - Selecione empresas específicas para análise focada
-            - Filtre por ano e mês para análise temporal
+            - Quanto mais **vermelha** a bolha, maior o número de sincronizações
+            - Quanto mais **azul** a bolha, menor o número de sincronizações
+            - O tamanho da bolha também é proporcional ao volume
+            - Passe o mouse sobre cada bolha para ver detalhes completos
             
             **Empresas Mapeadas:**
             - **EMR** - Energisa Minas Gerais (MG)
