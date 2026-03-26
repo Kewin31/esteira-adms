@@ -926,6 +926,10 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     # Filtrar apenas sincronizados
     df_sinc = df[df['Status'] == 'Sincronizado'].copy()
     
+    # REMOVER PROJETOS INTERNOS DAS CONTAGENS
+    if 'Tipo_Chamado' in df_sinc.columns:
+        df_sinc = df_sinc[df_sinc['Tipo_Chamado'] != 'Projetos Internos']
+    
     # Aplicar filtros de data
     if ano_filtro and ano_filtro != 'Todos':
         df_sinc = df_sinc[df_sinc['Ano'] == int(ano_filtro)]
@@ -4512,7 +4516,7 @@ if st.session_state.df_original is not None:
         if fig_barras:
             st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
         
-        # Tabela detalhada com barras de progresso (CORRIGIDA - usando st.dataframe)
+        # Tabela detalhada com barras de progresso (SEM A COLUNA "Progresso")
         with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
             if not df_mapa.empty:
                 # Preparar dados
@@ -4521,7 +4525,6 @@ if st.session_state.df_original is not None:
                 tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False).reset_index(drop=True)
                 
                 total_geral = tabela_detalhes['Sincronizações'].sum()
-                max_sinc = tabela_detalhes['Sincronizações'].max()
                 
                 # Adicionar coluna de posição
                 posicoes = []
@@ -4539,39 +4542,13 @@ if st.session_state.df_original is not None:
                 # Adicionar coluna de percentual
                 tabela_detalhes['% Total'] = (tabela_detalhes['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
                 
-                # Adicionar coluna de barra de progresso como HTML
-                bars = []
-                for _, row in tabela_detalhes.iterrows():
-                    percent = row['% Total']
-                    if max_sinc > 0:
-                        normalized = row['Sincronizações'] / max_sinc
-                        if normalized < 0.33:
-                            cor = COR_AZUL_PETROLEO
-                        elif normalized < 0.66:
-                            cor = COR_LARANJA
-                        else:
-                            cor = COR_VERMELHO
-                    else:
-                        cor = COR_CINZA_TEXTO
-                    
-                    bars.append(f"""
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="flex: 1; height: 8px; background: #E9ECEF; border-radius: 4px; overflow: hidden;">
-                            <div style="width: {percent}%; height: 100%; background: {cor}; border-radius: 4px;"></div>
-                        </div>
-                        <span style="font-size: 0.7rem; color: #6C757D; min-width: 35px;">{percent}%</span>
-                    </div>
-                    """)
-                
-                tabela_detalhes['Progresso'] = bars
-                
                 # Criar coluna de empresa com UF
                 tabela_detalhes['Empresa (UF)'] = tabela_detalhes.apply(
                     lambda x: f"{x['Empresa']} ({x['UF']})", axis=1
                 )
                 
-                # Selecionar colunas para exibir
-                df_exibir = tabela_detalhes[['Posição', 'Empresa (UF)', 'Estado', 'Região', 'Sincronizações', '% Total', 'Progresso']].copy()
+                # Selecionar colunas para exibir (SEM a coluna Progresso)
+                df_exibir = tabela_detalhes[['Posição', 'Empresa (UF)', 'Estado', 'Região', 'Sincronizações', '% Total']].copy()
                 
                 # Configurar as colunas para exibição
                 column_config = {
@@ -4580,8 +4557,7 @@ if st.session_state.df_original is not None:
                     "Estado": st.column_config.TextColumn("Estado", width="medium"),
                     "Região": st.column_config.TextColumn("Região", width="medium"),
                     "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d", width="small"),
-                    "% Total": st.column_config.NumberColumn("% Total", format="%.1f%%", width="small"),
-                    "Progresso": st.column_config.Column("Progresso", width="medium")
+                    "% Total": st.column_config.NumberColumn("% Total", format="%.1f%%", width="small")
                 }
                 
                 # Exibir a tabela
