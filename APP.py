@@ -4648,47 +4648,45 @@ if st.session_state.df_original is not None:
                     use_container_width=True
                 )
         
-        # Legenda - CORRIGIDA
         with st.expander("🌊 Sobre as Cores do Mapa e Ranking", expanded=False):
-            st.markdown(f"""
-            <div style="padding: 10px;">
-                <h4>🎨 Escala de Cores</h4>
-                <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-                    <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_AZUL_PETROLEO}; border-radius: 4px;"></span> Baixo volume</div>
-                    <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_LARANJA}; border-radius: 4px;"></span> Médio volume</div>
-                    <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_VERMELHO}; border-radius: 4px;"></span> Alto volume</div>
-                </div>
-                
-                <h4>📍 Mapa de Bolhas</h4>
-                <ul>
-                    <li>Quanto mais <strong style="color: {COR_VERMELHO};">vermelha</strong> a bolha, maior o número de sincronizações</li>
-                    <li>Quanto mais <strong style="color: {COR_AZUL_PETROLEO};">azul</strong> a bolha, menor o número de sincronizações</li>
-                    <li>O <strong>tamanho</strong> da bolha também é proporcional ao volume</li>
-                    <li>O texto <strong>dentro da bolha</strong> mostra a sigla da empresa e o número de sincronizações</li>
-                    <li><strong>Passe o mouse</strong> sobre cada bolha para ver detalhes completos</li>
-                </ul>
-                
-                <h4>🏆 Ranking</h4>
-                <ul>
-                    <li>As <strong>barras de progresso</strong> mostram o percentual em relação ao total</li>
-                    <li>A cor da barra segue o mesmo gradiente do mapa</li>
-                    <li>Os primeiros lugares recebem medalhas 🥇 🥈 🥉</li>
-                </ul>
-                
-                <h4>🏢 Empresas Mapeadas</h4>
-                <ul>
-                    <li><strong>EMR</strong> - Energisa Minas Gerais (MG)</li>
-                    <li><strong>EPB</strong> - Energisa Paraíba (PB)</li>
-                    <li><strong>ESE</strong> - Energisa Sergipe (SE)</li>
-                    <li><strong>ESS</strong> - Energisa Sul/Sudeste (SP)</li>
-                    <li><strong>EMS</strong> - Energisa Mato Grosso do Sul (MS)</li>
-                    <li><strong>EMT</strong> - Energisa Mato Grosso (MT)</li>
-                    <li><strong>ETO</strong> - Energisa Tocantins (TO)</li>
-                    <li><strong>ERO</strong> - Energisa Rondônia (RO)</li>
-                    <li><strong>EAC</strong> - Energisa Acre (AC)</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
+    # Usando st.markdown com unsafe_allow_html=True - forma correta
+    st.markdown(f"""
+    ### 🎨 Escala de Cores
+    
+    <div style="display: flex; gap: 30px; margin: 15px 0;">
+        <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_AZUL_PETROLEO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Baixo volume</strong> - Até 33% do máximo</div>
+        <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_LARANJA}; border-radius: 4px; vertical-align: middle;"></span> <strong>Médio volume</strong> - 33% a 66% do máximo</div>
+        <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_VERMELHO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Alto volume</strong> - Acima de 66% do máximo</div>
+    </div>
+    
+    ### 📍 Mapa de Bolhas
+    
+    - Quanto mais **<span style="color: {COR_VERMELHO};">vermelha</span>** a bolha, maior o número de sincronizações
+    - Quanto mais **<span style="color: {COR_AZUL_PETROLEO};">azul</span>** a bolha, menor o número de sincronizações
+    - O **tamanho** da bolha também é proporcional ao volume
+    - O texto **dentro da bolha** mostra a sigla da empresa e o número de sincronizações
+    - **Passe o mouse** sobre cada bolha para ver detalhes completos
+    
+    ### 🏆 Ranking
+    
+    - As **barras de progresso** mostram o percentual em relação ao total
+    - A cor da barra segue o mesmo gradiente do mapa
+    - Os primeiros lugares recebem medalhas 🥇 🥈 🥉
+    
+    ### 🏢 Empresas Mapeadas
+    
+    | Empresa | Nome Completo | Estado |
+    |---------|---------------|--------|
+    | **EMR** | Energisa Minas Gerais | MG |
+    | **EPB** | Energisa Paraíba | PB |
+    | **ESE** | Energisa Sergipe | SE |
+    | **ESS** | Energisa Sul/Sudeste | SP |
+    | **EMS** | Energisa Mato Grosso do Sul | MS |
+    | **EMT** | Energisa Mato Grosso | MT |
+    | **ETO** | Energisa Tocantins | TO |
+    | **ERO** | Energisa Rondônia | RO |
+    | **EAC** | Energisa Acre | AC |
+    """, unsafe_allow_html=True)
 
 else:
     st.markdown(f"""
