@@ -882,7 +882,7 @@ if st.session_state.df_original is not None:
                 # Criar coluna de empresa com UF
                 tabela_detalhes['Empresa (UF)'] = tabela_detalhes.apply(lambda x: f"{x['Empresa']} ({x['UF']})", axis=1)
                 
-                # Exibir tabela - REMOVIDA A COLUNA "Progresso"
+                # Exibir tabela
                 st.dataframe(
                     tabela_detalhes[['Posição', 'Empresa (UF)', 'Estado', 'Região', 'Sincronizações', '% Total']],
                     use_container_width=True,
