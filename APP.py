@@ -4512,173 +4512,168 @@ if st.session_state.df_original is not None:
         if fig_barras:
             st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
         
-        # Tabela detalhada com barras de progresso (CORRIGIDA - usando st.dataframe)
+        # Tabela detalhada com barras de progresso (CORRIGIDA)
         with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
-    if not df_mapa.empty:
-        # Preparar dados
-        tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'estado', 'regiao', 'sincronismos']].copy()
-        tabela_detalhes.columns = ['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações']
-        tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False).reset_index(drop=True)
-        
-        total_geral = tabela_detalhes['Sincronizações'].sum()
-        max_sinc = tabela_detalhes['Sincronizações'].max()
-        
-        # Construir HTML da tabela manualmente
-        html_table = """
-        <style>
-            .ranking-table-custom {
-                width: 100%;
-                border-collapse: collapse;
-                font-family: 'Segoe UI', sans-serif;
-                margin-bottom: 20px;
-            }
-            .ranking-table-custom th {
-                background: #005973;
-                color: white;
-                padding: 12px 10px;
-                text-align: left;
-                font-size: 0.75rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                position: sticky;
-                top: 0;
-            }
-            .ranking-table-custom td {
-                padding: 12px 10px;
-                border-bottom: 1px solid #E9ECEF;
-                font-size: 0.85rem;
-            }
-            .ranking-table-custom tr:hover {
-                background: #F8F9FA;
-            }
-            .progress-bar-container {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                width: 100%;
-            }
-            .progress-bar-track {
-                flex: 1;
-                height: 8px;
-                background: #E9ECEF;
-                border-radius: 4px;
-                overflow: hidden;
-            }
-            .progress-bar-fill {
-                height: 100%;
-                border-radius: 4px;
-                transition: width 0.3s ease;
-            }
-            .progress-percent {
-                font-size: 0.7rem;
-                color: #6C757D;
-                min-width: 35px;
-                text-align: right;
-            }
-            .sinc-value {
-                font-weight: 700;
-            }
-            .empresa-uf {
-                font-size: 0.7rem;
-                color: #6C757D;
-            }
-        </style>
-        <table class="ranking-table-custom">
-            <thead>
-                <tr>
-                    <th>Posição</th>
-                    <th>Empresa</th>
-                    <th>Estado</th>
-                    <th>Região</th>
-                    <th>Sincronizações</th>
-                    <th>% Total</th>
-                    <th>Progresso</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
-        
-        for idx, row in tabela_detalhes.iterrows():
-            posicao = idx + 1
-            percentual = (row['Sincronizações'] / total_geral * 100) if total_geral > 0 else 0
-            
-            # Medalha ou número
-            if posicao == 1:
-                medal = "🥇"
-            elif posicao == 2:
-                medal = "🥈"
-            elif posicao == 3:
-                medal = "🥉"
-            else:
-                medal = f"{posicao}º"
-            
-            # Cor do valor de sincronizações
-            if max_sinc > 0:
-                normalized = row['Sincronizações'] / max_sinc
-                if normalized < 0.33:
-                    cor_valor = COR_AZUL_PETROLEO
-                elif normalized < 0.66:
-                    cor_valor = COR_LARANJA
-                else:
-                    cor_valor = COR_VERMELHO
+            if not df_mapa.empty:
+                # Preparar dados
+                tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'estado', 'regiao', 'sincronismos']].copy()
+                tabela_detalhes.columns = ['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações']
+                tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False).reset_index(drop=True)
                 
-                # Cor da barra de progresso
-                if normalized < 0.33:
-                    cor_progresso = COR_AZUL_PETROLEO
-                elif normalized < 0.66:
-                    cor_progresso = COR_LARANJA
-                else:
-                    cor_progresso = COR_VERMELHO
-            else:
-                cor_valor = COR_AZUL_PETROLEO
-                cor_progresso = COR_CINZA_TEXTO
-            
-            html_table += f"""
-                <tr>
-                    <td style="font-weight: 600; text-align: center;">{medal}</td>
-                    <td>
-                        <strong>{row['Empresa']}</strong><br>
-                        <span style="font-size: 0.7rem; color: #6C757D;">{row['UF']}</span>
-                    </td>
-                    <td>{row['Estado']}</td>
-                    <td>{row['Região']}</td>
-                    <td class="sinc-value" style="color: {cor_valor};">{row['Sincronizações']:,}</td>
-                    <td style="font-weight: 500;">{percentual:.1f}%</td>
-                    <td style="width: 140px;">
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-track">
-                                <div class="progress-bar-fill" style="width: {percentual}%; background: {cor_progresso};"></div>
-                            </div>
-                            <span class="progress-percent">{percentual:.1f}%</span>
-                        </div>
-                    </td>
-                </tr>
-            """
+                total_geral = tabela_detalhes['Sincronizações'].sum()
+                max_sinc = tabela_detalhes['Sincronizações'].max()
+                
+                # Construir HTML da tabela manualmente
+                html_table = """
+                <style>
+                    .ranking-table-custom {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-family: 'Segoe UI', sans-serif;
+                        margin-bottom: 20px;
+                    }
+                    .ranking-table-custom th {
+                        background: #005973;
+                        color: white;
+                        padding: 12px 10px;
+                        text-align: left;
+                        font-size: 0.75rem;
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        position: sticky;
+                        top: 0;
+                    }
+                    .ranking-table-custom td {
+                        padding: 12px 10px;
+                        border-bottom: 1px solid #E9ECEF;
+                        font-size: 0.85rem;
+                    }
+                    .ranking-table-custom tr:hover {
+                        background: #F8F9FA;
+                    }
+                    .progress-bar-container {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        width: 100%;
+                    }
+                    .progress-bar-track {
+                        flex: 1;
+                        height: 8px;
+                        background: #E9ECEF;
+                        border-radius: 4px;
+                        overflow: hidden;
+                    }
+                    .progress-bar-fill {
+                        height: 100%;
+                        border-radius: 4px;
+                        transition: width 0.3s ease;
+                    }
+                    .progress-percent {
+                        font-size: 0.7rem;
+                        color: #6C757D;
+                        min-width: 35px;
+                        text-align: right;
+                    }
+                    .sinc-value {
+                        font-weight: 700;
+                    }
+                </style>
+                <table class="ranking-table-custom">
+                    <thead>
+                        <tr>
+                            <th>Posição</th>
+                            <th>Empresa</th>
+                            <th>Estado</th>
+                            <th>Região</th>
+                            <th>Sincronizações</th>
+                            <th>% Total</th>
+                            <th>Progresso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                """
+                
+                for idx, row in tabela_detalhes.iterrows():
+                    posicao = idx + 1
+                    percentual = (row['Sincronizações'] / total_geral * 100) if total_geral > 0 else 0
+                    
+                    # Medalha ou número
+                    if posicao == 1:
+                        medal = "🥇"
+                    elif posicao == 2:
+                        medal = "🥈"
+                    elif posicao == 3:
+                        medal = "🥉"
+                    else:
+                        medal = f"{posicao}º"
+                    
+                    # Cor do valor de sincronizações
+                    if max_sinc > 0:
+                        normalized = row['Sincronizações'] / max_sinc
+                        if normalized < 0.33:
+                            cor_valor = COR_AZUL_PETROLEO
+                        elif normalized < 0.66:
+                            cor_valor = COR_LARANJA
+                        else:
+                            cor_valor = COR_VERMELHO
+                        
+                        # Cor da barra de progresso
+                        if normalized < 0.33:
+                            cor_progresso = COR_AZUL_PETROLEO
+                        elif normalized < 0.66:
+                            cor_progresso = COR_LARANJA
+                        else:
+                            cor_progresso = COR_VERMELHO
+                    else:
+                        cor_valor = COR_AZUL_PETROLEO
+                        cor_progresso = COR_CINZA_TEXTO
+                    
+                    html_table += f"""
+                        <tr>
+                            <td style="font-weight: 600; text-align: center;">{medal}</td>
+                            <td>
+                                <strong>{row['Empresa']}</strong><br>
+                                <span style="font-size: 0.7rem; color: #6C757D;">{row['UF']}</span>
+                            </td>
+                            <td>{row['Estado']}</td>
+                            <td>{row['Região']}</td>
+                            <td class="sinc-value" style="color: {cor_valor};">{row['Sincronizações']:,}</td>
+                            <td style="font-weight: 500;">{percentual:.1f}%</td>
+                            <td style="width: 140px;">
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-track">
+                                        <div class="progress-bar-fill" style="width: {percentual}%; background: {cor_progresso};"></div>
+                                    </div>
+                                    <span class="progress-percent">{percentual:.1f}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    """
+                
+                html_table += """
+                    </tbody>
+                </table>
+                """
+                
+                # Renderizar a tabela com st.markdown usando unsafe_allow_html=True
+                st.markdown(html_table, unsafe_allow_html=True)
+                
+                # Botão de exportação
+                csv_data = tabela_detalhes[['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações']].copy()
+                csv_data['% Total'] = (csv_data['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
+                csv = csv_data.to_csv(index=False).encode('utf-8-sig')
+                
+                st.download_button(
+                    label="📥 Exportar dados para CSV",
+                    data=csv,
+                    file_name=f"sincronismos_empresas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
         
-        html_table += """
-            </tbody>
-        </table>
-        """
-        
-        # Renderizar a tabela com st.markdown usando unsafe_allow_html=True
-        st.markdown(html_table, unsafe_allow_html=True)
-        
-        # Botão de exportação
-        csv = tabela_detalhes[['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações']].to_csv(index=False).encode('utf-8-sig')
-        csv_percentual = tabela_detalhes[['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações', '% Total']].copy()
-        csv_percentual['% Total'] = csv_percentual['% Total'].round(1)
-        csv_data = csv_percentual.to_csv(index=False).encode('utf-8-sig')
-        
-        st.download_button(
-            label="📥 Exportar dados para CSV",
-            data=csv_data,
-            file_name=f"sincronismos_empresas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-        
-        # Legenda - CORRIGIDA
+        # Legenda
         with st.expander("🌊 Sobre as Cores do Mapa e Ranking", expanded=False):
             st.markdown(f"""
             ### 🎨 Escala de Cores
