@@ -1311,7 +1311,7 @@ def criar_grafico_barras(df_mapa):
     
     fig.update_layout(
         title=dict(
-            text="<b>🏆 RANKING DE SINCRONIZAÇÕES POR EMPRESA</b>",
+            text="<b>RANKING </b>",
             font=dict(size=16, color=COR_AZUL_ESCURO),
             x=0.5
         ),
@@ -4488,7 +4488,7 @@ if st.session_state.df_original is not None:
         st.markdown("---")
         
         # Mapa Folium
-        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS - TONS DE MAR (OCEANO)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS </div>', unsafe_allow_html=True)
         
         m = criar_mapa_folium(df_mapa)
         if m:
