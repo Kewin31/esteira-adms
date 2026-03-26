@@ -4512,10 +4512,10 @@ if st.session_state.df_original is not None:
         if fig_barras:
             st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
         
-        # Tabela detalhada com barras de progresso (estilo HTML) - CORRIGIDA
+        # Tabela detalhada com barras de progresso (CORRIGIDA - usando st.dataframe)
         with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
             if not df_mapa.empty:
-                # Preparar dados para tabela
+                # Preparar dados
                 tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'estado', 'regiao', 'sincronismos']].copy()
                 tabela_detalhes.columns = ['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações']
                 tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False).reset_index(drop=True)
@@ -4523,123 +4523,77 @@ if st.session_state.df_original is not None:
                 total_geral = tabela_detalhes['Sincronizações'].sum()
                 max_sinc = tabela_detalhes['Sincronizações'].max()
                 
-                # Criar HTML da tabela com barras de progresso
-                table_html = """
-                <style>
-                    .ranking-table-custom {
-                        width: 100%;
-                        border-collapse: collapse;
-                        font-family: 'Segoe UI', sans-serif;
-                    }
-                    .ranking-table-custom th {
-                        background: #005973;
-                        color: white;
-                        padding: 12px 10px;
-                        text-align: left;
-                        font-size: 0.75rem;
-                        font-weight: 600;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    }
-                    .ranking-table-custom td {
-                        padding: 12px 10px;
-                        border-bottom: 1px solid #E9ECEF;
-                        font-size: 0.85rem;
-                    }
-                    .ranking-table-custom tr:hover {
-                        background: #F8F9FA;
-                    }
-                    .progress-bar-custom {
-                        width: 100%;
-                        height: 8px;
-                        background: #E9ECEF;
-                        border-radius: 4px;
-                        overflow: hidden;
-                    }
-                    .progress-fill-custom {
-                        height: 100%;
-                        border-radius: 4px;
-                        transition: width 0.3s ease;
-                    }
-                    .medal-icon {
-                        font-size: 1.2rem;
-                        margin-right: 5px;
-                    }
-                    .sinc-value {
-                        font-weight: 700;
-                    }
-                </style>
-                <table class="ranking-table-custom">
-                    <thead>
-                        <tr>
-                            <th>Posição</th>
-                            <th>Empresa</th>
-                            <th>Estado</th>
-                            <th>Região</th>
-                            <th>Sincronizações</th>
-                            <th>% Total</th>
-                            <th>Progresso</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                """
+                # Adicionar coluna de posição
+                posicoes = []
+                for i in range(len(tabela_detalhes)):
+                    if i == 0:
+                        posicoes.append("🥇")
+                    elif i == 1:
+                        posicoes.append("🥈")
+                    elif i == 2:
+                        posicoes.append("🥉")
+                    else:
+                        posicoes.append(f"{i+1}º")
+                tabela_detalhes.insert(0, 'Posição', posicoes)
                 
-                for idx, row in tabela_detalhes.iterrows():
-                    posicao = idx + 1
-                    percentual = (row['Sincronizações'] / total_geral * 100) if total_geral > 0 else 0
-                    
-                    # Calcular cor do progresso baseado no valor
+                # Adicionar coluna de percentual
+                tabela_detalhes['% Total'] = (tabela_detalhes['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
+                
+                # Adicionar coluna de barra de progresso como HTML
+                bars = []
+                for _, row in tabela_detalhes.iterrows():
+                    percent = row['% Total']
                     if max_sinc > 0:
                         normalized = row['Sincronizações'] / max_sinc
                         if normalized < 0.33:
-                            cor_progresso = COR_AZUL_PETROLEO
+                            cor = COR_AZUL_PETROLEO
                         elif normalized < 0.66:
-                            cor_progresso = COR_LARANJA
+                            cor = COR_LARANJA
                         else:
-                            cor_progresso = COR_VERMELHO
+                            cor = COR_VERMELHO
                     else:
-                        cor_progresso = COR_CINZA_TEXTO
+                        cor = COR_CINZA_TEXTO
                     
-                    # Medalha ou número
-                    if posicao == 1:
-                        medal = "🥇"
-                    elif posicao == 2:
-                        medal = "🥈"
-                    elif posicao == 3:
-                        medal = "🥉"
-                    else:
-                        medal = f"{posicao}º"
-                    
-                    # Cor do valor de sincronizações
-                    cor_valor = cor_gradiente_folium(row['Sincronizações'], 0, max_sinc) if max_sinc > 0 else COR_AZUL_PETROLEO
-                    
-                    table_html += f"""
-                    <tr>
-                        <td style="font-weight: 600;">{medal}</td>
-                        <td><strong>{row['Empresa']}</strong><br><span style="font-size: 0.7rem; color: #6C757D;">{row['UF']}</span></td>
-                        <td>{row['Estado']}</td>
-                        <td>{row['Região']}</td>
-                        <td class="sinc-value" style="color: {cor_valor};">{row['Sincronizações']:,}</td>
-                        <td>{percentual:.1f}%</td>
-                        <td style="width: 120px;">
-                            <div class="progress-bar-custom">
-                                <div class="progress-fill-custom" style="width: {percentual}%; background: {cor_progresso};"></div>
-                            </div>
-                            <span style="font-size: 0.65rem; color: #6C757D;">{percentual:.1f}%</span>
-                        </td>
-                    </tr>
-                    """
+                    bars.append(f"""
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="flex: 1; height: 8px; background: #E9ECEF; border-radius: 4px; overflow: hidden;">
+                            <div style="width: {percent}%; height: 100%; background: {cor}; border-radius: 4px;"></div>
+                        </div>
+                        <span style="font-size: 0.7rem; color: #6C757D; min-width: 35px;">{percent}%</span>
+                    </div>
+                    """)
                 
-                table_html += """
-                    </tbody>
-                </table>
-                """
+                tabela_detalhes['Progresso'] = bars
                 
-                # Renderizar a tabela com st.markdown (corrigido)
-                st.markdown(table_html, unsafe_allow_html=True)
+                # Criar coluna de empresa com UF
+                tabela_detalhes['Empresa (UF)'] = tabela_detalhes.apply(
+                    lambda x: f"{x['Empresa']} ({x['UF']})", axis=1
+                )
+                
+                # Selecionar colunas para exibir
+                df_exibir = tabela_detalhes[['Posição', 'Empresa (UF)', 'Estado', 'Região', 'Sincronizações', '% Total', 'Progresso']].copy()
+                
+                # Configurar as colunas para exibição
+                column_config = {
+                    "Posição": st.column_config.TextColumn("Posição", width="small"),
+                    "Empresa (UF)": st.column_config.TextColumn("Empresa", width="large"),
+                    "Estado": st.column_config.TextColumn("Estado", width="medium"),
+                    "Região": st.column_config.TextColumn("Região", width="medium"),
+                    "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d", width="small"),
+                    "% Total": st.column_config.NumberColumn("% Total", format="%.1f%%", width="small"),
+                    "Progresso": st.column_config.Column("Progresso", width="medium")
+                }
+                
+                # Exibir a tabela
+                st.dataframe(
+                    df_exibir,
+                    use_container_width=True,
+                    column_config=column_config,
+                    height=400
+                )
                 
                 # Botão de exportação
-                csv = tabela_detalhes.to_csv(index=False).encode('utf-8-sig')
+                csv = tabela_detalhes[['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações', '% Total']].to_csv(index=False).encode('utf-8-sig')
                 st.download_button(
                     label="📥 Exportar dados para CSV",
                     data=csv,
@@ -4648,45 +4602,45 @@ if st.session_state.df_original is not None:
                     use_container_width=True
                 )
         
+        # Legenda - CORRIGIDA
         with st.expander("🌊 Sobre as Cores do Mapa e Ranking", expanded=False):
-    # Usando st.markdown com unsafe_allow_html=True - forma correta
-    st.markdown(f"""
-    ### 🎨 Escala de Cores
-    
-    <div style="display: flex; gap: 30px; margin: 15px 0;">
-        <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_AZUL_PETROLEO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Baixo volume</strong> - Até 33% do máximo</div>
-        <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_LARANJA}; border-radius: 4px; vertical-align: middle;"></span> <strong>Médio volume</strong> - 33% a 66% do máximo</div>
-        <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_VERMELHO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Alto volume</strong> - Acima de 66% do máximo</div>
-    </div>
-    
-    ### 📍 Mapa de Bolhas
-    
-    - Quanto mais **<span style="color: {COR_VERMELHO};">vermelha</span>** a bolha, maior o número de sincronizações
-    - Quanto mais **<span style="color: {COR_AZUL_PETROLEO};">azul</span>** a bolha, menor o número de sincronizações
-    - O **tamanho** da bolha também é proporcional ao volume
-    - O texto **dentro da bolha** mostra a sigla da empresa e o número de sincronizações
-    - **Passe o mouse** sobre cada bolha para ver detalhes completos
-    
-    ### 🏆 Ranking
-    
-    - As **barras de progresso** mostram o percentual em relação ao total
-    - A cor da barra segue o mesmo gradiente do mapa
-    - Os primeiros lugares recebem medalhas 🥇 🥈 🥉
-    
-    ### 🏢 Empresas Mapeadas
-    
-    | Empresa | Nome Completo | Estado |
-    |---------|---------------|--------|
-    | **EMR** | Energisa Minas Gerais | MG |
-    | **EPB** | Energisa Paraíba | PB |
-    | **ESE** | Energisa Sergipe | SE |
-    | **ESS** | Energisa Sul/Sudeste | SP |
-    | **EMS** | Energisa Mato Grosso do Sul | MS |
-    | **EMT** | Energisa Mato Grosso | MT |
-    | **ETO** | Energisa Tocantins | TO |
-    | **ERO** | Energisa Rondônia | RO |
-    | **EAC** | Energisa Acre | AC |
-    """, unsafe_allow_html=True)
+            st.markdown(f"""
+            ### 🎨 Escala de Cores
+            
+            <div style="display: flex; gap: 30px; margin: 15px 0;">
+                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_AZUL_PETROLEO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Baixo volume</strong> - Até 33% do máximo</div>
+                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_LARANJA}; border-radius: 4px; vertical-align: middle;"></span> <strong>Médio volume</strong> - 33% a 66% do máximo</div>
+                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_VERMELHO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Alto volume</strong> - Acima de 66% do máximo</div>
+            </div>
+            
+            ### 📍 Mapa de Bolhas
+            
+            - Quanto mais **<span style="color: {COR_VERMELHO};">vermelha</span>** a bolha, maior o número de sincronizações
+            - Quanto mais **<span style="color: {COR_AZUL_PETROLEO};">azul</span>** a bolha, menor o número de sincronizações
+            - O **tamanho** da bolha também é proporcional ao volume
+            - O texto **dentro da bolha** mostra a sigla da empresa e o número de sincronizações
+            - **Passe o mouse** sobre cada bolha para ver detalhes completos
+            
+            ### 🏆 Ranking
+            
+            - As **barras de progresso** mostram o percentual em relação ao total
+            - A cor da barra segue o mesmo gradiente do mapa
+            - Os primeiros lugares recebem medalhas 🥇 🥈 🥉
+            
+            ### 🏢 Empresas Mapeadas
+            
+            | Empresa | Nome Completo | Estado |
+            |---------|---------------|--------|
+            | **EMR** | Energisa Minas Gerais | MG |
+            | **EPB** | Energisa Paraíba | PB |
+            | **ESE** | Energisa Sergipe | SE |
+            | **ESS** | Energisa Sul/Sudeste | SP |
+            | **EMS** | Energisa Mato Grosso do Sul | MS |
+            | **EMT** | Energisa Mato Grosso | MT |
+            | **ETO** | Energisa Tocantins | TO |
+            | **ERO** | Energisa Rondônia | RO |
+            | **EAC** | Energisa Acre | AC |
+            """, unsafe_allow_html=True)
 
 else:
     st.markdown(f"""
