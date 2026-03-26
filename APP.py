@@ -1124,7 +1124,7 @@ def criar_mapa_folium(df_mapa):
             tooltip=folium.Tooltip(tooltip_html, sticky=True),
         ).add_to(m)
 
-        # Label DENTRO da bolha - corrigido para ficar centralizado
+        # Label DENTRO da bolha
         font_size_sigla = max(10, min(16, int(r * 0.4)))
         font_size_num = max(9, min(14, int(r * 0.32)))
         
@@ -4512,7 +4512,7 @@ if st.session_state.df_original is not None:
         if fig_barras:
             st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
         
-        # Tabela detalhada com barras de progresso (estilo HTML)
+        # Tabela detalhada com barras de progresso (estilo HTML) - CORRIGIDA
         with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
             if not df_mapa.empty:
                 # Preparar dados para tabela
@@ -4635,6 +4635,7 @@ if st.session_state.df_original is not None:
                 </table>
                 """
                 
+                # Renderizar a tabela com st.markdown (corrigido)
                 st.markdown(table_html, unsafe_allow_html=True)
                 
                 # Botão de exportação
@@ -4647,7 +4648,7 @@ if st.session_state.df_original is not None:
                     use_container_width=True
                 )
         
-        # Legenda
+        # Legenda - CORRIGIDA
         with st.expander("🌊 Sobre as Cores do Mapa e Ranking", expanded=False):
             st.markdown(f"""
             <div style="padding: 10px;">
