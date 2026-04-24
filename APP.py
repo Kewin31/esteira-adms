@@ -506,7 +506,8 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             'Sincronização': 'Sincronização',
             'SRE': 'SRE',
             'Empresa': 'Empresa',
-            'Revisões': 'Revisões'
+            'Revisões': 'Revisões',
+            'Motivo Revisão': 'Motivo_Revisao'
         }
         
         df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
@@ -916,6 +917,122 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     dados_mes = dados_mes.sort_values('Mes_Ano')
     
     return dados_mes
+
+# ============================================
+# FUNÇÃO DE CLASSIFICAÇÃO DE MOTIVOS DE REVISÃO
+# ============================================
+def classificar_motivo_revisao(texto):
+    """Classifica o motivo da revisão em categorias padronizadas"""
+    if pd.isna(texto) or texto == "" or texto.strip() == "":
+        return "📝 Sem motivo informado"
+    
+    texto = str(texto).lower()
+    
+    # Categorias de Classificação
+    categorias = {
+        "📋 Erro de Documentação": [
+            'erro na descrição', 'card preenchido', 'card incompleto', 'chamado sem responsável',
+            'nome do changeset fora do padrão', 'card sem proprietário', 'erro no preenchimento',
+            'faltou colocar a descrição', 'descrição', 'documentação', 'anexar',
+            'lista de pontos desatualizada', 'card preenchido de forma errada'
+        ],
+        "⚙️ Falha Técnica/Configuração": [
+            'changeset rejeitado', 'changeset não encontrado', 'changeset bloqueado',
+            'changeset com numeração errada', 'changeset não apresentou modificação',
+            'changeset duplicado', 'changeset errado', 'changeset ajustado',
+            'configurações da remota fora do padrão', 'equipamento sem by-pass',
+            'chave de by-pass aberta', 'parâmetros de comunicação', 'ponto de comando',
+            'endereço de ip divergente', 'comandos do disjuntores incoerentes'
+        ],
+        "🔗 Erro de Conectividade/Nó": [
+            'nó de conectividade', 'padrão de conectividade', 'criar o nó',
+            'conectividade', 'main', 'node', 'link de comunicação'
+        ],
+        "📐 Não Conformidade com Padrão": [
+            'padrão', 'procedimento', 'formato', 'nome do changeset',
+            'grupo de aor', 'quadro de religadores', 'tela autogerada',
+            'representação dos sinais', 'catalogo da chave', 'template',
+            'alinhamento', 'sincronismo'
+        ],
+        "🔄 Divergência de Informação": [
+            'divergência', 'inconsistente', 'incoerente', 'não condiz',
+            'chamado não encontrado', 'não correlaciona', 'changeset envolve outros equipamentos',
+            'dois chamados em um único changeset'
+        ],
+        "🎨 Erro de Interface/Tela": [
+            'representações em tela', 'tela autogerada', 'diagrama unifilar',
+            'esquemática', 'exibir em tela', 'tela de resumo'
+        ]
+    }
+    
+    for categoria, palavras_chave in categorias.items():
+        for palavra in palavras_chave:
+            if palavra in texto:
+                return categoria
+    
+    return "📝 Outros"
+
+def analisar_motivos_revisao(df, ano_selecionado, mes_selecionado):
+    """Analisa os motivos de revisão com filtros"""
+    df_filtrado = df[df['Revisões'] > 0].copy()
+    
+    if df_filtrado.empty:
+        return None, None, None, None
+    
+    if 'Motivo_Revisao' not in df_filtrado.columns:
+        return None, None, None, None
+    
+    # Aplicar filtros de data
+    if ano_selecionado != 'Todos os Anos':
+        df_filtrado = df_filtrado[df_filtrado['Ano'] == int(ano_selecionado)]
+    
+    if mes_selecionado != 'Todos os Meses':
+        df_filtrado = df_filtrado[df_filtrado['Mês'] == int(mes_selecionado)]
+    
+    if df_filtrado.empty:
+        return None, None, None, None
+    
+    # Classificar motivos
+    df_filtrado['Categoria_Motivo'] = df_filtrado['Motivo_Revisao'].apply(classificar_motivo_revisao)
+    
+    # Remover linhas com texto vazio após classificação
+    df_filtrado = df_filtrado[df_filtrado['Categoria_Motivo'] != "📝 Sem motivo informado"]
+    
+    if df_filtrado.empty:
+        return None, None, None, None
+    
+    # Estatísticas por categoria
+    estatisticas_categoria = df_filtrado.groupby('Categoria_Motivo').agg({
+        'Chamado': 'count',
+        'Revisões': 'sum'
+    }).reset_index()
+    estatisticas_categoria.columns = ['Categoria', 'Quantidade', 'Total_Revisões']
+    estatisticas_categoria = estatisticas_categoria.sort_values('Quantidade', ascending=False)
+    estatisticas_categoria['Percentual'] = (estatisticas_categoria['Quantidade'] / estatisticas_categoria['Quantidade'].sum() * 100).round(1)
+    
+    # Top motivos individuais
+    motivos_contagem = df_filtrado['Motivo_Revisao'].value_counts().reset_index()
+    motivos_contagem.columns = ['Motivo', 'Quantidade']
+    motivos_contagem['Percentual'] = (motivos_contagem['Quantidade'] / motivos_contagem['Quantidade'].sum() * 100).round(1)
+    motivos_contagem = motivos_contagem.head(15)
+    
+    # Análise por Responsável
+    if 'Responsável_Formatado' in df_filtrado.columns:
+        responsavel_categoria = df_filtrado.groupby(['Responsável_Formatado', 'Categoria_Motivo']).size().reset_index()
+        responsavel_categoria.columns = ['Responsável', 'Categoria', 'Quantidade']
+        
+        responsavel_pivot = responsavel_categoria.pivot_table(
+            index='Responsável', 
+            columns='Categoria', 
+            values='Quantidade', 
+            fill_value=0
+        ).reset_index()
+    else:
+        responsavel_pivot = None
+    
+    total_com_revisao = len(df_filtrado)
+    
+    return estatisticas_categoria, motivos_contagem, responsavel_pivot, total_com_revisao
 
 # ============================================
 # FUNÇÕES DO MAPA - PROCESSAMENTO DE DADOS
@@ -2134,7 +2251,7 @@ if st.session_state.df_original is not None:
     # ============================================
     # CRIAR TABS PRINCIPAIS
     # ============================================
-    tab_principal, tab_mapa = st.tabs(["📊 Dashboard Principal", "🗺️ Mapa de Sincronizações"])
+    tab_principal, tab_mapa, tab_motivos = st.tabs(["📊 Dashboard Principal", "🗺️ Mapa de Sincronizações", "🔍 Motivos de Revisão"])
     
     with tab_principal:
         st.markdown("## 📊 Informações da Base de Dados")
@@ -4617,6 +4734,350 @@ if st.session_state.df_original is not None:
             | **ERO** | Energisa Rondônia | RO |
             | **EAC** | Energisa Acre | AC |
             """, unsafe_allow_html=True)
+    
+    # ============================================
+    # NOVA ABA: 🔍 MOTIVOS DE REVISÃO
+    # ============================================
+    with tab_motivos:
+        st.markdown("## 🔍 ANÁLISE DE MOTIVOS DE REVISÃO")
+        st.markdown("_Principais causas de retrabalho e oportunidades de melhoria_")
+        
+        if 'Motivo_Revisao' not in df.columns:
+            st.warning("⚠️ Coluna 'Motivo Revisão' não encontrada no arquivo de dados.")
+        else:
+            # Filtros específicos para análise de motivos
+            col_filtro_motivo1, col_filtro_motivo2, col_filtro_motivo3 = st.columns(3)
+            
+            with col_filtro_motivo1:
+                anos_motivo = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_motivo = ['Todos os Anos'] + list(anos_motivo)
+                ano_motivo = st.selectbox(
+                    "📅 Ano",
+                    options=anos_opcoes_motivo,
+                    key="filtro_ano_motivo"
+                )
+            
+            with col_filtro_motivo2:
+                meses_motivo = sorted(df['Mês'].dropna().unique().astype(int))
+                meses_opcoes_motivo = ['Todos os Meses'] + [f"{m:02d}" for m in meses_motivo]
+                mes_motivo = st.selectbox(
+                    "📆 Mês",
+                    options=meses_opcoes_motivo,
+                    key="filtro_mes_motivo"
+                )
+            
+            with col_filtro_motivo3:
+                if 'Responsável_Formatado' in df.columns:
+                    responsaveis_motivo = ['Todos'] + sorted(df['Responsável_Formatado'].dropna().unique())
+                    responsavel_motivo = st.selectbox(
+                        "👤 Responsável",
+                        options=responsaveis_motivo,
+                        key="filtro_responsavel_motivo"
+                    )
+                else:
+                    responsavel_motivo = 'Todos'
+            
+            # Aplicar filtros para análise
+            df_motivos = df.copy()
+            
+            if ano_motivo != 'Todos os Anos':
+                df_motivos = df_motivos[df_motivos['Ano'] == int(ano_motivo)]
+            
+            if mes_motivo != 'Todos os Meses':
+                df_motivos = df_motivos[df_motivos['Mês'] == int(mes_motivo)]
+            
+            if responsavel_motivo != 'Todos' and 'Responsável_Formatado' in df_motivos.columns:
+                df_motivos = df_motivos[df_motivos['Responsável_Formatado'] == responsavel_motivo]
+            
+            # Filtrar apenas registros com revisão > 0 e com motivo preenchido
+            df_com_revisao = df_motivos[df_motivos['Revisões'] > 0].copy()
+            df_com_motivo = df_com_revisao[df_com_revisao['Motivo_Revisao'].notna() & (df_com_revisao['Motivo_Revisao'].str.strip() != '')].copy()
+            
+            total_com_revisao = len(df_com_revisao)
+            total_com_motivo_informado = len(df_com_motivo)
+            total_sem_motivo = total_com_revisao - total_com_motivo_informado
+            
+            # Cards de resumo executivo
+            st.markdown("### 📊 Resumo Executivo")
+            
+            col_metric1, col_metric2, col_metric3, col_metric4 = st.columns(4)
+            
+            with col_metric1:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{total_com_revisao:,}</div>
+                    <div class="metric-label">Total com Revisão</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_metric2:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{total_com_motivo_informado:,}</div>
+                    <div class="metric-label">Motivos Informados</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_metric3:
+                pct_informado = (total_com_motivo_informado / total_com_revisao * 100) if total_com_revisao > 0 else 0
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{pct_informado:.1f}%</div>
+                    <div class="metric-label">Taxa de Informação</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_metric4:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{total_sem_motivo}</div>
+                    <div class="metric-label">Sem Motivo Informado</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            if df_com_motivo.empty:
+                st.info("ℹ️ Nenhum motivo de revisão registrado com os filtros selecionados.")
+            else:
+                # Classificar motivos em categorias
+                df_com_motivo['Categoria'] = df_com_motivo['Motivo_Revisao'].apply(classificar_motivo_revisao)
+                
+                # 1. Distribuição por Categoria (Gráfico de Rosca)
+                st.markdown("### 📊 Distribuição por Categoria de Motivo")
+                
+                col_cat1, col_cat2 = st.columns([1, 1.5])
+                
+                with col_cat1:
+                    categoria_counts = df_com_motivo['Categoria'].value_counts().reset_index()
+                    categoria_counts.columns = ['Categoria', 'Quantidade']
+                    categoria_counts['Percentual'] = (categoria_counts['Quantidade'] / len(df_com_motivo) * 100).round(1)
+                    
+                    fig_pizza = px.pie(
+                        categoria_counts,
+                        values='Quantidade',
+                        names='Categoria',
+                        title='Distribuição por Categoria',
+                        hole=0.4,
+                        color='Categoria',
+                        color_discrete_sequence=px.colors.sequential.Blues_r
+                    )
+                    fig_pizza.update_layout(height=400)
+                    st.plotly_chart(fig_pizza, use_container_width=True)
+                
+                with col_cat2:
+                    st.markdown("#### 📈 Ranking de Categorias")
+                    for idx, row in categoria_counts.iterrows():
+                        percentual_barra = row['Percentual']
+                        st.markdown(f"""
+                        <div style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span><strong>{row['Categoria']}</strong></span>
+                                <span>{row['Quantidade']} ({row['Percentual']:.1f}%)</span>
+                            </div>
+                            <div style="background: {COR_CINZA_BORDA}; border-radius: 10px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, {COR_AZUL_ESCURO}, {COR_AZUL_PETROLEO}); width: {percentual_barra}%; padding: 8px 0; border-radius: 10px;"></div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                st.markdown("---")
+                
+                # 2. Top Motivos Específicos
+                st.markdown("### 🎯 Top Motivos Mais Recorrentes")
+                
+                motivos_counts = df_com_motivo['Motivo_Revisao'].value_counts().head(10).reset_index()
+                motivos_counts.columns = ['Motivo', 'Quantidade']
+                motivos_counts['Percentual'] = (motivos_counts['Quantidade'] / len(df_com_motivo) * 100).round(1)
+                
+                fig_top_motivos = go.Figure()
+                
+                colors_bar = [COR_VERMELHO if i < 3 else COR_AZUL_PETROLEO for i in range(len(motivos_counts))]
+                
+                fig_top_motivos.add_trace(go.Bar(
+                    x=motivos_counts['Motivo'],
+                    y=motivos_counts['Quantidade'],
+                    text=motivos_counts['Quantidade'],
+                    textposition='outside',
+                    marker_color=colors_bar,
+                    marker_line_color=COR_AZUL_ESCURO,
+                    marker_line_width=1.5,
+                    hovertemplate='<b>%{x}</b><br>Quantidade: %{y}<extra></extra>'
+                ))
+                
+                fig_top_motivos.update_layout(
+                    title='Top 10 Motivos de Revisão',
+                    xaxis_title='Motivo',
+                    yaxis_title='Quantidade de Ocorrências',
+                    height=450,
+                    plot_bgcolor=COR_BRANCO,
+                    xaxis=dict(tickangle=45, tickfont=dict(size=10)),
+                    yaxis=dict(gridcolor=COR_CINZA_BORDA)
+                )
+                
+                st.plotly_chart(fig_top_motivos, use_container_width=True)
+                
+                st.markdown("---")
+                
+                # 3. Análise por Responsável
+                if 'Responsável_Formatado' in df_com_motivo.columns:
+                    st.markdown("### 👥 Análise de Motivos por Responsável")
+                    
+                    col_resp1, col_resp2 = st.columns(2)
+                    
+                    with col_resp1:
+                        top_responsaveis = df_com_motivo['Responsável_Formatado'].value_counts().head(10).reset_index()
+                        top_responsaveis.columns = ['Responsável', 'Qtd_Revisões']
+                        
+                        fig_responsaveis = go.Figure()
+                        fig_responsaveis.add_trace(go.Bar(
+                            x=top_responsaveis['Responsável'],
+                            y=top_responsaveis['Qtd_Revisões'],
+                            text=top_responsaveis['Qtd_Revisões'],
+                            textposition='outside',
+                            marker_color=COR_AZUL_PETROLEO,
+                            marker_line_color=COR_AZUL_ESCURO,
+                            marker_line_width=1
+                        ))
+                        fig_responsaveis.update_layout(
+                            title='Top 10 Responsáveis com Mais Revisões',
+                            xaxis_title='Responsável',
+                            yaxis_title='Quantidade de Revisões com Motivo',
+                            height=400,
+                            xaxis=dict(tickangle=45)
+                        )
+                        st.plotly_chart(fig_responsaveis, use_container_width=True)
+                    
+                    with col_resp2:
+                        matriz_resp_cat = pd.crosstab(
+                            df_com_motivo['Responsável_Formatado'], 
+                            df_com_motivo['Categoria']
+                        ).reset_index()
+                        
+                        top_5_resp = df_com_motivo['Responsável_Formatado'].value_counts().head(5).index
+                        matriz_top = matriz_resp_cat[matriz_resp_cat['Responsável_Formatado'].isin(top_5_resp)]
+                        
+                        if not matriz_top.empty:
+                            st.markdown("**📊 Matriz Responsável vs Categoria**")
+                            st.dataframe(
+                                matriz_top,
+                                use_container_width=True,
+                                column_config={
+                                    "Responsável_Formatado": st.column_config.TextColumn("Responsável", width="medium"),
+                                }
+                            )
+                
+                st.markdown("---")
+                
+                # 4. Evolução Mensal dos Motivos
+                if 'Criado' in df_com_motivo.columns:
+                    st.markdown("### 📈 Evolução Mensal dos Principais Motivos")
+                    
+                    df_com_motivo['Mês_Ano'] = df_com_motivo['Criado'].dt.strftime('%Y-%m')
+                    
+                    top_5_motivos = df_com_motivo['Categoria'].value_counts().head(5).index.tolist()
+                    
+                    evolucao_motivos = df_com_motivo.groupby(['Mês_Ano', 'Categoria']).size().reset_index()
+                    evolucao_motivos.columns = ['Mês_Ano', 'Categoria', 'Quantidade']
+                    
+                    evolucao_top = evolucao_motivos[evolucao_motivos['Categoria'].isin(top_5_motivos)]
+                    
+                    fig_evolucao = px.line(
+                        evolucao_top,
+                        x='Mês_Ano',
+                        y='Quantidade',
+                        color='Categoria',
+                        markers=True,
+                        title='Evolução das Principais Categorias de Motivos',
+                        labels={'Mês_Ano': 'Período', 'Quantidade': 'Número de Ocorrências', 'Categoria': 'Categoria do Motivo'}
+                    )
+                    
+                    fig_evolucao.update_layout(
+                        height=400,
+                        xaxis_title="Mês/Ano",
+                        yaxis_title="Quantidade",
+                        hovermode='x unified'
+                    )
+                    
+                    st.plotly_chart(fig_evolucao, use_container_width=True)
+                
+                st.markdown("---")
+                
+                # 5. Recomendações Automáticas
+                st.markdown("### 💡 Recomendações com Base nos Motivos")
+                
+                # Analisar padrões e gerar recomendações
+                recomendacoes = []
+                
+                # Motivo mais frequente
+                motivo_mais_frequente = df_com_motivo['Motivo_Revisao'].mode()
+                if not motivo_mais_frequente.empty:
+                    recomendacoes.append({
+                        'Prioridade': '🔴 ALTA',
+                        'Recomendação': f'Corrigir recorrentemente: "{motivo_mais_frequente.iloc[0][:50]}"',
+                        'Justificativa': f'Ocorreu {df_com_motivo[df_com_motivo["Motivo_Revisao"] == motivo_mais_frequente.iloc[0]].shape[0]} vezes'
+                    })
+                
+                # Categoria mais frequente
+                categoria_mais_frequente = df_com_motivo['Categoria'].mode()
+                if not categoria_mais_frequente.empty:
+                    recomendacoes.append({
+                        'Prioridade': '🟡 MÉDIA',
+                        'Recomendação': f'Revisar processo da categoria "{categoria_mais_frequente.iloc[0]}"',
+                        'Justificativa': f'Representa {(df_com_motivo["Categoria"] == categoria_mais_frequente.iloc[0]).sum() / len(df_com_motivo) * 100:.1f}% das ocorrências'
+                    })
+                
+                # Responsável com mais revisões
+                if 'Responsável_Formatado' in df_com_motivo.columns:
+                    responsavel_top = df_com_motivo['Responsável_Formatado'].value_counts().index[0] if len(df_com_motivo) > 0 else None
+                    if responsavel_top:
+                        recomendacoes.append({
+                            'Prioridade': '🟡 MÉDIA',
+                            'Recomendação': f'Acompanhamento com {responsavel_top}',
+                            'Justificativa': f'Responsável por {df_com_motivo[df_com_motivo["Responsável_Formatado"] == responsavel_top].shape[0]} revisões'
+                        })
+                
+                # Exibir recomendações
+                for rec in recomendacoes[:5]:
+                    cor_classe = 'warning-card' if 'ALTA' in rec['Prioridade'] else 'info-card' if 'MÉDIA' in rec['Prioridade'] else 'performance-card'
+                    st.markdown(f"""
+                    <div class="{cor_classe}" style="margin-bottom: 15px; padding: 12px;">
+                        <div>
+                            <strong style="font-size: 1rem;">{rec['Prioridade']} - {rec['Recomendação']}</strong><br>
+                            <small style="color: {COR_CINZA_TEXTO};">{rec['Justificativa']}</small>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown("---")
+                
+                # 6. Tabela Detalhada
+                with st.expander("📋 Ver Detalhamento dos Motivos", expanded=False):
+                    df_detalhe = df_com_motivo[['Chamado', 'Motivo_Revisao', 'Categoria', 'Responsável_Formatado', 'Criado']].copy()
+                    df_detalhe['Criado'] = df_detalhe['Criado'].dt.strftime('%d/%m/%Y')
+                    df_detalhe = df_detalhe.sort_values('Criado', ascending=False)
+                    
+                    st.dataframe(
+                        df_detalhe,
+                        use_container_width=True,
+                        height=400,
+                        column_config={
+                            "Chamado": st.column_config.TextColumn("Chamado"),
+                            "Motivo_Revisao": st.column_config.TextColumn("Motivo da Revisão", width="large"),
+                            "Categoria": st.column_config.TextColumn("Categoria"),
+                            "Responsável_Formatado": st.column_config.TextColumn("Responsável"),
+                            "Criado": st.column_config.TextColumn("Data")
+                        }
+                    )
+                    
+                    csv_detalhe = df_detalhe.to_csv(index=False).encode('utf-8-sig')
+                    st.download_button(
+                        label="📥 Exportar detalhes para CSV",
+                        data=csv_detalhe,
+                        file_name=f"detalhes_motivos_revisao_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
 
 else:
     st.markdown(f"""
