@@ -5157,7 +5157,7 @@ if st.session_state.df_original is not None:
                     ca = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
                     cr = len(df_sre_data[df_sre_data['Revisões'] > 0])
                     ipe = calcular_ipe(ca, cr, cd, cards_total_periodo, total_sres_periodo)
-                    sres_metrics.append({'SRE': substituir_nome_sre(sre), 'Cards Demandados': cd, 'Cards Analisados': ca, 'Cards Reabertos': cr, 'IPE (%)': round(ipe * 100, 2), 'Status': '✅ Meta' if ipe >= 0.95 else '⚠️ Abaixo'})
+                    sres_metrics.append({'SRE': substituir_nome_sre(sre), 'Cards Demandados': cd, 'Cards Analisados': ca, 'Cards Revisão': cr, 'IPE (%)': round(ipe * 100, 2), 'Status': '✅ Meta' if ipe >= 0.95 else '⚠️ Abaixo'})
             
             if sres_metrics:
                 df_sres = pd.DataFrame(sres_metrics).sort_values('IPE (%)', ascending=False)
