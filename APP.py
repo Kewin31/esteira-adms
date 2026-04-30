@@ -5078,16 +5078,14 @@ if st.session_state.df_original is not None:
                         mime="text/csv",
                         use_container_width=True
                     )
-    # ============================================
-    # NOVA ABA: KPI IPE - ACUMULADO GERAL
+     # ============================================
+    # NOVA ABA: KPI IPE - ACUMULADO POR MÊS
     # ============================================
     with tab_ipe:
         st.markdown(f'<div class="section-title">🎯 KPI IPE - ÍNDICE DE PERFORMANCE DO ESPECIALISTA</div>', unsafe_allow_html=True)
         
         if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
             
-            # FUNÇÃO PARA CALCULAR IPE
-            # Fórmula: IPE = (CA - CR) / (CD + |((CT/CD)/NA) - 1|)
             def calcular_ipe(ca, cr, cd, ct, na):
                 if cd <= 0 or na <= 0:
                     return 0
@@ -5099,35 +5097,8 @@ if st.session_state.df_original is not None:
                 if denominador <= 0:
                     return 0
                 ipe = numerador / denominador
-                return min(ipe, 1.0)  # Cap em 100%
+                return min(ipe, 1.0)
             
-            # FILTROS
-            col_filtro_ipe1, col_filtro_ipe2 = st.columns(2)
-            
-            with col_filtro_ipe1:
-                if 'Ano' in df.columns:
-                    anos_ipe = sorted(df['Ano'].dropna().unique().astype(int))
-                    anos_opcoes_ipe = ['Todos'] + list(anos_ipe)
-                    ano_ipe = st.selectbox("📅 Filtrar por Ano:", options=anos_opcoes_ipe, key="filtro_ano_ipe")
-                else:
-                    ano_ipe = 'Todos'
-            
-            with col_filtro_ipe2:
-                if 'Mês' in df.columns:
-                    meses_ipe = sorted(df['Mês'].dropna().unique().astype(int))
-                    meses_opcoes_ipe = ['Todos'] + [str(m) for m in meses_ipe]
-                    mes_ipe = st.selectbox("📆 Filtrar por Mês:", options=meses_opcoes_ipe, key="filtro_mes_ipe")
-                else:
-                    mes_ipe = 'Todos'
-            
-            # APLICA FILTROS
-            df_ipe = df.copy()
-            if ano_ipe != 'Todos':
-                df_ipe = df_ipe[df_ipe['Ano'] == int(ano_ipe)]
-            if mes_ipe != 'Todos':
-                df_ipe = df_ipe[df_ipe['Mês'] == int(mes_ipe)]
-            
-            # MAPEAMENTO DE NOMES DOS SRES
             def substituir_nome_sre(sre_nome):
                 if pd.isna(sre_nome):
                     return "Não informado"
@@ -5143,11 +5114,38 @@ if st.session_state.df_original is not None:
                 else:
                     return sre_nome
             
-            # ========================================
-            # 1. PERFORMANCE DETALHADA (MÊS ATUAL)
-            # ========================================
-            st.markdown("### 📊 Performance Detalhada - Período Selecionado")
+            # FILTROS
+            st.markdown("### 📅 Filtros de Período")
+            col_filtro_ipe1, col_filtro_ipe2 = st.columns(2)
             
+            with col_filtro_ipe1:
+                if 'Ano' in df.columns:
+                    anos_ipe = sorted(df['Ano'].dropna().unique().astype(int))
+                    anos_opcoes_ipe = ['Todos'] + list(anos_ipe)
+                    ano_ipe = st.selectbox("📅 Filtrar por Ano:", options=anos_opcoes_ipe, key="filtro_ano_ipe")
+                else:
+                    ano_ipe = 'Todos'
+            
+            with col_filtro_ipe2:
+                if 'Mês' in df.columns:
+                    meses_map = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
+                    meses_disponiveis = sorted(df['Mês'].dropna().unique().astype(int))
+                    meses_opcoes_ipe = [meses_map[m] for m in meses_disponiveis]
+                    meses_selecionados_nomes = st.multiselect("📆 Selecionar Mês(es):", options=meses_opcoes_ipe, default=meses_opcoes_ipe, key="filtro_meses_ipe")
+                    meses_invertido = {v: k for k, v in meses_map.items()}
+                    meses_selecionados_numeros = [meses_invertido[m] for m in meses_selecionados_nomes] if meses_selecionados_nomes else []
+                else:
+                    meses_selecionados_numeros = []
+            
+            # APLICA FILTROS
+            df_ipe = df.copy()
+            if ano_ipe != 'Todos':
+                df_ipe = df_ipe[df_ipe['Ano'] == int(ano_ipe)]
+            if meses_selecionados_numeros:
+                df_ipe = df_ipe[df_ipe['Mês'].isin(meses_selecionados_numeros)]
+            
+            # PERFORMANCE DETALHADA
+            st.markdown("### 📊 Performance Detalhada - Período Selecionado")
             cards_total_periodo = len(df_ipe)
             total_sres_periodo = df_ipe['SRE'].nunique()
             
@@ -5159,127 +5157,62 @@ if st.session_state.df_original is not None:
                     ca = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
                     cr = len(df_sre_data[df_sre_data['Revisões'] > 0])
                     ipe = calcular_ipe(ca, cr, cd, cards_total_periodo, total_sres_periodo)
-                    
-                    sres_metrics.append({
-                        'SRE': substituir_nome_sre(sre),
-                        'Cards Demandados': cd,
-                        'Cards Analisados': ca,
-                        'Cards Reabertos': cr,
-                        'IPE (%)': round(ipe * 100, 2),
-                        'Status': '✅ Meta' if ipe >= 0.95 else '⚠️ Abaixo'
-                    })
+                    sres_metrics.append({'SRE': substituir_nome_sre(sre), 'Cards Demandados': cd, 'Cards Analisados': ca, 'Cards Reabertos': cr, 'IPE (%)': round(ipe * 100, 2), 'Status': '✅ Meta' if ipe >= 0.95 else '⚠️ Abaixo'})
             
             if sres_metrics:
                 df_sres = pd.DataFrame(sres_metrics).sort_values('IPE (%)', ascending=False)
-                st.dataframe(df_sres, use_container_width=True, column_config={
-                    "IPE (%)": st.column_config.ProgressColumn("IPE %", format="%.2f%%", min_value=0, max_value=100)
-                })
+                st.dataframe(df_sres, use_container_width=True, column_config={"IPE (%)": st.column_config.ProgressColumn("IPE %", format="%.2f%%", min_value=0, max_value=100)})
             
             st.markdown("---")
             
-            # ========================================
-            # 2. IPE ACUMULADO GERAL (TODOS OS SREs)
-            # ========================================
-            st.markdown("### 📈 IPE Acumulado Geral - Evolução Mensal")
-            st.caption("_Considera TODOS os SREs juntos, mês a mês (ex: ACM.JAN, ACM.FEV)_")
+            # IPE ACUMULADO POR MÊS - GRÁFICO DE LINHA
+            st.markdown("### 📈 IPE Acumulado por Mês")
+            st.caption("_Evolução do IPE acumulado mês a mês considerando TODO o período_")
             
-            if 'Criado' in df_ipe.columns:
+            if 'Criado' in df_ipe.columns and len(df_ipe) > 0:
                 df_ipe['Periodo'] = df_ipe['Criado'].dt.strftime('%Y-%m')
-                df_ipe['Nome_Mes'] = df_ipe['Criado'].dt.strftime('%b').str.upper()
+                df_ipe['Nome_Mes_Completo'] = df_ipe['Criado'].dt.month.map({1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'})
                 meses_ordenados = sorted(df_ipe['Periodo'].unique())
                 
                 acumulados = []
                 for periodo in meses_ordenados:
                     df_ate = df_ipe[df_ipe['Periodo'] <= periodo]
-                    
                     cd_acum = len(df_ate)
                     ca_acum = len(df_ate[df_ate['Status'] == 'Sincronizado'])
                     cr_acum = len(df_ate[df_ate['Revisões'] > 0])
                     na_acum = df_ate['SRE'].nunique()
-                    
                     ipe_acum = calcular_ipe(ca_acum, cr_acum, cd_acum, cd_acum, na_acum)
-                    nome_mes = df_ate['Nome_Mes'].iloc[-1] if len(df_ate) > 0 else periodo
-                    
-                    acumulados.append({
-                        'Mês': nome_mes,
-                        'Cards Demandados': cd_acum,
-                        'Cards Analisados': ca_acum,
-                        'Cards Reabertos': cr_acum,
-                        'SREs': na_acum,
-                        'IPE Acumulado (%)': round(ipe_acum * 100, 2)
-                    })
+                    df_ate_sorted = df_ate.sort_values('Criado')
+                    ultimo_mes_completo = df_ate_sorted['Nome_Mes_Completo'].iloc[-1] if len(df_ate_sorted) > 0 else periodo
+                    acumulados.append({'Mês': ultimo_mes_completo, 'CD_Acum': cd_acum, 'CA_Acum': ca_acum, 'CR_Acum': cr_acum, 'NA_Acum': na_acum, 'IPE Acumulado (%)': round(ipe_acum * 100, 2)})
                 
                 if acumulados:
                     df_acum = pd.DataFrame(acumulados)
                     
                     # GRÁFICO DE LINHA
                     fig_linha = go.Figure()
-                    fig_linha.add_trace(go.Scatter(
-                        x=df_acum['Mês'],
-                        y=df_acum['IPE Acumulado (%)'],
-                        mode='lines+markers+text',
-                        line=dict(color=COR_AZUL_ESCURO, width=4),
-                        marker=dict(size=12, color=COR_AZUL_PETROLEO),
-                        text=df_acum['IPE Acumulado (%)'].apply(lambda x: f'{x:.1f}%'),
-                        textposition='top center',
-                        name='IPE Acumulado Geral'
-                    ))
+                    fig_linha.add_trace(go.Scatter(x=df_acum['Mês'], y=df_acum['IPE Acumulado (%)'], mode='lines+markers+text', line=dict(color=COR_AZUL_ESCURO, width=4), marker=dict(size=12, color=COR_AZUL_PETROLEO), text=df_acum['IPE Acumulado (%)'].apply(lambda x: f'{x:.1f}%'), textposition='top center', name='IPE Acumulado', hovertemplate='<b>%{x}</b><br>IPE: %{y:.1f}%<br>CD: %{customdata[0]:,}<br>CA: %{customdata[1]:,}<br>CR: %{customdata[2]:,}<br>SREs: %{customdata[3]}<extra></extra>', customdata=df_acum[['CD_Acum', 'CA_Acum', 'CR_Acum', 'NA_Acum']].values))
                     fig_linha.add_hline(y=95, line_dash="dash", line_color=COR_AZUL_PETROLEO, annotation_text="🎯 Meta 95%")
                     fig_linha.add_hline(y=100, line_dash="dot", line_color=COR_CINZA_TEXTO, annotation_text="Limite 100%")
-                    fig_linha.update_layout(
-                        title='Evolução do IPE Acumulado Geral',
-                        xaxis_title='Mês',
-                        yaxis_title='IPE Acumulado (%)',
-                        yaxis=dict(range=[0, 105]),
-                        height=450,
-                        plot_bgcolor=COR_BRANCO
-                    )
+                    fig_linha.add_trace(go.Scatter(x=df_acum['Mês'], y=df_acum['IPE Acumulado (%)'], fill='tozeroy', fillcolor='rgba(2, 138, 159, 0.1)', line=dict(width=0), showlegend=False, hoverinfo='skip'))
+                    fig_linha.update_layout(title='📈 Evolução do IPE Acumulado por Mês', xaxis_title='Mês', yaxis_title='IPE Acumulado (%)', yaxis=dict(range=[0, 105]), height=500, plot_bgcolor=COR_BRANCO)
                     st.plotly_chart(fig_linha, use_container_width=True)
                     
                     # CARDS RESUMO
                     ultimo = df_acum.iloc[-1]
                     primeiro = df_acum.iloc[0]
-                    
                     st.markdown("### 🎯 Resumo do Período Acumulado")
                     col_r1, col_r2, col_r3, col_r4 = st.columns(4)
+                    with col_r1: st.metric("📅 Período", f"{primeiro['Mês']} - {ultimo['Mês']}")
+                    with col_r2: st.metric("📊 Total Cards", f"{ultimo['CD_Acum']:,}")
+                    with col_r3: st.metric("🎯 IPE Acumulado", f"{ultimo['IPE Acumulado (%)']:.2f}%", delta=f"{ultimo['IPE Acumulado (%)'] - 95:+.2f} pp", delta_color="normal" if ultimo['IPE Acumulado (%)'] >= 95 else "inverse")
+                    with col_r4: st.metric("👥 SREs Ativos", f"{ultimo['NA_Acum']}")
                     
-                    with col_r1:
-                        st.metric("📅 Período", f"{primeiro['Mês']} - {ultimo['Mês']}")
-                    with col_r2:
-                        st.metric("📊 Total Cards", f"{ultimo['Cards Demandados']:,}")
-                    with col_r3:
-                        st.metric("🎯 IPE Acumulado", f"{ultimo['IPE Acumulado (%)']:.2f}%",
-                                 delta=f"{ultimo['IPE Acumulado (%)'] - 95:+.2f} pp",
-                                 delta_color="normal" if ultimo['IPE Acumulado (%)'] >= 95 else "inverse")
-                    with col_r4:
-                        st.metric("👥 SREs Ativos", f"{ultimo['SREs']}")
-                    
-                    # TABELA
-                    st.markdown("### 📋 Tabela de Acumulados Mensais")
-                    st.dataframe(df_acum, use_container_width=True, column_config={
-                        "IPE Acumulado (%)": st.column_config.ProgressColumn("IPE %", format="%.2f%%", min_value=0, max_value=100)
-                    })
-                    
-                    # GRÁFICO DE BARRAS
-                    fig_barra = go.Figure()
-                    cores_barra = [COR_VERDE_ESCURO if v >= 95 else COR_LARANJA if v >= 70 else COR_VERMELHO for v in df_acum['IPE Acumulado (%)']]
-                    fig_barra.add_trace(go.Bar(
-                        x=df_acum['Mês'],
-                        y=df_acum['IPE Acumulado (%)'],
-                        text=df_acum['IPE Acumulado (%)'].apply(lambda x: f'{x:.1f}%'),
-                        textposition='outside',
-                        marker_color=cores_barra
-                    ))
-                    fig_barra.add_hline(y=95, line_dash="dash", line_color=COR_AZUL_PETROLEO, annotation_text="Meta 95%")
-                    fig_barra.update_layout(
-                        title='IPE Acumulado por Mês',
-                        xaxis_title='Mês',
-                        yaxis_title='IPE Acumulado (%)',
-                        yaxis=dict(range=[0, 105]),
-                        height=400,
-                        showlegend=False
-                    )
-                    st.plotly_chart(fig_barra, use_container_width=True)
+                    # TABELA (EXPANDER)
+                    with st.expander("📋 Ver Tabela de Acumulados Mensais", expanded=False):
+                        st.dataframe(df_acum, use_container_width=True, column_config={"IPE Acumulado (%)": st.column_config.ProgressColumn("IPE %", format="%.2f%%", min_value=0, max_value=100)})
+                        csv_acum = df_acum.to_csv(index=False).encode('utf-8-sig')
+                        st.download_button("📥 Exportar para CSV", data=csv_acum, file_name=f"ipe_acumulado_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", mime="text/csv", use_container_width=True)
             
             # EXPLICAÇÃO
             with st.expander("📖 Entenda o Cálculo do IPE"):
@@ -5287,10 +5220,10 @@ if st.session_state.df_original is not None:
                 **Fórmula:** `IPE = (CA - CR) / (CD + |((CT/CD)/NA) - 1|)`
                 
                 - **CA** = Cards Analisados (Sincronizados)
-                - **CR** = Cards Reabertos (Com revisão > 0)
-                - **CD** = Cards Demandados (Total do SRE)
-                - **CT** = Cards Total (Total geral do período)
-                - **NA** = Número de Atendentes (Total de SREs únicos)
+                - **CR** = Cards Revisão (Com revisão > 0)
+                - **CD** = Cards Demandados (Total do período)
+                - **CT** = Cards Total (Total geral)
+                - **NA** = Número de Atendentes (SREs únicos)
                 
                 **Meta: 95% | Limite máximo: 100%**
                 """)
