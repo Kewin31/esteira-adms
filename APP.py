@@ -5078,13 +5078,16 @@ if st.session_state.df_original is not None:
                         mime="text/csv",
                         use_container_width=True
                     )
-     # ============================================
+       # ============================================
     # NOVA ABA: KPI IPE - ACUMULADO POR MÊS
     # ============================================
     with tab_ipe:
         st.markdown(f'<div class="section-title">🎯 KPI IPE - ÍNDICE DE PERFORMANCE DO ESPECIALISTA</div>', unsafe_allow_html=True)
         
-        if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
+        if 'SRE' in df.columns and 'Status' in df.columns:
+            
+            # Verifica se a coluna 'Retorno Cliente' existe, senão usa 'Revisões' como fallback
+            coluna_retorno = 'Retorno Cliente' if 'Retorno Cliente' in df.columns else 'Revisões'
             
             def calcular_ipe(ca, cr, cd, ct, na):
                 if cd <= 0 or na <= 0:
@@ -5113,6 +5116,13 @@ if st.session_state.df_original is not None:
                     return "Ramiza Irineu"
                 else:
                     return sre_nome
+            
+            def is_retorno_sim(valor):
+                """Verifica se o valor indica retorno do cliente (Sim)"""
+                if pd.isna(valor):
+                    return False
+                valor_str = str(valor).strip().upper()
+                return valor_str in ['SIM', 'S', 'YES', 'Y', '1', 'TRUE']
             
             # FILTROS
             st.markdown("### 📅 Filtros de Período")
@@ -5149,19 +5159,45 @@ if st.session_state.df_original is not None:
             cards_total_periodo = len(df_ipe)
             total_sres_periodo = df_ipe['SRE'].nunique()
             
+            # Informa qual coluna está sendo usada para retorno
+            if coluna_retorno == 'Retorno Cliente':
+                st.info("📌 **Cards Reabertos (CR)** = Cards com 'Retorno Cliente = Sim'")
+            else:
+                st.info("📌 **Cards Reabertos (CR)** = Cards com 'Revisões > 0'")
+            
             sres_metrics = []
             for sre in df_ipe['SRE'].dropna().unique():
                 df_sre_data = df_ipe[df_ipe['SRE'] == sre]
                 if len(df_sre_data) > 0:
                     cd = len(df_sre_data)
                     ca = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
-                    cr = len(df_sre_data[df_sre_data['Revisões'] > 0])
+                    
+                    # Cálculo de CR baseado na coluna de retorno
+                    if coluna_retorno == 'Retorno Cliente':
+                        cr = len(df_sre_data[df_sre_data['Retorno Cliente'].apply(is_retorno_sim)])
+                    else:
+                        cr = len(df_sre_data[df_sre_data['Revisões'] > 0])
+                    
                     ipe = calcular_ipe(ca, cr, cd, cards_total_periodo, total_sres_periodo)
-                    sres_metrics.append({'SRE': substituir_nome_sre(sre), 'Cards Demandados': cd, 'Cards Analisados': ca, 'Cards Revisão': cr, 'IPE (%)': round(ipe * 100, 2), 'Status': '✅ Meta' if ipe >= 0.95 else '⚠️ Abaixo'})
+                    sres_metrics.append({
+                        'SRE': substituir_nome_sre(sre),
+                        'Cards Demandados': cd,
+                        'Cards Analisados': ca,
+                        'Cards Reabertos': cr,
+                        'IPE (%)': round(ipe * 100, 2),
+                        'Status': '✅ Meta' if ipe >= 0.95 else '⚠️ Abaixo'
+                    })
             
             if sres_metrics:
                 df_sres = pd.DataFrame(sres_metrics).sort_values('IPE (%)', ascending=False)
-                st.dataframe(df_sres, use_container_width=True, column_config={"IPE (%)": st.column_config.ProgressColumn("IPE %", format="%.2f%%", min_value=0, max_value=100)})
+                st.dataframe(df_sres, use_container_width=True, column_config={
+                    "SRE": st.column_config.TextColumn("SRE", width="small"),
+                    "Cards Demandados": st.column_config.NumberColumn("Demandados", format="%d"),
+                    "Cards Analisados": st.column_config.NumberColumn("Analisados", format="%d"),
+                    "Cards Reabertos": st.column_config.NumberColumn("Reabertos", format="%d"),
+                    "IPE (%)": st.column_config.ProgressColumn("IPE %", format="%.2f%%", min_value=0, max_value=100),
+                    "Status": st.column_config.TextColumn("Status", width="small")
+                })
             
             st.markdown("---")
             
@@ -5177,21 +5213,48 @@ if st.session_state.df_original is not None:
                 acumulados = []
                 for periodo in meses_ordenados:
                     df_ate = df_ipe[df_ipe['Periodo'] <= periodo]
+                    
                     cd_acum = len(df_ate)
                     ca_acum = len(df_ate[df_ate['Status'] == 'Sincronizado'])
-                    cr_acum = len(df_ate[df_ate['Revisões'] > 0])
+                    
+                    # CR acumulado baseado na coluna de retorno
+                    if coluna_retorno == 'Retorno Cliente':
+                        cr_acum = len(df_ate[df_ate['Retorno Cliente'].apply(is_retorno_sim)])
+                    else:
+                        cr_acum = len(df_ate[df_ate['Revisões'] > 0])
+                    
                     na_acum = df_ate['SRE'].nunique()
                     ipe_acum = calcular_ipe(ca_acum, cr_acum, cd_acum, cd_acum, na_acum)
+                    
                     df_ate_sorted = df_ate.sort_values('Criado')
                     ultimo_mes_completo = df_ate_sorted['Nome_Mes_Completo'].iloc[-1] if len(df_ate_sorted) > 0 else periodo
-                    acumulados.append({'Mês': ultimo_mes_completo, 'CD_Acum': cd_acum, 'CA_Acum': ca_acum, 'CR_Acum': cr_acum, 'NA_Acum': na_acum, 'IPE Acumulado (%)': round(ipe_acum * 100, 2)})
+                    
+                    acumulados.append({
+                        'Mês': ultimo_mes_completo,
+                        'CD_Acum': cd_acum,
+                        'CA_Acum': ca_acum,
+                        'CR_Acum': cr_acum,
+                        'NA_Acum': na_acum,
+                        'IPE Acumulado (%)': round(ipe_acum * 100, 2)
+                    })
                 
                 if acumulados:
                     df_acum = pd.DataFrame(acumulados)
                     
                     # GRÁFICO DE LINHA
                     fig_linha = go.Figure()
-                    fig_linha.add_trace(go.Scatter(x=df_acum['Mês'], y=df_acum['IPE Acumulado (%)'], mode='lines+markers+text', line=dict(color=COR_AZUL_ESCURO, width=4), marker=dict(size=12, color=COR_AZUL_PETROLEO), text=df_acum['IPE Acumulado (%)'].apply(lambda x: f'{x:.1f}%'), textposition='top center', name='IPE Acumulado', hovertemplate='<b>%{x}</b><br>IPE: %{y:.1f}%<br>CD: %{customdata[0]:,}<br>CA: %{customdata[1]:,}<br>CR: %{customdata[2]:,}<br>SREs: %{customdata[3]}<extra></extra>', customdata=df_acum[['CD_Acum', 'CA_Acum', 'CR_Acum', 'NA_Acum']].values))
+                    fig_linha.add_trace(go.Scatter(
+                        x=df_acum['Mês'], 
+                        y=df_acum['IPE Acumulado (%)'], 
+                        mode='lines+markers+text', 
+                        line=dict(color=COR_AZUL_ESCURO, width=4), 
+                        marker=dict(size=12, color=COR_AZUL_PETROLEO), 
+                        text=df_acum['IPE Acumulado (%)'].apply(lambda x: f'{x:.1f}%'), 
+                        textposition='top center', 
+                        name='IPE Acumulado',
+                        hovertemplate='<b>%{x}</b><br>IPE: %{y:.1f}%<br>CD: %{customdata[0]:,}<br>CA: %{customdata[1]:,}<br>CR: %{customdata[2]:,}<br>SREs: %{customdata[3]}<extra></extra>',
+                        customdata=df_acum[['CD_Acum', 'CA_Acum', 'CR_Acum', 'NA_Acum']].values
+                    ))
                     fig_linha.add_hline(y=95, line_dash="dash", line_color=COR_AZUL_PETROLEO, annotation_text="🎯 Meta 95%")
                     fig_linha.add_hline(y=100, line_dash="dot", line_color=COR_CINZA_TEXTO, annotation_text="Limite 100%")
                     fig_linha.add_trace(go.Scatter(x=df_acum['Mês'], y=df_acum['IPE Acumulado (%)'], fill='tozeroy', fillcolor='rgba(2, 138, 159, 0.1)', line=dict(width=0), showlegend=False, hoverinfo='skip'))
@@ -5216,19 +5279,21 @@ if st.session_state.df_original is not None:
             
             # EXPLICAÇÃO
             with st.expander("📖 Entenda o Cálculo do IPE"):
-                st.markdown("""
+                st.markdown(f"""
                 **Fórmula:** `IPE = (CA - CR) / (CD + |((CT/CD)/NA) - 1|)`
                 
                 - **CA** = Cards Analisados (Sincronizados)
-                - **CR** = Cards Revisão (Com revisão > 0)
+                - **CR** = Cards Reabertos (Cards com **'{'Retorno Cliente = Sim' if coluna_retorno == 'Retorno Cliente' else 'Revisões > 0'}'**)
                 - **CD** = Cards Demandados (Total do período)
                 - **CT** = Cards Total (Total geral)
                 - **NA** = Número de Atendentes (SREs únicos)
                 
                 **Meta: 95% | Limite máximo: 100%**
+                
+                > **Importante:** Cards sem preenchimento na coluna 'Retorno Cliente' são considerados como **'Não'** (não contam como reabertos).
                 """)
         else:
-            st.warning("⚠️ Colunas necessárias ('SRE', 'Status', 'Revisões') não encontradas.")
+            st.warning("⚠️ Colunas necessárias ('SRE', 'Status') não encontradas.")
 
 else:
     st.markdown(f"""
