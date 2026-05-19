@@ -5078,16 +5078,20 @@ if st.session_state.df_original is not None:
                         mime="text/csv",
                         use_container_width=True
                     )
-       # ============================================
+         # ============================================
     # NOVA ABA: KPI IPE - ACUMULADO POR MÊS
     # ============================================
     with tab_ipe:
         st.markdown(f'<div class="section-title">🎯 KPI IPE - ÍNDICE DE PERFORMANCE DO ESPECIALISTA</div>', unsafe_allow_html=True)
         
-        if 'SRE' in df.columns and 'Status' in df.columns:
+        if 'SRE' in df.columns and 'Status' in df.columns and 'Retorno Cliente' in df.columns:
             
-            # Verifica se a coluna 'Retorno Cliente' existe, senão usa 'Revisões' como fallback
-            coluna_retorno = 'Retorno Cliente' if 'Retorno Cliente' in df.columns else 'Revisões'
+            def is_retorno_sim(valor):
+                """Verifica se o valor indica retorno do cliente (Sim)"""
+                if pd.isna(valor):
+                    return False
+                valor_str = str(valor).strip().upper()
+                return valor_str in ['SIM', 'S', 'YES', 'Y', '1', 'TRUE']
             
             def calcular_ipe(ca, cr, cd, ct, na):
                 if cd <= 0 or na <= 0:
@@ -5116,13 +5120,6 @@ if st.session_state.df_original is not None:
                     return "Ramiza Irineu"
                 else:
                     return sre_nome
-            
-            def is_retorno_sim(valor):
-                """Verifica se o valor indica retorno do cliente (Sim)"""
-                if pd.isna(valor):
-                    return False
-                valor_str = str(valor).strip().upper()
-                return valor_str in ['SIM', 'S', 'YES', 'Y', '1', 'TRUE']
             
             # FILTROS
             st.markdown("### 📅 Filtros de Período")
@@ -5159,24 +5156,13 @@ if st.session_state.df_original is not None:
             cards_total_periodo = len(df_ipe)
             total_sres_periodo = df_ipe['SRE'].nunique()
             
-            # Informa qual coluna está sendo usada para retorno
-            if coluna_retorno == 'Retorno Cliente':
-                st.info("📌 **Cards Reabertos (CR)** = Cards com 'Retorno Cliente = Sim'")
-            else:
-                st.info("📌 **Cards Reabertos (CR)** = Cards com 'Revisões > 0'")
-            
             sres_metrics = []
             for sre in df_ipe['SRE'].dropna().unique():
                 df_sre_data = df_ipe[df_ipe['SRE'] == sre]
                 if len(df_sre_data) > 0:
                     cd = len(df_sre_data)
                     ca = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
-                    
-                    # Cálculo de CR baseado na coluna de retorno
-                    if coluna_retorno == 'Retorno Cliente':
-                        cr = len(df_sre_data[df_sre_data['Retorno Cliente'].apply(is_retorno_sim)])
-                    else:
-                        cr = len(df_sre_data[df_sre_data['Revisões'] > 0])
+                    cr = len(df_sre_data[df_sre_data['Retorno Cliente'].apply(is_retorno_sim)])
                     
                     ipe = calcular_ipe(ca, cr, cd, cards_total_periodo, total_sres_periodo)
                     sres_metrics.append({
@@ -5216,14 +5202,9 @@ if st.session_state.df_original is not None:
                     
                     cd_acum = len(df_ate)
                     ca_acum = len(df_ate[df_ate['Status'] == 'Sincronizado'])
-                    
-                    # CR acumulado baseado na coluna de retorno
-                    if coluna_retorno == 'Retorno Cliente':
-                        cr_acum = len(df_ate[df_ate['Retorno Cliente'].apply(is_retorno_sim)])
-                    else:
-                        cr_acum = len(df_ate[df_ate['Revisões'] > 0])
-                    
+                    cr_acum = len(df_ate[df_ate['Retorno Cliente'].apply(is_retorno_sim)])
                     na_acum = df_ate['SRE'].nunique()
+                    
                     ipe_acum = calcular_ipe(ca_acum, cr_acum, cd_acum, cd_acum, na_acum)
                     
                     df_ate_sorted = df_ate.sort_values('Criado')
@@ -5279,11 +5260,11 @@ if st.session_state.df_original is not None:
             
             # EXPLICAÇÃO
             with st.expander("📖 Entenda o Cálculo do IPE"):
-                st.markdown(f"""
+                st.markdown("""
                 **Fórmula:** `IPE = (CA - CR) / (CD + |((CT/CD)/NA) - 1|)`
                 
                 - **CA** = Cards Analisados (Sincronizados)
-                - **CR** = Cards Reabertos (Cards com **'{'Retorno Cliente = Sim' if coluna_retorno == 'Retorno Cliente' else 'Revisões > 0'}'**)
+                - **CR** = Cards Reabertos (Cards com **'Retorno Cliente = Sim'**)
                 - **CD** = Cards Demandados (Total do período)
                 - **CT** = Cards Total (Total geral)
                 - **NA** = Número de Atendentes (SREs únicos)
@@ -5293,7 +5274,7 @@ if st.session_state.df_original is not None:
                 > **Importante:** Cards sem preenchimento na coluna 'Retorno Cliente' são considerados como **'Não'** (não contam como reabertos).
                 """)
         else:
-            st.warning("⚠️ Colunas necessárias ('SRE', 'Status') não encontradas.")
+            st.warning("⚠️ Colunas necessárias ('SRE', 'Status', 'Retorno Cliente') não encontradas.")
 
 else:
     st.markdown(f"""
