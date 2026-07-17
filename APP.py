@@ -860,43 +860,6 @@ def calcular_taxa_retorno_sre(df, sre_nome):
     
     return taxa_retorno, cards_com_revisoes, cards_sincronizados
 
-def criar_matriz_performance_dev(df):
-    """Cria matriz de performance (Eficiência vs Qualidade) para Desenvolvedores"""
-    devs = df['Responsável_Formatado'].dropna().unique()
-    matriz_data = []
-    
-    for dev in devs:
-        df_dev = df[df['Responsável_Formatado'] == dev].copy()
-        
-        if len(df_dev) == 0:
-            continue
-        
-        total_cards = len(df_dev)
-        
-        if 'Criado' in df_dev.columns:
-            meses_ativos = df_dev['Criado'].dt.to_period('M').nunique()
-            eficiencia = total_cards / max(meses_ativos, 1)
-        else:
-            eficiencia = total_cards
-        
-        if 'Revisões' in df_dev.columns:
-            cards_sem_revisao = len(df_dev[df_dev['Revisões'] == 0])
-            qualidade = (cards_sem_revisao / total_cards * 100) if total_cards > 0 else 0
-        else:
-            qualidade = 100
-        
-        score = (qualidade * 0.5) + (eficiencia * 5 * 0.3) + ((total_cards / max(len(df), 1)) * 100 * 0.2)
-        
-        matriz_data.append({
-            'Desenvolvedor': dev,
-            'Eficiencia': round(eficiencia, 1),
-            'Qualidade': round(qualidade, 1),
-            'Score': round(score, 1),
-            'Total_Cards': total_cards
-        })
-    
-    return pd.DataFrame(matriz_data)
-
 def analisar_tendencia_mensal_sre(df, sre_nome):
     """Analisa tendência mensal de sincronizações de um SRE"""
     df_sre = df[df['SRE'] == sre_nome].copy()
@@ -3013,466 +2976,461 @@ if st.session_state.df_original is not None:
                         )
                 
                 st.markdown("---")
-                st.markdown(f'<div class="section-title">🔍 ANÁLISES AVANÇADAS</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="section-title">📈 ANÁLISE DE SAZONALIDADE</div>', unsafe_allow_html=True)
                 
-                tab_extra2, tab_extra3 = st.tabs([
-                    "📈 Análise de Sazonalidade"
-                ])
-                
-                with tab_extra2:
-                    with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
-                        st.markdown("""
-                        **Análise de Sazonalidade e Padrões Temporais:**
-                        
-                        Esta análise identifica padrões no fluxo de demandas ao longo do tempo:
-                        
-                        **📅 Padrões por Dia da Semana:**
-                        - Identifica quais dias têm mais/menos demandas
-                        - Mostra taxa de sincronização por dia
-                        - Útil para planejamento de recursos
-                        
-                        **🕐 Demandas por Hora do Dia:**
-                        - Identifica horários de pico de criação de chamados
-                        - Mostra horários com maior taxa de sincronização
-                        - Filtros por ano e mês disponíveis
-                        
-                        **📈 Sazonalidade Mensal:**
-                        - Distribuição de demandas ao longo dos meses
-                        - Identifica meses com maior volume
-                        - Mostra taxa de sincronização mensal
-                        - Inclui todos os 12 meses (Janeiro a Dezembro)
-                        
-                        **📊 Tipos de Gráficos:**
-                        - Gráficos de barras para comparação
-                        - Gráficos de linha para tendências
-                        - Taxas de sincronização sobrepostas
-                        
-                        **🎯 Objetivo:**
-                        Otimizar alocação de recursos e identificar padrões para melhorar eficiência.
-                        """)
+                with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
+                    st.markdown("""
+                    **Análise de Sazonalidade e Padrões Temporais:**
                     
-                    if 'Criado' in df.columns and 'Status' in df.columns:
-                        col_saz_filtro1, col_saz_filtro2, col_saz_filtro3 = st.columns(3)
+                    Esta análise identifica padrões no fluxo de demandas ao longo do tempo:
+                    
+                    **📅 Padrões por Dia da Semana:**
+                    - Identifica quais dias têm mais/menos demandas
+                    - Mostra taxa de sincronização por dia
+                    - Útil para planejamento de recursos
+                    
+                    **🕐 Demandas por Hora do Dia:**
+                    - Identifica horários de pico de criação de chamados
+                    - Mostra horários com maior taxa de sincronização
+                    - Filtros por ano e mês disponíveis
+                    
+                    **📈 Sazonalidade Mensal:**
+                    - Distribuição de demandas ao longo dos meses
+                    - Identifica meses com maior volume
+                    - Mostra taxa de sincronização mensal
+                    - Inclui todos os 12 meses (Janeiro a Dezembro)
+                    
+                    **📊 Tipos de Gráficos:**
+                    - Gráficos de barras para comparação
+                    - Gráficos de linha para tendências
+                    - Taxas de sincronização sobrepostas
+                    
+                    **🎯 Objetivo:**
+                    Otimizar alocação de recursos e identificar padrões para melhorar eficiência.
+                    """)
+                
+                if 'Criado' in df.columns and 'Status' in df.columns:
+                    col_saz_filtro1, col_saz_filtro2, col_saz_filtro3 = st.columns(3)
+                    
+                    with col_saz_filtro1:
+                        anos_saz = sorted(df['Ano'].dropna().unique().astype(int))
+                        anos_opcoes_saz = ['Todos os Anos'] + list(anos_saz)
+                        ano_saz = st.selectbox(
+                            "Selecionar Ano:",
+                            options=anos_opcoes_saz,
+                            index=len(anos_opcoes_saz)-1,
+                            key="ano_saz"
+                        )
+                    
+                    with col_saz_filtro2:
+                        if ano_saz != 'Todos os Anos':
+                            meses_ano = df[df['Ano'] == int(ano_saz)]['Mês'].unique()
+                            meses_opcoes = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_ano])
+                            mes_saz = st.selectbox(
+                                "Selecionar Mês:",
+                                options=meses_opcoes,
+                                key="mes_saz"
+                            )
+                        else:
+                            mes_saz = 'Todos os Meses'
+                    
+                    with col_saz_filtro3:
+                        tipo_analise = st.selectbox(
+                            "Tipo de Análise:",
+                            options=["Demandas Totais", "Apenas Sincronizados", "Comparativo"],
+                            index=0
+                        )
+                    
+                    df_saz = df.copy()
+                    
+                    if ano_saz != 'Todos os Anos':
+                        df_saz = df_saz[df_saz['Ano'] == int(ano_saz)]
+                    
+                    if mes_saz != 'Todos os Meses':
+                        df_saz = df_saz[df_saz['Mês'] == int(mes_saz)]
+                    
+                    st.markdown("### 📅 Padrões por Dia da Semana")
+                    
+                    dias_semana = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                    dias_portugues = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+                    dia_mapping = dict(zip(dias_semana, dias_portugues))
+                    
+                    df_saz['Dia_Semana'] = df_saz['Criado'].dt.day_name()
+                    df_saz['Dia_Semana_PT'] = df_saz['Dia_Semana'].map(dia_mapping)
+                    
+                    col_dia1, col_dia2 = st.columns(2)
+                    
+                    with col_dia1:
+                        demanda_dia = df_saz['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
+                        demanda_dia.columns = ['Dia', 'Total_Demandas']
                         
-                        with col_saz_filtro1:
-                            anos_saz = sorted(df['Ano'].dropna().unique().astype(int))
-                            anos_opcoes_saz = ['Todos os Anos'] + list(anos_saz)
-                            ano_saz = st.selectbox(
-                                "Selecionar Ano:",
-                                options=anos_opcoes_saz,
-                                index=len(anos_opcoes_saz)-1,
-                                key="ano_saz"
+                        sinc_dia = df_saz[df_saz['Status'] == 'Sincronizado']['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
+                        sinc_dia.columns = ['Dia', 'Sincronizados']
+                        
+                        dados_dia = pd.merge(demanda_dia, sinc_dia, on='Dia', how='left').fillna(0)
+                        dados_dia['Taxa_Sinc'] = (dados_dia['Sincronizados'] / dados_dia['Total_Demandas'] * 100).round(1)
+                        
+                        fig_dias = go.Figure()
+                        
+                        fig_dias.add_trace(go.Bar(
+                            x=dados_dia['Dia'],
+                            y=dados_dia['Total_Demandas'],
+                            name='Total Demandas',
+                            marker_color=COR_AZUL_ESCURO,
+                            text=dados_dia['Total_Demandas'],
+                            textposition='auto'
+                        ))
+                        
+                        fig_dias.add_trace(go.Bar(
+                            x=dados_dia['Dia'],
+                            y=dados_dia['Sincronizados'],
+                            name='Sincronizados',
+                            marker_color=COR_VERDE_ESCURO,
+                            text=dados_dia['Sincronizados'],
+                            textposition='auto'
+                        ))
+                        
+                        fig_dias.add_trace(go.Scatter(
+                            x=dados_dia['Dia'],
+                            y=dados_dia['Taxa_Sinc'],
+                            name='Taxa Sinc (%)',
+                            yaxis='y2',
+                            mode='lines+markers',
+                            line=dict(color=COR_LARANJA, width=3),
+                            marker=dict(size=8)
+                        ))
+                        
+                        fig_dias.update_layout(
+                            title='Demandas e Sincronizações por Dia da Semana',
+                            barmode='group',
+                            yaxis=dict(title='Quantidade'),
+                            yaxis2=dict(
+                                title='Taxa Sinc (%)',
+                                overlaying='y',
+                                side='right',
+                                range=[0, 100]
+                            ),
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig_dias, use_container_width=True)
+                    
+                    with col_dia2:
+                        st.markdown("### 🕐 Demandas por Hora do Dia")
+                        
+                        col_hora_filtro1, col_hora_filtro2 = st.columns(2)
+                        
+                        with col_hora_filtro1:
+                            anos_hora = sorted(df['Ano'].dropna().unique().astype(int))
+                            anos_opcoes_hora = ['Todos os Anos'] + list(anos_hora)
+                            ano_hora = st.selectbox(
+                                "Ano para análise horária:",
+                                options=anos_opcoes_hora,
+                                index=len(anos_opcoes_hora)-1,
+                                key="ano_hora"
                             )
                         
-                        with col_saz_filtro2:
-                            if ano_saz != 'Todos os Anos':
-                                meses_ano = df[df['Ano'] == int(ano_saz)]['Mês'].unique()
-                                meses_opcoes = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_ano])
-                                mes_saz = st.selectbox(
-                                    "Selecionar Mês:",
-                                    options=meses_opcoes,
-                                    key="mes_saz"
+                        with col_hora_filtro2:
+                            if ano_hora != 'Todos os Anos':
+                                meses_hora = df[df['Ano'] == int(ano_hora)]['Mês'].unique()
+                                meses_opcoes_hora = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_hora])
+                                mes_hora = st.selectbox(
+                                    "Mês para análise horária:",
+                                    options=meses_opcoes_hora,
+                                    key="mes_hora"
                                 )
                             else:
-                                mes_saz = 'Todos os Meses'
+                                mes_hora = 'Todos os Meses'
                         
-                        with col_saz_filtro3:
-                            tipo_analise = st.selectbox(
-                                "Tipo de Análise:",
-                                options=["Demandas Totais", "Apenas Sincronizados", "Comparativo"],
-                                index=0
-                            )
+                        df_hora = df.copy()
                         
-                        df_saz = df.copy()
+                        if ano_hora != 'Todos os Anos':
+                            df_hora = df_hora[df_hora['Ano'] == int(ano_hora)]
                         
-                        if ano_saz != 'Todos os Anos':
-                            df_saz = df_saz[df_saz['Ano'] == int(ano_saz)]
+                        if mes_hora != 'Todos os Meses':
+                            df_hora = df_hora[df_hora['Mês'] == int(mes_hora)]
                         
-                        if mes_saz != 'Todos os Meses':
-                            df_saz = df_saz[df_saz['Mês'] == int(mes_saz)]
+                        subtitulo_hora = "Análise por Hora"
+                        if ano_hora != 'Todos os Anos':
+                            subtitulo_hora += f" - {ano_hora}"
+                        if mes_hora != 'Todos os Meses':
+                            meses_nomes = {
+                                1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                                5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                                9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+                            }
+                            subtitulo_hora += f" - {meses_nomes[int(mes_hora)]}"
                         
-                        st.markdown("### 📅 Padrões por Dia da Semana")
+                        st.markdown(f"**Período:** {subtitulo_hora}")
                         
-                        dias_semana = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                        dias_portugues = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
-                        dia_mapping = dict(zip(dias_semana, dias_portugues))
+                        df_hora['Hora'] = df_hora['Criado'].dt.hour
                         
-                        df_saz['Dia_Semana'] = df_saz['Criado'].dt.day_name()
-                        df_saz['Dia_Semana_PT'] = df_saz['Dia_Semana'].map(dia_mapping)
+                        demanda_hora = df_hora['Hora'].value_counts().sort_index().reset_index()
+                        demanda_hora.columns = ['Hora', 'Total_Demandas']
                         
-                        col_dia1, col_dia2 = st.columns(2)
+                        sinc_hora = df_hora[df_hora['Status'] == 'Sincronizado']['Hora'].value_counts().sort_index().reset_index()
+                        sinc_hora.columns = ['Hora', 'Sincronizados']
                         
-                        with col_dia1:
-                            demanda_dia = df_saz['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
-                            demanda_dia.columns = ['Dia', 'Total_Demandas']
+                        dados_hora = pd.merge(demanda_hora, sinc_hora, on='Hora', how='left').fillna(0)
+                        dados_hora['Taxa_Sinc'] = (dados_hora['Sincronizados'] / dados_hora['Total_Demandas'] * 100).where(dados_hora['Total_Demandas'] > 0, 0).round(1)
+                        
+                        fig_horas = go.Figure()
+                        
+                        fig_horas.add_trace(go.Scatter(
+                            x=dados_hora['Hora'],
+                            y=dados_hora['Total_Demandas'],
+                            name='Total Demandas',
+                            mode='lines+markers',
+                            line=dict(color=COR_AZUL_ESCURO, width=3),
+                            marker=dict(size=8)
+                        ))
+                        
+                        fig_horas.add_trace(go.Scatter(
+                            x=dados_hora['Hora'],
+                            y=dados_hora['Sincronizados'],
+                            name='Sincronizados',
+                            mode='lines+markers',
+                            line=dict(color=COR_VERDE_ESCURO, width=3),
+                            marker=dict(size=8)
+                        ))
+                        
+                        if not dados_hora.empty:
+                            pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
+                            pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
                             
-                            sinc_dia = df_saz[df_saz['Status'] == 'Sincronizado']['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
-                            sinc_dia.columns = ['Dia', 'Sincronizados']
+                            hora_pico_demanda = f"{int(pico_demanda['Hora'])}:00h"
+                            hora_pico_sinc = f"{int(pico_sinc['Hora'])}:00h"
                             
-                            dados_dia = pd.merge(demanda_dia, sinc_dia, on='Dia', how='left').fillna(0)
-                            dados_dia['Taxa_Sinc'] = (dados_dia['Sincronizados'] / dados_dia['Total_Demandas'] * 100).round(1)
-                            
-                            fig_dias = go.Figure()
-                            
-                            fig_dias.add_trace(go.Bar(
-                                x=dados_dia['Dia'],
-                                y=dados_dia['Total_Demandas'],
-                                name='Total Demandas',
-                                marker_color=COR_AZUL_ESCURO,
-                                text=dados_dia['Total_Demandas'],
-                                textposition='auto'
-                            ))
-                            
-                            fig_dias.add_trace(go.Bar(
-                                x=dados_dia['Dia'],
-                                y=dados_dia['Sincronizados'],
-                                name='Sincronizados',
-                                marker_color=COR_VERDE_ESCURO,
-                                text=dados_dia['Sincronizados'],
-                                textposition='auto'
-                            ))
-                            
-                            fig_dias.add_trace(go.Scatter(
-                                x=dados_dia['Dia'],
-                                y=dados_dia['Taxa_Sinc'],
-                                name='Taxa Sinc (%)',
-                                yaxis='y2',
-                                mode='lines+markers',
-                                line=dict(color=COR_LARANJA, width=3),
-                                marker=dict(size=8)
-                            ))
-                            
-                            fig_dias.update_layout(
-                                title='Demandas e Sincronizações por Dia da Semana',
-                                barmode='group',
-                                yaxis=dict(title='Quantidade'),
-                                yaxis2=dict(
-                                    title='Taxa Sinc (%)',
-                                    overlaying='y',
-                                    side='right',
-                                    range=[0, 100]
-                                ),
-                                height=400,
-                                showlegend=True
+                            fig_horas.add_annotation(
+                                x=pico_demanda['Hora'],
+                                y=pico_demanda['Total_Demandas'],
+                                text=f"Pico Demandas: {int(pico_demanda['Total_Demandas'])}<br>{hora_pico_demanda}",
+                                showarrow=True,
+                                arrowhead=2,
+                                ax=0,
+                                ay=-40,
+                                bgcolor="white",
+                                bordercolor="black"
                             )
                             
-                            st.plotly_chart(fig_dias, use_container_width=True)
+                            fig_horas.add_annotation(
+                                x=pico_sinc['Hora'],
+                                y=pico_sinc['Sincronizados'],
+                                text=f"Pico Sinc: {int(pico_sinc['Sincronizados'])}<br>{hora_pico_sinc}",
+                                showarrow=True,
+                                arrowhead=2,
+                                ax=0,
+                                ay=40,
+                                bgcolor="white",
+                                bordercolor="green"
+                            )
                         
-                        with col_dia2:
-                            st.markdown("### 🕐 Demandas por Hora do Dia")
+                        fig_horas.update_layout(
+                            title=f'Demandas por Hora do Dia - {subtitulo_hora}',
+                            xaxis_title='Hora do Dia',
+                            yaxis_title='Quantidade',
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig_horas, use_container_width=True)
+                        
+                        if not dados_hora.empty:
+                            col_hora_stats1, col_hora_stats2, col_hora_stats3 = st.columns(3)
                             
-                            col_hora_filtro1, col_hora_filtro2 = st.columns(2)
-                            
-                            with col_hora_filtro1:
-                                anos_hora = sorted(df['Ano'].dropna().unique().astype(int))
-                                anos_opcoes_hora = ['Todos os Anos'] + list(anos_hora)
-                                ano_hora = st.selectbox(
-                                    "Ano para análise horária:",
-                                    options=anos_opcoes_hora,
-                                    index=len(anos_opcoes_hora)-1,
-                                    key="ano_hora"
+                            with col_hora_stats1:
+                                hora_pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
+                                hora_formatada = f"{int(hora_pico_demanda['Hora'])}:00h"
+                                st.metric(
+                                    "🕐 Pico de Demandas", 
+                                    hora_formatada, 
+                                    f"{int(hora_pico_demanda['Total_Demandas'])} demandas"
                                 )
                             
-                            with col_hora_filtro2:
-                                if ano_hora != 'Todos os Anos':
-                                    meses_hora = df[df['Ano'] == int(ano_hora)]['Mês'].unique()
-                                    meses_opcoes_hora = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_hora])
-                                    mes_hora = st.selectbox(
-                                        "Mês para análise horária:",
-                                        options=meses_opcoes_hora,
-                                        key="mes_hora"
+                            with col_hora_stats2:
+                                HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
+                                
+                                dados_sinc_pico = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)].copy()
+                                
+                                if not dados_sinc_pico.empty:
+                                    hora_pico_sinc = dados_sinc_pico.loc[dados_sinc_pico['Sincronizados'].idxmax()]
+                                    hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
+                                    st.metric(
+                                        "✅ Pico de Sincronizações", 
+                                        hora_sinc_formatada, 
+                                        f"{int(hora_pico_sinc['Sincronizados'])} sinc."
                                     )
                                 else:
-                                    mes_hora = 'Todos os Meses'
-                            
-                            df_hora = df.copy()
-                            
-                            if ano_hora != 'Todos os Anos':
-                                df_hora = df_hora[df_hora['Ano'] == int(ano_hora)]
-                            
-                            if mes_hora != 'Todos os Meses':
-                                df_hora = df_hora[df_hora['Mês'] == int(mes_hora)]
-                            
-                            subtitulo_hora = "Análise por Hora"
-                            if ano_hora != 'Todos os Anos':
-                                subtitulo_hora += f" - {ano_hora}"
-                            if mes_hora != 'Todos os Meses':
-                                meses_nomes = {
-                                    1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
-                                    5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
-                                    9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
-                                }
-                                subtitulo_hora += f" - {meses_nomes[int(mes_hora)]}"
-                            
-                            st.markdown(f"**Período:** {subtitulo_hora}")
-                            
-                            df_hora['Hora'] = df_hora['Criado'].dt.hour
-                            
-                            demanda_hora = df_hora['Hora'].value_counts().sort_index().reset_index()
-                            demanda_hora.columns = ['Hora', 'Total_Demandas']
-                            
-                            sinc_hora = df_hora[df_hora['Status'] == 'Sincronizado']['Hora'].value_counts().sort_index().reset_index()
-                            sinc_hora.columns = ['Hora', 'Sincronizados']
-                            
-                            dados_hora = pd.merge(demanda_hora, sinc_hora, on='Hora', how='left').fillna(0)
-                            dados_hora['Taxa_Sinc'] = (dados_hora['Sincronizados'] / dados_hora['Total_Demandas'] * 100).where(dados_hora['Total_Demandas'] > 0, 0).round(1)
-                            
-                            fig_horas = go.Figure()
-                            
-                            fig_horas.add_trace(go.Scatter(
-                                x=dados_hora['Hora'],
-                                y=dados_hora['Total_Demandas'],
-                                name='Total Demandas',
-                                mode='lines+markers',
-                                line=dict(color=COR_AZUL_ESCURO, width=3),
-                                marker=dict(size=8)
-                            ))
-                            
-                            fig_horas.add_trace(go.Scatter(
-                                x=dados_hora['Hora'],
-                                y=dados_hora['Sincronizados'],
-                                name='Sincronizados',
-                                mode='lines+markers',
-                                line=dict(color=COR_VERDE_ESCURO, width=3),
-                                marker=dict(size=8)
-                            ))
-                            
-                            if not dados_hora.empty:
-                                pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
-                                pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
-                                
-                                hora_pico_demanda = f"{int(pico_demanda['Hora'])}:00h"
-                                hora_pico_sinc = f"{int(pico_sinc['Hora'])}:00h"
-                                
-                                fig_horas.add_annotation(
-                                    x=pico_demanda['Hora'],
-                                    y=pico_demanda['Total_Demandas'],
-                                    text=f"Pico Demandas: {int(pico_demanda['Total_Demandas'])}<br>{hora_pico_demanda}",
-                                    showarrow=True,
-                                    arrowhead=2,
-                                    ax=0,
-                                    ay=-40,
-                                    bgcolor="white",
-                                    bordercolor="black"
-                                )
-                                
-                                fig_horas.add_annotation(
-                                    x=pico_sinc['Hora'],
-                                    y=pico_sinc['Sincronizados'],
-                                    text=f"Pico Sinc: {int(pico_sinc['Sincronizados'])}<br>{hora_pico_sinc}",
-                                    showarrow=True,
-                                    arrowhead=2,
-                                    ax=0,
-                                    ay=40,
-                                    bgcolor="white",
-                                    bordercolor="green"
-                                )
-                            
-                            fig_horas.update_layout(
-                                title=f'Demandas por Hora do Dia - {subtitulo_hora}',
-                                xaxis_title='Hora do Dia',
-                                yaxis_title='Quantidade',
-                                height=400,
-                                showlegend=True
-                            )
-                            
-                            st.plotly_chart(fig_horas, use_container_width=True)
-                            
-                            if not dados_hora.empty:
-                                col_hora_stats1, col_hora_stats2, col_hora_stats3 = st.columns(3)
-                                
-                                with col_hora_stats1:
-                                    hora_pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
-                                    hora_formatada = f"{int(hora_pico_demanda['Hora'])}:00h"
+                                    hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
+                                    hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
                                     st.metric(
-                                        "🕐 Pico de Demandas", 
-                                        hora_formatada, 
-                                        f"{int(hora_pico_demanda['Total_Demandas'])} demandas"
+                                        "✅ Pico de Sincronizações", 
+                                        hora_sinc_formatada, 
+                                        f"{int(hora_pico_sinc['Sincronizados'])} sinc.",
+                                        help="Pico calculado fora dos horários de sincronismo"
                                     )
+                            
+                            with col_hora_stats3:
+                                HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
+                                MINIMO_CHAMADOS = 2
                                 
-                                with col_hora_stats2:
-                                    HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
-                                    
-                                    dados_sinc_pico = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)].copy()
-                                    
-                                    if not dados_sinc_pico.empty:
-                                        hora_pico_sinc = dados_sinc_pico.loc[dados_sinc_pico['Sincronizados'].idxmax()]
-                                        hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
-                                        st.metric(
-                                            "✅ Pico de Sincronizações", 
-                                            hora_sinc_formatada, 
-                                            f"{int(hora_pico_sinc['Sincronizados'])} sinc."
-                                        )
-                                    else:
-                                        hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
-                                        hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
-                                        st.metric(
-                                            "✅ Pico de Sincronizações", 
-                                            hora_sinc_formatada, 
-                                            f"{int(hora_pico_sinc['Sincronizados'])} sinc.",
-                                            help="Pico calculado fora dos horários de sincronismo"
-                                        )
+                                dados_hora_validos = dados_hora[
+                                    dados_hora['Hora'].isin(HORARIOS_SINCRONISMO) &
+                                    (dados_hora['Total_Demandas'] >= MINIMO_CHAMADOS)
+                                ]
                                 
-                                with col_hora_stats3:
-                                    HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
-                                    MINIMO_CHAMADOS = 2
+                                if not dados_hora_validos.empty:
+                                    melhor_taxa_hora = dados_hora_validos.loc[dados_hora_validos['Taxa_Sinc'].idxmax()]
+                                    hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
                                     
-                                    dados_hora_validos = dados_hora[
-                                        dados_hora['Hora'].isin(HORARIOS_SINCRONISMO) &
-                                        (dados_hora['Total_Demandas'] >= MINIMO_CHAMADOS)
-                                    ]
+                                    st.metric(
+                                        "🏆 Melhor Taxa Sinc.", 
+                                        hora_taxa_formatada, 
+                                        f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%"
+                                    )
+                                else:
+                                    dados_fallback = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)]
                                     
-                                    if not dados_hora_validos.empty:
-                                        melhor_taxa_hora = dados_hora_validos.loc[dados_hora_validos['Taxa_Sinc'].idxmax()]
+                                    if not dados_fallback.empty:
+                                        melhor_taxa_hora = dados_fallback.loc[dados_fallback['Taxa_Sinc'].idxmax()]
                                         hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
-                                        
                                         st.metric(
                                             "🏆 Melhor Taxa Sinc.", 
                                             hora_taxa_formatada, 
-                                            f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%"
+                                            f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%",
+                                            help="Taxa calculada com volume baixo de dados"
                                         )
                                     else:
-                                        dados_fallback = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)]
-                                        
-                                        if not dados_fallback.empty:
-                                            melhor_taxa_hora = dados_fallback.loc[dados_fallback['Taxa_Sinc'].idxmax()]
-                                            hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
-                                            st.metric(
-                                                "🏆 Melhor Taxa Sinc.", 
-                                                hora_taxa_formatada, 
-                                                f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%",
-                                                help="Taxa calculada com volume baixo de dados"
-                                            )
-                                        else:
-                                            st.metric(
-                                                "🏆 Melhor Taxa Sinc.", 
-                                                "N/A",
-                                                "Sem dados nos horários 8-12,14-16h"
-                                            )
-                        
-                        st.markdown("### 📈 Sazonalidade Mensal")
-                        
-                        col_saz_mes1, col_saz_mes2 = st.columns(2)
-                        
-                        with col_saz_mes1:
-                            anos_saz_mes = sorted(df['Ano'].dropna().unique().astype(int))
-                            anos_opcoes_saz_mes = ['Todos os Anos'] + list(anos_saz_mes)
-                            ano_saz_mes = st.selectbox(
-                                "Selecionar Ano para análise mensal:",
-                                options=anos_opcoes_saz_mes,
-                                index=len(anos_opcoes_saz_mes)-1,
-                                key="ano_saz_mes"
-                            )
-                        
-                        with col_saz_mes2:
-                            if ano_saz_mes != 'Todos os Anos':
-                                st.markdown(f"**Ano selecionado:** {ano_saz_mes}")
-                            else:
-                                st.markdown("**Todos os anos**")
-                        
+                                        st.metric(
+                                            "🏆 Melhor Taxa Sinc.", 
+                                            "N/A",
+                                            "Sem dados nos horários 8-12,14-16h"
+                                        )
+                    
+                    st.markdown("### 📈 Sazonalidade Mensal")
+                    
+                    col_saz_mes1, col_saz_mes2 = st.columns(2)
+                    
+                    with col_saz_mes1:
+                        anos_saz_mes = sorted(df['Ano'].dropna().unique().astype(int))
+                        anos_opcoes_saz_mes = ['Todos os Anos'] + list(anos_saz_mes)
+                        ano_saz_mes = st.selectbox(
+                            "Selecionar Ano para análise mensal:",
+                            options=anos_opcoes_saz_mes,
+                            index=len(anos_opcoes_saz_mes)-1,
+                            key="ano_saz_mes"
+                        )
+                    
+                    with col_saz_mes2:
                         if ano_saz_mes != 'Todos os Anos':
-                            df_saz_mes = df[df['Ano'] == int(ano_saz_mes)].copy()
+                            st.markdown(f"**Ano selecionado:** {ano_saz_mes}")
                         else:
-                            df_saz_mes = df.copy()
+                            st.markdown("**Todos os anos**")
+                    
+                    if ano_saz_mes != 'Todos os Anos':
+                        df_saz_mes = df[df['Ano'] == int(ano_saz_mes)].copy()
+                    else:
+                        df_saz_mes = df.copy()
+                    
+                    if not df_saz_mes.empty:
+                        meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                        meses_nomes_completos = {
+                            'Jan': 'Janeiro', 'Fev': 'Fevereiro', 'Mar': 'Março', 'Abr': 'Abril',
+                            'Mai': 'Maio', 'Jun': 'Junho', 'Jul': 'Julho', 'Ago': 'Agosto',
+                            'Set': 'Setembro', 'Out': 'Outubro', 'Nov': 'Novembro', 'Dez': 'Dezembro'
+                        }
                         
-                        if not df_saz_mes.empty:
-                            meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-                            meses_nomes_completos = {
-                                'Jan': 'Janeiro', 'Fev': 'Fevereiro', 'Mar': 'Março', 'Abr': 'Abril',
-                                'Mai': 'Maio', 'Jun': 'Junho', 'Jul': 'Julho', 'Ago': 'Agosto',
-                                'Set': 'Setembro', 'Out': 'Outubro', 'Nov': 'Novembro', 'Dez': 'Dezembro'
-                            }
-                            
-                            if 'Nome_Mês' in df_saz_mes.columns:
-                                df_saz_mes['Mês_Abrev'] = df_saz_mes['Nome_Mês']
-                            else:
-                                df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.month.map({
-                                    1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
-                                    5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
-                                    9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
-                                })
-                            
-                            demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reset_index()
-                            demanda_mes.columns = ['Mês', 'Total']
-                            
-                            demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).reset_index()
-                            demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
-                            
-                            sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reset_index()
-                            sinc_mes.columns = ['Mês', 'Sincronizados']
-                            
-                            sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).reset_index()
-                            sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
-                            
-                            dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
-                            dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).where(dados_mes['Total'] > 0, 0).round(1)
-                            
-                            titulo_grafico = f'Distribuição Mensal'
-                            if ano_saz_mes != 'Todos os Anos':
-                                titulo_grafico += f' - {ano_saz_mes}'
-                            
-                            fig_mes_saz = go.Figure()
-                            
-                            fig_mes_saz.add_trace(go.Bar(
-                                x=dados_mes['Mês'],
-                                y=dados_mes['Total'],
-                                name='Total Demandas',
-                                marker_color=COR_AZUL_ESCURO,
-                                text=dados_mes['Total'],
-                                textposition='auto'
-                            ))
-                            
-                            fig_mes_saz.add_trace(go.Bar(
-                                x=dados_mes['Mês'],
-                                y=dados_mes['Sincronizados'],
-                                name='Sincronizados',
-                                marker_color=COR_VERDE_ESCURO,
-                                text=dados_mes['Sincronizados'],
-                                textposition='auto'
-                            ))
-                            
-                            fig_mes_saz.add_trace(go.Scatter(
-                                x=dados_mes['Mês'],
-                                y=dados_mes['Taxa_Sinc'],
-                                name='Taxa Sinc (%)',
-                                yaxis='y2',
-                                mode='lines+markers',
-                                line=dict(color=COR_LARANJA, width=3),
-                                marker=dict(size=8)
-                            ))
-                            
-                            fig_mes_saz.update_layout(
-                                title=titulo_grafico,
-                                barmode='group',
-                                yaxis=dict(title='Quantidade'),
-                                yaxis2=dict(
-                                    title='Taxa Sinc (%)',
-                                    overlaying='y',
-                                    side='right',
-                                    range=[0, 100]
-                                ),
-                                height=400,
-                                showlegend=True
-                            )
-                            
-                            st.plotly_chart(fig_mes_saz, use_container_width=True)
-                            
-                            col_pico1, col_pico2, col_pico3 = st.columns(3)
-                            
-                            with col_pico1:
-                                mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
-                                st.metric("📈 Mês com mais demandas", 
-                                         f"{meses_nomes_completos.get(mes_maior_demanda['Mês'], mes_maior_demanda['Mês'])}: {int(mes_maior_demanda['Total'])}")
-                            
-                            with col_pico2:
-                                mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
-                                st.metric("✅ Mês com mais sincronizações", 
-                                         f"{meses_nomes_completos.get(mes_maior_sinc['Mês'], mes_maior_sinc['Mês'])}: {int(mes_maior_sinc['Sincronizados'])}")
-                            
-                            with col_pico3:
-                                melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
-                                st.metric("🏆 Melhor taxa de sincronização", 
-                                         f"{meses_nomes_completos.get(melhor_taxa['Mês'], melhor_taxa['Mês'])}: {melhor_taxa['Taxa_Sinc']}%")
+                        if 'Nome_Mês' in df_saz_mes.columns:
+                            df_saz_mes['Mês_Abrev'] = df_saz_mes['Nome_Mês']
+                        else:
+                            df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.month.map({
+                                1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                                5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                                9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+                            })
+                        
+                        demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reset_index()
+                        demanda_mes.columns = ['Mês', 'Total']
+                        
+                        demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                        demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
+                        
+                        sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reset_index()
+                        sinc_mes.columns = ['Mês', 'Sincronizados']
+                        
+                        sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                        sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
+                        
+                        dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
+                        dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).where(dados_mes['Total'] > 0, 0).round(1)
+                        
+                        titulo_grafico = f'Distribuição Mensal'
+                        if ano_saz_mes != 'Todos os Anos':
+                            titulo_grafico += f' - {ano_saz_mes}'
+                        
+                        fig_mes_saz = go.Figure()
+                        
+                        fig_mes_saz.add_trace(go.Bar(
+                            x=dados_mes['Mês'],
+                            y=dados_mes['Total'],
+                            name='Total Demandas',
+                            marker_color=COR_AZUL_ESCURO,
+                            text=dados_mes['Total'],
+                            textposition='auto'
+                        ))
+                        
+                        fig_mes_saz.add_trace(go.Bar(
+                            x=dados_mes['Mês'],
+                            y=dados_mes['Sincronizados'],
+                            name='Sincronizados',
+                            marker_color=COR_VERDE_ESCURO,
+                            text=dados_mes['Sincronizados'],
+                            textposition='auto'
+                        ))
+                        
+                        fig_mes_saz.add_trace(go.Scatter(
+                            x=dados_mes['Mês'],
+                            y=dados_mes['Taxa_Sinc'],
+                            name='Taxa Sinc (%)',
+                            yaxis='y2',
+                            mode='lines+markers',
+                            line=dict(color=COR_LARANJA, width=3),
+                            marker=dict(size=8)
+                        ))
+                        
+                        fig_mes_saz.update_layout(
+                            title=titulo_grafico,
+                            barmode='group',
+                            yaxis=dict(title='Quantidade'),
+                            yaxis2=dict(
+                                title='Taxa Sinc (%)',
+                                overlaying='y',
+                                side='right',
+                                range=[0, 100]
+                            ),
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig_mes_saz, use_container_width=True)
+                        
+                        col_pico1, col_pico2, col_pico3 = st.columns(3)
+                        
+                        with col_pico1:
+                            mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
+                            st.metric("📈 Mês com mais demandas", 
+                                     f"{meses_nomes_completos.get(mes_maior_demanda['Mês'], mes_maior_demanda['Mês'])}: {int(mes_maior_demanda['Total'])}")
+                        
+                        with col_pico2:
+                            mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
+                            st.metric("✅ Mês com mais sincronizações", 
+                                     f"{meses_nomes_completos.get(mes_maior_sinc['Mês'], mes_maior_sinc['Mês'])}: {int(mes_maior_sinc['Sincronizados'])}")
+                        
+                        with col_pico3:
+                            melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
+                            st.metric("🏆 Melhor taxa de sincronização", 
+                                     f"{meses_nomes_completos.get(melhor_taxa['Mês'], melhor_taxa['Mês'])}: {melhor_taxa['Taxa_Sinc']}%")
                 
                 st.markdown("---")
                 col_top, col_dist = st.columns([2, 1])
