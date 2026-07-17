@@ -1746,7 +1746,7 @@ st.markdown(f"""
                 letter-spacing: -0.3px;
                 text-shadow: 0 1px 2px rgba(0,0,0,0.1);
             ">
-                📊 ESTEIRA ADMS
+                📊 ESTEIRA SRE
             </h1>
             <p style="
                 color: rgba(255,255,255,0.9);
