@@ -919,6 +919,257 @@ def analisar_tendencia_mensal_sre(df, sre_nome):
     return dados_mes
 
 # ============================================
+# NOVA FUNÇÃO PARA FILTRAR POR SISTEMA DE VALIDAÇÃO
+# ============================================
+def filtrar_por_sistema(df, sistema_selecionado):
+    """
+    Filtra o DataFrame baseado no sistema de validação (ADMS/ELIPSE)
+    
+    Args:
+        df: DataFrame original
+        sistema_selecionado: 'ADMS', 'ELIPSE', ou 'Todos'
+    
+    Returns:
+        DataFrame filtrado
+    """
+    if sistema_selecionado == 'Todos' or 'Tipo_Chamado' not in df.columns:
+        return df
+    
+    df_filtrado = df.copy()
+    
+    if sistema_selecionado == 'ELIPSE':
+        # Para ELIPSE (SRE), filtra apenas os chamados do tipo 'Elipse'
+        df_filtrado = df_filtrado[df_filtrado['Tipo_Chamado'] == 'Elipse']
+    elif sistema_selecionado == 'ADMS':
+        # Para ADMS, filtra os chamados do tipo 'Telemetry' ou 'Manual'
+        df_filtrado = df_filtrado[df_filtrado['Tipo_Chamado'].isin(['Telemetry', 'Manual'])]
+    
+    return df_filtrado
+
+# ============================================
+# FUNÇÃO PARA EXIBIR ESTATÍSTICAS COMPARATIVAS
+# ============================================
+def exibir_estatisticas_por_sistema(df):
+    """Exibe estatísticas comparativas entre ADMS e ELIPSE"""
+    
+    if 'Tipo_Chamado' not in df.columns:
+        st.info("ℹ️ Coluna 'Tipo_Chamado' não encontrada para análise comparativa.")
+        return
+    
+    st.markdown("### 📊 Comparativo ADMS vs ELIPSE")
+    
+    # Separar dados por sistema
+    df_elipse = df[df['Tipo_Chamado'] == 'Elipse']
+    df_adms = df[df['Tipo_Chamado'].isin(['Telemetry', 'Manual'])]
+    
+    # Métricas principais
+    col_comp1, col_comp2, col_comp3, col_comp4 = st.columns(4)
+    
+    with col_comp1:
+        total_elipse = len(df_elipse)
+        st.metric("📋 ELIPSE (SRE)", total_elipse, help="Chamados do tipo Elipse")
+    
+    with col_comp2:
+        total_adms = len(df_adms)
+        st.metric("📋 ADMS", total_adms, help="Chamados do tipo Telemetry e Manual")
+    
+    with col_comp3:
+        sinc_elipse = len(df_elipse[df_elipse['Status'] == 'Sincronizado']) if 'Status' in df_elipse.columns else 0
+        pct_elipse = (sinc_elipse / total_elipse * 100) if total_elipse > 0 else 0
+        st.metric("✅ Sincronizados ELIPSE", sinc_elipse, f"{pct_elipse:.1f}%")
+    
+    with col_comp4:
+        sinc_adms = len(df_adms[df_adms['Status'] == 'Sincronizado']) if 'Status' in df_adms.columns else 0
+        pct_adms = (sinc_adms / total_adms * 100) if total_adms > 0 else 0
+        st.metric("✅ Sincronizados ADMS", sinc_adms, f"{pct_adms:.1f}%")
+    
+    # Gráfico comparativo
+    if total_elipse > 0 or total_adms > 0:
+        st.markdown("### 📈 Distribuição por Sistema")
+        
+        dados_sistema = pd.DataFrame({
+            'Sistema': ['ELIPSE (SRE)', 'ADMS'],
+            'Total': [total_elipse, total_adms],
+            'Sincronizados': [sinc_elipse, sinc_adms],
+            'Percentual_Sinc': [pct_elipse, pct_adms]
+        })
+        
+        fig_comp = go.Figure()
+        
+        fig_comp.add_trace(go.Bar(
+            x=dados_sistema['Sistema'],
+            y=dados_sistema['Total'],
+            name='Total',
+            marker_color=COR_AZUL_ESCURO,
+            text=dados_sistema['Total'],
+            textposition='auto',
+            hovertemplate='<b>%{x}</b><br>Total: %{y:,}<extra></extra>'
+        ))
+        
+        fig_comp.add_trace(go.Bar(
+            x=dados_sistema['Sistema'],
+            y=dados_sistema['Sincronizados'],
+            name='Sincronizados',
+            marker_color=COR_VERDE_ESCURO,
+            text=dados_sistema['Sincronizados'],
+            textposition='auto',
+            hovertemplate='<b>%{x}</b><br>Sincronizados: %{y:,}<extra></extra>'
+        ))
+        
+        fig_comp.update_layout(
+            title='Distribuição de Chamados por Sistema de Validação',
+            barmode='group',
+            height=400,
+            showlegend=True,
+            plot_bgcolor=COR_BRANCO,
+            yaxis=dict(gridcolor=COR_CINZA_BORDA, rangemode='tozero')
+        )
+        
+        st.plotly_chart(fig_comp, use_container_width=True)
+        
+        # Análise comparativa adicional
+        st.markdown("### 🎯 Análise Comparativa")
+        
+        col_analise1, col_analise2 = st.columns(2)
+        
+        with col_analise1:
+            # Taxa de sucesso por sistema
+            st.markdown("**Taxa de Sucesso**")
+            fig_taxa = go.Figure()
+            
+            fig_taxa.add_trace(go.Bar(
+                x=dados_sistema['Sistema'],
+                y=dados_sistema['Percentual_Sinc'],
+                name='Taxa de Sucesso',
+                marker_color=[COR_VERDE_ESCURO if pct >= 90 else COR_LARANJA for pct in dados_sistema['Percentual_Sinc']],
+                text=[f"{pct:.1f}%" for pct in dados_sistema['Percentual_Sinc']],
+                textposition='auto'
+            ))
+            
+            fig_taxa.add_hline(y=90, line_dash="dash", line_color=COR_VERDE_ESCURO, annotation_text="Meta 90%")
+            fig_taxa.add_hline(y=70, line_dash="dash", line_color=COR_LARANJA, annotation_text="Alerta 70%")
+            
+            fig_taxa.update_layout(
+                title='Taxa de Sincronização por Sistema',
+                yaxis=dict(range=[0, 105], title='Percentual (%)'),
+                height=300,
+                showlegend=False,
+                plot_bgcolor=COR_BRANCO
+            )
+            
+            st.plotly_chart(fig_taxa, use_container_width=True)
+        
+        with col_analise2:
+            # Análise de revisões por sistema
+            if 'Revisões' in df.columns:
+                st.markdown("**Revisões por Sistema**")
+                
+                revisoes_elipse = df_elipse['Revisões'].sum() if len(df_elipse) > 0 else 0
+                revisoes_adms = df_adms['Revisões'].sum() if len(df_adms) > 0 else 0
+                media_rev_elipse = df_elipse['Revisões'].mean() if len(df_elipse) > 0 else 0
+                media_rev_adms = df_adms['Revisões'].mean() if len(df_adms) > 0 else 0
+                
+                dados_revisoes = pd.DataFrame({
+                    'Sistema': ['ELIPSE (SRE)', 'ADMS'],
+                    'Total_Revisões': [revisoes_elipse, revisoes_adms],
+                    'Média_Revisões': [media_rev_elipse, media_rev_adms]
+                })
+                
+                fig_rev = go.Figure()
+                
+                fig_rev.add_trace(go.Bar(
+                    x=dados_revisoes['Sistema'],
+                    y=dados_revisoes['Total_Revisões'],
+                    name='Total Revisões',
+                    marker_color=COR_LARANJA,
+                    text=dados_revisoes['Total_Revisões'],
+                    textposition='auto'
+                ))
+                
+                fig_rev.add_trace(go.Scatter(
+                    x=dados_revisoes['Sistema'],
+                    y=dados_revisoes['Média_Revisões'],
+                    name='Média Revisões',
+                    yaxis='y2',
+                    mode='lines+markers+text',
+                    line=dict(color=COR_VERMELHO, width=2),
+                    marker=dict(size=10, color=COR_VERMELHO),
+                    text=[f"{m:.1f}" for m in dados_revisoes['Média_Revisões']],
+                    textposition='top center'
+                ))
+                
+                fig_rev.update_layout(
+                    title='Análise de Revisões por Sistema',
+                    yaxis=dict(title='Total Revisões', gridcolor=COR_CINZA_BORDA),
+                    yaxis2=dict(
+                        title='Média Revisões',
+                        overlaying='y',
+                        side='right',
+                        gridcolor='rgba(0,0,0,0)'
+                    ),
+                    height=300,
+                    showlegend=True,
+                    plot_bgcolor=COR_BRANCO,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02)
+                )
+                
+                st.plotly_chart(fig_rev, use_container_width=True)
+    
+    # Tabela detalhada
+    with st.expander("📋 Ver Detalhamento por Sistema", expanded=False):
+        # Preparar dados detalhados
+        detalhes = []
+        
+        for sistema in ['ELIPSE', 'ADMS']:
+            if sistema == 'ELIPSE':
+                df_sistema = df_elipse
+            else:
+                df_sistema = df_adms
+            
+            if len(df_sistema) > 0:
+                total = len(df_sistema)
+                sinc = len(df_sistema[df_sistema['Status'] == 'Sincronizado']) if 'Status' in df_sistema.columns else 0
+                pct_sinc = (sinc / total * 100) if total > 0 else 0
+                
+                if 'Revisões' in df_sistema.columns:
+                    total_rev = df_sistema['Revisões'].sum()
+                    media_rev = df_sistema['Revisões'].mean()
+                else:
+                    total_rev = 0
+                    media_rev = 0
+                
+                if 'Responsável_Formatado' in df_sistema.columns:
+                    top_resp = df_sistema['Responsável_Formatado'].value_counts().index[0] if len(df_sistema) > 0 else 'N/A'
+                else:
+                    top_resp = 'N/A'
+                
+                detalhes.append({
+                    'Sistema': sistema,
+                    'Total Chamados': total,
+                    'Sincronizados': sinc,
+                    '% Sucesso': f"{pct_sinc:.1f}%",
+                    'Total Revisões': total_rev,
+                    'Média Revisões': f"{media_rev:.2f}",
+                    'Top Responsável': top_resp
+                })
+        
+        if detalhes:
+            df_detalhes = pd.DataFrame(detalhes)
+            st.dataframe(
+                df_detalhes,
+                use_container_width=True,
+                column_config={
+                    "Sistema": st.column_config.TextColumn("Sistema", width="small"),
+                    "Total Chamados": st.column_config.NumberColumn("Total", format="%d"),
+                    "Sincronizados": st.column_config.NumberColumn("Sinc.", format="%d"),
+                    "% Sucesso": st.column_config.TextColumn("% Sucesso"),
+                    "Total Revisões": st.column_config.NumberColumn("Total Rev.", format="%d"),
+                    "Média Revisões": st.column_config.TextColumn("Média Rev."),
+                    "Top Responsável": st.column_config.TextColumn("Top Responsável")
+                }
+            )
+
+# ============================================
 # FUNÇÃO DE CLASSIFICAÇÃO DE MOTIVOS DE REVISÃO
 # ============================================
 def classificar_motivo_revisao(texto):
@@ -1042,10 +1293,6 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
     
     # Filtrar apenas sincronizados
     df_sinc = df[df['Status'] == 'Sincronizado'].copy()
-    
-    # REMOVER PROJETOS INTERNOS DAS CONTAGENS
-    #if 'Tipo_Chamado' in df_sinc.columns:
-        #df_sinc = df_sinc[df_sinc['Tipo_Chamado'] != 'Projetos Internos']
     
     # Aplicar filtros de data
     if ano_filtro and ano_filtro != 'Todos':
@@ -1453,7 +1700,6 @@ def criar_grafico_barras(df_mapa):
     
     return fig
 
-
 # ============================================
 # SIDEBAR - FILTROS E CONTROLES
 # ============================================
@@ -1568,6 +1814,33 @@ with st.sidebar:
             
             st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
             st.markdown('</div>', unsafe_allow_html=True)
+            
+            # ============================================
+            # NOVO FILTRO DE SISTEMA NA SIDEBAR
+            # ============================================
+            with st.container():
+                st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+                st.markdown("**🎯 Sistema**")
+                
+                # Novo filtro para sistema de validação
+                sistema_selecionado = st.selectbox(
+                    "Selecionar Sistema:",
+                    options=['Todos', 'ADMS', 'ELIPSE'],
+                    key="filtro_sistema",
+                    help="Filtra os chamados por sistema de validação (ADMS ou ELIPSE)"
+                )
+                
+                st.session_state.sistema_selecionado = sistema_selecionado
+                
+                # Exibir informações sobre o filtro atual
+                if sistema_selecionado == 'ADMS':
+                    st.info("🔹 **ADMS**: Chamados dos tipos 'Telemetry' e 'Manual'")
+                elif sistema_selecionado == 'ELIPSE':
+                    st.info("🔹 **ELIPSE**: Chamados do tipo 'Elipse'")
+                else:
+                    st.info("🔹 **Todos**: Exibindo todos os chamados")
+                
+                st.markdown('</div>', unsafe_allow_html=True)
     
     with st.container():
         st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
@@ -1807,8 +2080,24 @@ if st.session_state.df_original is not None:
     if verificar_e_atualizar_arquivo():
         st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
+# ============================================
+# APLICAÇÃO DO FILTRO DE SISTEMA
+# ============================================
+if st.session_state.df_original is not None:
+    # Aplicar filtros existentes...
+    df_filtrado = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
+    
+    # Aplicar filtro de sistema
+    if 'sistema_selecionado' in st.session_state:
+        sistema_selecionado = st.session_state.sistema_selecionado
+        df_filtrado_sistema = filtrar_por_sistema(df_filtrado, sistema_selecionado)
+        st.session_state.df_filtrado_sistema = df_filtrado_sistema
+    else:
+        st.session_state.df_filtrado_sistema = df_filtrado
+
 if st.session_state.df_original is not None and st.session_state.show_popup:
-    df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
+    df = st.session_state.df_filtrado_sistema if st.session_state.df_filtrado_sistema is not None else st.session_state.df_filtrado
+    df = df if df is not None else st.session_state.df_original
     
     with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
         
@@ -2246,26 +2535,33 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
 # EXIBIR DASHBOARD SE HOUVER DADOS
 # ============================================
 if st.session_state.df_original is not None:
-    df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
+    # Usar o DataFrame filtrado por sistema para as abas
+    df_para_analise = st.session_state.df_filtrado_sistema if st.session_state.df_filtrado_sistema is not None else st.session_state.df_filtrado
+    if df_para_analise is None:
+        df_para_analise = st.session_state.df_original
     
     # ============================================
     # CRIAR TABS PRINCIPAIS
     # ============================================
-    tab_principal, tab_mapa, tab_motivos, tab_ipe = st.tabs(["📊 Dashboard Principal", "🗺️ Mapa de Sincronizações", "🔍 Motivos de Revisão", "📈 SRE Performance (KPI IPE)"])
+    tab_principal, tab_mapa, tab_motivos, tab_ipe, tab_comparativo = st.tabs(["📊 Dashboard Principal", "🗺️ Mapa de Sincronizações", "🔍 Motivos de Revisão", "📈 SRE Performance (KPI IPE)", "📊 ADMS vs ELIPSE"])
     
     with tab_principal:
         st.markdown("## 📊 Informações da Base de Dados")
         
-        if 'Criado' in df.columns and not df.empty:
-            data_min = df['Criado'].min()
-            data_max = df['Criado'].max()
+        # Adicionar informação do sistema filtrado
+        sistema_atual = st.session_state.get('sistema_selecionado', 'Todos')
+        
+        if 'Criado' in df_para_analise.columns and not df_para_analise.empty:
+            data_min = df_para_analise['Criado'].min()
+            data_max = df_para_analise['Criado'].max()
             
             st.markdown(f"""
             <div class="info-base">
                 <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
                 <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO};">
                 Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
-                Total de registros: {len(df):,}
+                Total de registros: {len(df_para_analise):,} | 
+                Sistema: <strong>{sistema_atual}</strong>
                 </p>
             </div>
             """, unsafe_allow_html=True)
@@ -2275,7 +2571,7 @@ if st.session_state.df_original is not None:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            total_atual = len(df)
+            total_atual = len(df_para_analise)
             st.markdown(criar_card_indicador_simples(
                 total_atual, 
                 "Total de Demandas", 
@@ -2283,8 +2579,8 @@ if st.session_state.df_original is not None:
             ), unsafe_allow_html=True)
         
         with col2:
-            if 'Status' in df.columns:
-                sincronizados = len(df[df['Status'] == 'Sincronizado'])
+            if 'Status' in df_para_analise.columns:
+                sincronizados = len(df_para_analise[df_para_analise['Status'] == 'Sincronizado'])
                 st.markdown(criar_card_indicador_simples(
                     sincronizados,
                     "Sincronizados",
@@ -2292,8 +2588,8 @@ if st.session_state.df_original is not None:
                 ), unsafe_allow_html=True)
         
         with col3:
-            if 'Revisões' in df.columns:
-                total_revisoes = int(df['Revisões'].sum())
+            if 'Revisões' in df_para_analise.columns:
+                total_revisoes = int(df_para_analise['Revisões'].sum())
                 st.markdown(criar_card_indicador_simples(
                     total_revisoes,
                     "Total de Revisões",
@@ -2316,8 +2612,8 @@ if st.session_state.df_original is not None:
                 st.markdown(f'<div class="section-title">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
             
             with col_seletor:
-                if 'Ano' in df.columns:
-                    anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
+                if 'Ano' in df_para_analise.columns:
+                    anos_disponiveis = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                     if anos_disponiveis:
                         ano_selecionado = st.selectbox(
                             "Selecionar Ano:",
@@ -2327,8 +2623,8 @@ if st.session_state.df_original is not None:
                             key="ano_evolucao"
                         )
             
-            if 'Ano' in df.columns and 'Nome_Mês' in df.columns and anos_disponiveis:
-                df_ano = df[df['Ano'] == ano_selecionado].copy()
+            if 'Ano' in df_para_analise.columns and 'Nome_Mês' in df_para_analise.columns and anos_disponiveis:
+                df_ano = df_para_analise[df_para_analise['Ano'] == ano_selecionado].copy()
                 
                 if not df_ano.empty:
                     ordem_meses_abreviados = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
@@ -2413,8 +2709,8 @@ if st.session_state.df_original is not None:
             col_rev_filtro1, col_rev_filtro2 = st.columns(2)
             
             with col_rev_filtro1:
-                if 'Ano' in df.columns:
-                    anos_rev = sorted(df['Ano'].dropna().unique().astype(int))
+                if 'Ano' in df_para_analise.columns:
+                    anos_rev = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                     anos_opcoes_rev = ['Todos os Anos'] + list(anos_rev)
                     ano_rev = st.selectbox(
                         "📅 Filtrar por Ano:",
@@ -2423,8 +2719,8 @@ if st.session_state.df_original is not None:
                     )
             
             with col_rev_filtro2:
-                if 'Mês' in df.columns:
-                    meses_rev = sorted(df['Mês'].dropna().unique().astype(int))
+                if 'Mês' in df_para_analise.columns:
+                    meses_rev = sorted(df_para_analise['Mês'].dropna().unique().astype(int))
                     meses_opcoes_rev = ['Todos os Meses'] + [str(m) for m in meses_rev]
                     mes_rev = st.selectbox(
                         "📆 Filtrar por Mês:",
@@ -2432,7 +2728,7 @@ if st.session_state.df_original is not None:
                         key="filtro_mes_revisoes"
                     )
             
-            df_rev = df.copy()
+            df_rev = df_para_analise.copy()
             
             if ano_rev != 'Todos os Anos':
                 df_rev = df_rev[df_rev['Ano'] == int(ano_rev)]
@@ -2516,8 +2812,8 @@ if st.session_state.df_original is not None:
             col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
             
             with col_filtro1:
-                if 'Ano' in df.columns:
-                    anos_sinc = sorted(df['Ano'].dropna().unique().astype(int))
+                if 'Ano' in df_para_analise.columns:
+                    anos_sinc = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                     anos_opcoes_sinc = ['Todos os Anos'] + list(anos_sinc)
                     ano_sinc = st.selectbox(
                         "📅 Ano:",
@@ -2526,8 +2822,8 @@ if st.session_state.df_original is not None:
                     )
             
             with col_filtro2:
-                if 'Mês' in df.columns:
-                    meses_sinc = sorted(df['Mês'].dropna().unique().astype(int))
+                if 'Mês' in df_para_analise.columns:
+                    meses_sinc = sorted(df_para_analise['Mês'].dropna().unique().astype(int))
                     meses_opcoes_sinc = ['Todos os Meses'] + [str(m) for m in meses_sinc]
                     mes_sinc = st.selectbox(
                         "📆 Mês:",
@@ -2536,8 +2832,8 @@ if st.session_state.df_original is not None:
                     )
             
             with col_filtro3:
-                if 'SRE' in df.columns:
-                    sres_sinc = ['Todos os SREs'] + sorted(df['SRE'].dropna().unique())
+                if 'SRE' in df_para_analise.columns:
+                    sres_sinc = ['Todos os SREs'] + sorted(df_para_analise['SRE'].dropna().unique())
                     sre_sinc = st.selectbox(
                         "🔧 SRE:",
                         options=sres_sinc,
@@ -2545,15 +2841,15 @@ if st.session_state.df_original is not None:
                     )
             
             with col_filtro4:
-                if 'Empresa' in df.columns:
-                    empresas_sinc = ['Todas Empresas'] + sorted(df['Empresa'].dropna().unique())
+                if 'Empresa' in df_para_analise.columns:
+                    empresas_sinc = ['Todas Empresas'] + sorted(df_para_analise['Empresa'].dropna().unique())
                     empresa_sinc = st.selectbox(
                         "🏢 Empresa:",
                         options=empresas_sinc,
                         key="filtro_empresa_sinc"
                     )
             
-            df_sinc = df.copy()
+            df_sinc = df_para_analise.copy()
             
             if ano_sinc != 'Todos os Anos':
                 df_sinc = df_sinc[df_sinc['Ano'] == int(ano_sinc)]
@@ -2935,12 +3231,12 @@ if st.session_state.df_original is not None:
         with tab4:
             st.markdown(f'<div class="section-title">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
             
-            if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
+            if 'SRE' in df_para_analise.columns and 'Status' in df_para_analise.columns and 'Revisões' in df_para_analise.columns:
                 col_filtro1, col_filtro2 = st.columns(2)
                 
                 with col_filtro1:
-                    if 'Ano' in df.columns:
-                        anos_sre = sorted(df['Ano'].dropna().unique().astype(int))
+                    if 'Ano' in df_para_analise.columns:
+                        anos_sre = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                         anos_opcoes_sre = ['Todos'] + list(anos_sre)
                         ano_sre = st.selectbox(
                             "📅 Filtrar por Ano:",
@@ -2949,8 +3245,8 @@ if st.session_state.df_original is not None:
                         )
                 
                 with col_filtro2:
-                    if 'Mês' in df.columns:
-                        meses_sre = sorted(df['Mês'].dropna().unique().astype(int))
+                    if 'Mês' in df_para_analise.columns:
+                        meses_sre = sorted(df_para_analise['Mês'].dropna().unique().astype(int))
                         meses_opcoes_sre = ['Todos'] + [str(m) for m in meses_sre]
                         mes_sre = st.selectbox(
                             "📆 Filtrar por Mês:",
@@ -2958,7 +3254,7 @@ if st.session_state.df_original is not None:
                             key="filtro_mes_sre"
                         )
                 
-                df_sre = df.copy()
+                df_sre = df_para_analise.copy()
                 
                 if 'Ano' in df_sre.columns and ano_sre != 'Todos':
                     df_sre = df_sre[df_sre['Ano'] == int(ano_sre)]
@@ -3142,12 +3438,12 @@ if st.session_state.df_original is not None:
                 ])
                 
                 with tab_extra1:
-                    if 'Responsável_Formatado' in df.columns and 'Revisões' in df.columns and 'Status' in df.columns:
+                    if 'Responsável_Formatado' in df_para_analise.columns and 'Revisões' in df_para_analise.columns and 'Status' in df_para_analise.columns:
                         col_filtro_perf1, col_filtro_perf2, col_filtro_perf3 = st.columns(3)
                         
                         with col_filtro_perf1:
-                            if 'Ano' in df.columns:
-                                anos_perf = sorted(df['Ano'].dropna().unique().astype(int))
+                            if 'Ano' in df_para_analise.columns:
+                                anos_perf = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                                 anos_opcoes_perf = ['Todos os Anos'] + list(anos_perf)
                                 ano_perf = st.selectbox(
                                     "📅 Filtrar por Ano:",
@@ -3156,8 +3452,8 @@ if st.session_state.df_original is not None:
                                 )
                         
                         with col_filtro_perf2:
-                            if 'Mês' in df.columns:
-                                meses_perf = sorted(df['Mês'].dropna().unique().astype(int))
+                            if 'Mês' in df_para_analise.columns:
+                                meses_perf = sorted(df_para_analise['Mês'].dropna().unique().astype(int))
                                 meses_opcoes_perf = ['Todos os Meses'] + [str(m) for m in meses_perf]
                                 mes_perf = st.selectbox(
                                     "📆 Filtrar por Mês:",
@@ -3172,7 +3468,7 @@ if st.session_state.df_original is not None:
                                 index=0
                             )
                         
-                        df_perf = df.copy()
+                        df_perf = df_para_analise.copy()
                         
                         if ano_perf != 'Todos os Anos':
                             df_perf = df_perf[df_perf['Ano'] == int(ano_perf)]
@@ -3495,11 +3791,11 @@ if st.session_state.df_original is not None:
                         Otimizar alocação de recursos e identificar padrões para melhorar eficiência.
                         """)
                     
-                    if 'Criado' in df.columns and 'Status' in df.columns:
+                    if 'Criado' in df_para_analise.columns and 'Status' in df_para_analise.columns:
                         col_saz_filtro1, col_saz_filtro2, col_saz_filtro3 = st.columns(3)
                         
                         with col_saz_filtro1:
-                            anos_saz = sorted(df['Ano'].dropna().unique().astype(int))
+                            anos_saz = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                             anos_opcoes_saz = ['Todos os Anos'] + list(anos_saz)
                             ano_saz = st.selectbox(
                                 "Selecionar Ano:",
@@ -3510,7 +3806,7 @@ if st.session_state.df_original is not None:
                         
                         with col_saz_filtro2:
                             if ano_saz != 'Todos os Anos':
-                                meses_ano = df[df['Ano'] == int(ano_saz)]['Mês'].unique()
+                                meses_ano = df_para_analise[df_para_analise['Ano'] == int(ano_saz)]['Mês'].unique()
                                 meses_opcoes = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_ano])
                                 mes_saz = st.selectbox(
                                     "Selecionar Mês:",
@@ -3527,7 +3823,7 @@ if st.session_state.df_original is not None:
                                 index=0
                             )
                         
-                        df_saz = df.copy()
+                        df_saz = df_para_analise.copy()
                         
                         if ano_saz != 'Todos os Anos':
                             df_saz = df_saz[df_saz['Ano'] == int(ano_saz)]
@@ -3608,7 +3904,7 @@ if st.session_state.df_original is not None:
                             col_hora_filtro1, col_hora_filtro2 = st.columns(2)
                             
                             with col_hora_filtro1:
-                                anos_hora = sorted(df['Ano'].dropna().unique().astype(int))
+                                anos_hora = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                                 anos_opcoes_hora = ['Todos os Anos'] + list(anos_hora)
                                 ano_hora = st.selectbox(
                                     "Ano para análise horária:",
@@ -3619,7 +3915,7 @@ if st.session_state.df_original is not None:
                             
                             with col_hora_filtro2:
                                 if ano_hora != 'Todos os Anos':
-                                    meses_hora = df[df['Ano'] == int(ano_hora)]['Mês'].unique()
+                                    meses_hora = df_para_analise[df_para_analise['Ano'] == int(ano_hora)]['Mês'].unique()
                                     meses_opcoes_hora = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_hora])
                                     mes_hora = st.selectbox(
                                         "Mês para análise horária:",
@@ -3629,7 +3925,7 @@ if st.session_state.df_original is not None:
                                 else:
                                     mes_hora = 'Todos os Meses'
                             
-                            df_hora = df.copy()
+                            df_hora = df_para_analise.copy()
                             
                             if ano_hora != 'Todos os Anos':
                                 df_hora = df_hora[df_hora['Ano'] == int(ano_hora)]
@@ -3793,130 +4089,130 @@ if st.session_state.df_original is not None:
                                                 "N/A",
                                                 "Sem dados nos horários 8-12,14-16h"
                                             )
-                        
-                        st.markdown("### 📈 Sazonalidade Mensal")
-                        
-                        col_saz_mes1, col_saz_mes2 = st.columns(2)
-                        
-                        with col_saz_mes1:
-                            anos_saz_mes = sorted(df['Ano'].dropna().unique().astype(int))
-                            anos_opcoes_saz_mes = ['Todos os Anos'] + list(anos_saz_mes)
-                            ano_saz_mes = st.selectbox(
-                                "Selecionar Ano para análise mensal:",
-                                options=anos_opcoes_saz_mes,
-                                index=len(anos_opcoes_saz_mes)-1,
-                                key="ano_saz_mes"
-                            )
-                        
-                        with col_saz_mes2:
+                            
+                            st.markdown("### 📈 Sazonalidade Mensal")
+                            
+                            col_saz_mes1, col_saz_mes2 = st.columns(2)
+                            
+                            with col_saz_mes1:
+                                anos_saz_mes = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
+                                anos_opcoes_saz_mes = ['Todos os Anos'] + list(anos_saz_mes)
+                                ano_saz_mes = st.selectbox(
+                                    "Selecionar Ano para análise mensal:",
+                                    options=anos_opcoes_saz_mes,
+                                    index=len(anos_opcoes_saz_mes)-1,
+                                    key="ano_saz_mes"
+                                )
+                            
+                            with col_saz_mes2:
+                                if ano_saz_mes != 'Todos os Anos':
+                                    st.markdown(f"**Ano selecionado:** {ano_saz_mes}")
+                                else:
+                                    st.markdown("**Todos os anos**")
+                            
                             if ano_saz_mes != 'Todos os Anos':
-                                st.markdown(f"**Ano selecionado:** {ano_saz_mes}")
+                                df_saz_mes = df_para_analise[df_para_analise['Ano'] == int(ano_saz_mes)].copy()
                             else:
-                                st.markdown("**Todos os anos**")
-                        
-                        if ano_saz_mes != 'Todos os Anos':
-                            df_saz_mes = df[df['Ano'] == int(ano_saz_mes)].copy()
-                        else:
-                            df_saz_mes = df.copy()
-                        
-                        if not df_saz_mes.empty:
-                            meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-                            meses_nomes_completos = {
-                                'Jan': 'Janeiro', 'Fev': 'Fevereiro', 'Mar': 'Março', 'Abr': 'Abril',
-                                'Mai': 'Maio', 'Jun': 'Junho', 'Jul': 'Julho', 'Ago': 'Agosto',
-                                'Set': 'Setembro', 'Out': 'Outubro', 'Nov': 'Novembro', 'Dez': 'Dezembro'
-                            }
+                                df_saz_mes = df_para_analise.copy()
                             
-                            if 'Nome_Mês' in df_saz_mes.columns:
-                                df_saz_mes['Mês_Abrev'] = df_saz_mes['Nome_Mês']
-                            else:
-                                df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.month.map({
-                                    1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
-                                    5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
-                                    9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
-                                })
-                            
-                            demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reset_index()
-                            demanda_mes.columns = ['Mês', 'Total']
-                            
-                            demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).reset_index()
-                            demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
-                            
-                            sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reset_index()
-                            sinc_mes.columns = ['Mês', 'Sincronizados']
-                            
-                            sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).reset_index()
-                            sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
-                            
-                            dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
-                            dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).where(dados_mes['Total'] > 0, 0).round(1)
-                            
-                            titulo_grafico = f'Distribuição Mensal'
-                            if ano_saz_mes != 'Todos os Anos':
-                                titulo_grafico += f' - {ano_saz_mes}'
-                            
-                            fig_mes_saz = go.Figure()
-                            
-                            fig_mes_saz.add_trace(go.Bar(
-                                x=dados_mes['Mês'],
-                                y=dados_mes['Total'],
-                                name='Total Demandas',
-                                marker_color=COR_AZUL_ESCURO,
-                                text=dados_mes['Total'],
-                                textposition='auto'
-                            ))
-                            
-                            fig_mes_saz.add_trace(go.Bar(
-                                x=dados_mes['Mês'],
-                                y=dados_mes['Sincronizados'],
-                                name='Sincronizados',
-                                marker_color=COR_VERDE_ESCURO,
-                                text=dados_mes['Sincronizados'],
-                                textposition='auto'
-                            ))
-                            
-                            fig_mes_saz.add_trace(go.Scatter(
-                                x=dados_mes['Mês'],
-                                y=dados_mes['Taxa_Sinc'],
-                                name='Taxa Sinc (%)',
-                                yaxis='y2',
-                                mode='lines+markers',
-                                line=dict(color=COR_LARANJA, width=3),
-                                marker=dict(size=8)
-                            ))
-                            
-                            fig_mes_saz.update_layout(
-                                title=titulo_grafico,
-                                barmode='group',
-                                yaxis=dict(title='Quantidade'),
-                                yaxis2=dict(
-                                    title='Taxa Sinc (%)',
-                                    overlaying='y',
-                                    side='right',
-                                    range=[0, 100]
-                                ),
-                                height=400,
-                                showlegend=True
-                            )
-                            
-                            st.plotly_chart(fig_mes_saz, use_container_width=True)
-                            
-                            col_pico1, col_pico2, col_pico3 = st.columns(3)
-                            
-                            with col_pico1:
-                                mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
-                                st.metric("📈 Mês com mais demandas", 
-                                         f"{meses_nomes_completos.get(mes_maior_demanda['Mês'], mes_maior_demanda['Mês'])}: {int(mes_maior_demanda['Total'])}")
-                            
-                            with col_pico2:
-                                mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
-                                st.metric("✅ Mês com mais sincronizações", 
-                                         f"{meses_nomes_completos.get(mes_maior_sinc['Mês'], mes_maior_sinc['Mês'])}: {int(mes_maior_sinc['Sincronizados'])}")
-                            
-                            with col_pico3:
-                                melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
-                                st.metric("🏆 Melhor taxa de sincronização", 
-                                         f"{meses_nomes_completos.get(melhor_taxa['Mês'], melhor_taxa['Mês'])}: {melhor_taxa['Taxa_Sinc']}%")
+                            if not df_saz_mes.empty:
+                                meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                                meses_nomes_completos = {
+                                    'Jan': 'Janeiro', 'Fev': 'Fevereiro', 'Mar': 'Março', 'Abr': 'Abril',
+                                    'Mai': 'Maio', 'Jun': 'Junho', 'Jul': 'Julho', 'Ago': 'Agosto',
+                                    'Set': 'Setembro', 'Out': 'Outubro', 'Nov': 'Novembro', 'Dez': 'Dezembro'
+                                }
+                                
+                                if 'Nome_Mês' in df_saz_mes.columns:
+                                    df_saz_mes['Mês_Abrev'] = df_saz_mes['Nome_Mês']
+                                else:
+                                    df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.month.map({
+                                        1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                                        5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                                        9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+                                    })
+                                
+                                demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reset_index()
+                                demanda_mes.columns = ['Mês', 'Total']
+                                
+                                demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                                demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
+                                
+                                sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reset_index()
+                                sinc_mes.columns = ['Mês', 'Sincronizados']
+                                
+                                sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                                sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
+                                
+                                dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
+                                dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).where(dados_mes['Total'] > 0, 0).round(1)
+                                
+                                titulo_grafico = f'Distribuição Mensal'
+                                if ano_saz_mes != 'Todos os Anos':
+                                    titulo_grafico += f' - {ano_saz_mes}'
+                                
+                                fig_mes_saz = go.Figure()
+                                
+                                fig_mes_saz.add_trace(go.Bar(
+                                    x=dados_mes['Mês'],
+                                    y=dados_mes['Total'],
+                                    name='Total Demandas',
+                                    marker_color=COR_AZUL_ESCURO,
+                                    text=dados_mes['Total'],
+                                    textposition='auto'
+                                ))
+                                
+                                fig_mes_saz.add_trace(go.Bar(
+                                    x=dados_mes['Mês'],
+                                    y=dados_mes['Sincronizados'],
+                                    name='Sincronizados',
+                                    marker_color=COR_VERDE_ESCURO,
+                                    text=dados_mes['Sincronizados'],
+                                    textposition='auto'
+                                ))
+                                
+                                fig_mes_saz.add_trace(go.Scatter(
+                                    x=dados_mes['Mês'],
+                                    y=dados_mes['Taxa_Sinc'],
+                                    name='Taxa Sinc (%)',
+                                    yaxis='y2',
+                                    mode='lines+markers',
+                                    line=dict(color=COR_LARANJA, width=3),
+                                    marker=dict(size=8)
+                                ))
+                                
+                                fig_mes_saz.update_layout(
+                                    title=titulo_grafico,
+                                    barmode='group',
+                                    yaxis=dict(title='Quantidade'),
+                                    yaxis2=dict(
+                                        title='Taxa Sinc (%)',
+                                        overlaying='y',
+                                        side='right',
+                                        range=[0, 100]
+                                    ),
+                                    height=400,
+                                    showlegend=True
+                                )
+                                
+                                st.plotly_chart(fig_mes_saz, use_container_width=True)
+                                
+                                col_pico1, col_pico2, col_pico3 = st.columns(3)
+                                
+                                with col_pico1:
+                                    mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
+                                    st.metric("📈 Mês com mais demandas", 
+                                             f"{meses_nomes_completos.get(mes_maior_demanda['Mês'], mes_maior_demanda['Mês'])}: {int(mes_maior_demanda['Total'])}")
+                                
+                                with col_pico2:
+                                    mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
+                                    st.metric("✅ Mês com mais sincronizações", 
+                                             f"{meses_nomes_completos.get(mes_maior_sinc['Mês'], mes_maior_sinc['Mês'])}: {int(mes_maior_sinc['Sincronizados'])}")
+                                
+                                with col_pico3:
+                                    melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
+                                    st.metric("🏆 Melhor taxa de sincronização", 
+                                             f"{meses_nomes_completos.get(melhor_taxa['Mês'], melhor_taxa['Mês'])}: {melhor_taxa['Taxa_Sinc']}%")
                 
                 with tab_extra3:
                     with st.expander("ℹ️ **SOBRE ESTA ANÁLISE**", expanded=False):
@@ -3928,11 +4224,11 @@ if st.session_state.df_original is not None:
                         - 🎯 **Foco em prevenção**
                         """)
                     
-                    if 'Tipo_Chamado' in df.columns:
+                    if 'Tipo_Chamado' in df_para_analise.columns:
                         col_diag1, col_diag2, col_diag3 = st.columns(3)
                         
                         with col_diag1:
-                            anos_diag = sorted(df['Ano'].dropna().unique().astype(int))
+                            anos_diag = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                             anos_opcoes_diag = ['Todos os Anos'] + list(anos_diag)
                             ano_diag = st.selectbox(
                                 "Selecionar Ano:",
@@ -3943,7 +4239,7 @@ if st.session_state.df_original is not None:
                         
                         with col_diag2:
                             if ano_diag != 'Todos os Anos':
-                                meses_diag = df[df['Ano'] == int(ano_diag)]['Mês'].unique()
+                                meses_diag = df_para_analise[df_para_analise['Ano'] == int(ano_diag)]['Mês'].unique()
                                 meses_opcoes_diag = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_diag])
                                 mes_diag = st.selectbox(
                                     "Selecionar Mês:",
@@ -3960,7 +4256,7 @@ if st.session_state.df_original is not None:
                                 index=0
                             )
                         
-                        df_diag = df.copy()
+                        df_diag = df_para_analise.copy()
                         
                         if ano_diag != 'Todos os Anos':
                             df_diag = df_diag[df_diag['Ano'] == int(ano_diag)]
@@ -4302,8 +4598,8 @@ if st.session_state.df_original is not None:
                 with col_top:
                     st.markdown(f'<div class="section-title">👥 TOP 10 RESPONSÁVEIS</div>', unsafe_allow_html=True)
                     
-                    if 'Responsável_Formatado' in df.columns:
-                        top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
+                    if 'Responsável_Formatado' in df_para_analise.columns:
+                        top_responsaveis = df_para_analise['Responsável_Formatado'].value_counts().head(10).reset_index()
                         top_responsaveis.columns = ['Responsável', 'Demandas']
                         
                         fig_top = px.bar(
@@ -4339,8 +4635,8 @@ if st.session_state.df_original is not None:
                 with col_dist:
                     st.markdown(f'<div class="section-title">📊 DISTRIBUIÇÃO POR TIPO</div>', unsafe_allow_html=True)
                     
-                    if 'Tipo_Chamado' in df.columns:
-                        tipos_chamado = df['Tipo_Chamado'].value_counts().reset_index()
+                    if 'Tipo_Chamado' in df_para_analise.columns:
+                        tipos_chamado = df_para_analise['Tipo_Chamado'].value_counts().reset_index()
                         tipos_chamado.columns = ['Tipo', 'Quantidade']
                         
                         tipos_chamado = tipos_chamado.sort_values('Quantidade', ascending=True)
@@ -4379,7 +4675,7 @@ if st.session_state.df_original is not None:
                 st.markdown("---")
                 st.markdown(f'<div class="section-title">🕒 ÚLTIMAS DEMANDAS REGISTRADAS</div>', unsafe_allow_html=True)
                 
-                if 'Criado' in df.columns:
+                if 'Criado' in df_para_analise.columns:
                     filtro_chamado_principal = st.text_input(
                         "🔎 Buscar chamado específico:",
                         placeholder="Digite o número do chamado...",
@@ -4421,7 +4717,7 @@ if st.session_state.df_original is not None:
                             key="input_filtro_chamado"
                         )
                     
-                    ultimas_demandas = df.copy()
+                    ultimas_demandas = df_para_analise.copy()
                     
                     if filtro_chamado_principal:
                         ultimas_demandas = ultimas_demandas[
@@ -4502,7 +4798,7 @@ if st.session_state.df_original is not None:
         col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
         
         with col_mapa_filtro1:
-            empresas_disponiveis = df['Empresa'].dropna().unique()
+            empresas_disponiveis = df_para_analise['Empresa'].dropna().unique()
             empresas_opcoes = ['Todas'] + sorted([e for e in empresas_disponiveis if e in MAPEAMENTO_EMPRESAS])
             
             empresas_selecionadas_mapa = st.multiselect(
@@ -4513,8 +4809,8 @@ if st.session_state.df_original is not None:
             )
         
         with col_mapa_filtro2:
-            if 'Ano' in df.columns:
-                anos_disponiveis_mapa = sorted(df['Ano'].dropna().unique().astype(int))
+            if 'Ano' in df_para_analise.columns:
+                anos_disponiveis_mapa = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                 anos_opcoes_mapa = ['Todos'] + list(anos_disponiveis_mapa)
                 ano_filtro_mapa = st.selectbox(
                     "📅 Ano",
@@ -4526,8 +4822,8 @@ if st.session_state.df_original is not None:
                 ano_filtro_mapa = 'Todos'
         
         with col_mapa_filtro3:
-            if 'Mês' in df.columns and ano_filtro_mapa != 'Todos':
-                df_ano_mapa = df[df['Ano'] == int(ano_filtro_mapa)]
+            if 'Mês' in df_para_analise.columns and ano_filtro_mapa != 'Todos':
+                df_ano_mapa = df_para_analise[df_para_analise['Ano'] == int(ano_filtro_mapa)]
                 meses_disponiveis_mapa = sorted(df_ano_mapa['Mês'].dropna().unique().astype(int))
                 meses_opcoes_mapa = ['Todos'] + [f"{m:02d}" for m in meses_disponiveis_mapa]
                 mes_filtro_mapa = st.selectbox(
@@ -4541,7 +4837,7 @@ if st.session_state.df_original is not None:
         
         # Processar dados para o mapa
         df_mapa, total_sinc_filtrado = processar_dados_mapa(
-            df,
+            df_para_analise,
             empresas_selecionadas=empresas_selecionadas_mapa,
             ano_filtro=ano_filtro_mapa,
             mes_filtro=mes_filtro_mapa
@@ -4633,17 +4929,15 @@ if st.session_state.df_original is not None:
         if fig_barras:
             st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
         
-        # Tabela detalhada com barras de progresso (SEM A COLUNA "Progresso")
+        # Tabela detalhada com barras de progresso
         with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
             if not df_mapa.empty:
-                # Preparar dados
                 tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'estado', 'regiao', 'sincronismos']].copy()
                 tabela_detalhes.columns = ['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações']
                 tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False).reset_index(drop=True)
                 
                 total_geral = tabela_detalhes['Sincronizações'].sum()
                 
-                # Adicionar coluna de posição
                 posicoes = []
                 for i in range(len(tabela_detalhes)):
                     if i == 0:
@@ -4656,18 +4950,14 @@ if st.session_state.df_original is not None:
                         posicoes.append(f"{i+1}º")
                 tabela_detalhes.insert(0, 'Posição', posicoes)
                 
-                # Adicionar coluna de percentual
                 tabela_detalhes['% Total'] = (tabela_detalhes['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
                 
-                # Criar coluna de empresa com UF
                 tabela_detalhes['Empresa (UF)'] = tabela_detalhes.apply(
                     lambda x: f"{x['Empresa']} ({x['UF']})", axis=1
                 )
                 
-                # Selecionar colunas para exibir (SEM a coluna Progresso)
                 df_exibir = tabela_detalhes[['Posição', 'Empresa (UF)', 'Estado', 'Região', 'Sincronizações', '% Total']].copy()
                 
-                # Configurar as colunas para exibição
                 column_config = {
                     "Posição": st.column_config.TextColumn("Posição", width="small"),
                     "Empresa (UF)": st.column_config.TextColumn("Empresa", width="large"),
@@ -4677,7 +4967,6 @@ if st.session_state.df_original is not None:
                     "% Total": st.column_config.NumberColumn("% Total", format="%.1f%%", width="small")
                 }
                 
-                # Exibir a tabela
                 st.dataframe(
                     df_exibir,
                     use_container_width=True,
@@ -4685,7 +4974,6 @@ if st.session_state.df_original is not None:
                     height=400
                 )
                 
-                # Botão de exportação
                 csv = tabela_detalhes[['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações', '% Total']].to_csv(index=False).encode('utf-8-sig')
                 st.download_button(
                     label="📥 Exportar dados para CSV",
@@ -4695,7 +4983,7 @@ if st.session_state.df_original is not None:
                     use_container_width=True
                 )
         
-        # Legenda - CORRIGIDA
+        # Legenda
         with st.expander("🌊 Sobre as Cores do Mapa e Ranking", expanded=False):
             st.markdown(f"""
             ### 🎨 Escala de Cores
@@ -4736,20 +5024,20 @@ if st.session_state.df_original is not None:
             """, unsafe_allow_html=True)
     
     # ============================================
-    # NOVA ABA: 🔍 MOTIVOS DE REVISÃO
+    # ABA: 🔍 MOTIVOS DE REVISÃO
     # ============================================
     with tab_motivos:
         st.markdown("## 🔍 ANÁLISE DE MOTIVOS DE REVISÃO")
         st.markdown("_Principais causas de retrabalho e oportunidades de melhoria_")
         
-        if 'Motivo_Revisao' not in df.columns:
+        if 'Motivo_Revisao' not in df_para_analise.columns:
             st.warning("⚠️ Coluna 'Motivo Revisão' não encontrada no arquivo de dados.")
         else:
             # Filtros específicos para análise de motivos
             col_filtro_motivo1, col_filtro_motivo2, col_filtro_motivo3 = st.columns(3)
             
             with col_filtro_motivo1:
-                anos_motivo = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_motivo = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                 anos_opcoes_motivo = ['Todos os Anos'] + list(anos_motivo)
                 ano_motivo = st.selectbox(
                     "📅 Ano",
@@ -4758,7 +5046,7 @@ if st.session_state.df_original is not None:
                 )
             
             with col_filtro_motivo2:
-                meses_motivo = sorted(df['Mês'].dropna().unique().astype(int))
+                meses_motivo = sorted(df_para_analise['Mês'].dropna().unique().astype(int))
                 meses_opcoes_motivo = ['Todos os Meses'] + [f"{m:02d}" for m in meses_motivo]
                 mes_motivo = st.selectbox(
                     "📆 Mês",
@@ -4767,8 +5055,8 @@ if st.session_state.df_original is not None:
                 )
             
             with col_filtro_motivo3:
-                if 'Responsável_Formatado' in df.columns:
-                    responsaveis_motivo = ['Todos'] + sorted(df['Responsável_Formatado'].dropna().unique())
+                if 'Responsável_Formatado' in df_para_analise.columns:
+                    responsaveis_motivo = ['Todos'] + sorted(df_para_analise['Responsável_Formatado'].dropna().unique())
                     responsavel_motivo = st.selectbox(
                         "👤 Responsável",
                         options=responsaveis_motivo,
@@ -4778,7 +5066,7 @@ if st.session_state.df_original is not None:
                     responsavel_motivo = 'Todos'
             
             # Aplicar filtros para análise
-            df_motivos = df.copy()
+            df_motivos = df_para_analise.copy()
             
             if ano_motivo != 'Todos os Anos':
                 df_motivos = df_motivos[df_motivos['Ano'] == int(ano_motivo)]
@@ -5006,10 +5294,8 @@ if st.session_state.df_original is not None:
                 # 5. Recomendações Automáticas
                 st.markdown("### 💡 Recomendações com Base nos Motivos")
                 
-                # Analisar padrões e gerar recomendações
                 recomendacoes = []
                 
-                # Motivo mais frequente
                 motivo_mais_frequente = df_com_motivo['Motivo_Revisao'].mode()
                 if not motivo_mais_frequente.empty:
                     recomendacoes.append({
@@ -5018,7 +5304,6 @@ if st.session_state.df_original is not None:
                         'Justificativa': f'Ocorreu {df_com_motivo[df_com_motivo["Motivo_Revisao"] == motivo_mais_frequente.iloc[0]].shape[0]} vezes'
                     })
                 
-                # Categoria mais frequente
                 categoria_mais_frequente = df_com_motivo['Categoria'].mode()
                 if not categoria_mais_frequente.empty:
                     recomendacoes.append({
@@ -5027,7 +5312,6 @@ if st.session_state.df_original is not None:
                         'Justificativa': f'Representa {(df_com_motivo["Categoria"] == categoria_mais_frequente.iloc[0]).sum() / len(df_com_motivo) * 100:.1f}% das ocorrências'
                     })
                 
-                # Responsável com mais revisões
                 if 'Responsável_Formatado' in df_com_motivo.columns:
                     responsavel_top = df_com_motivo['Responsável_Formatado'].value_counts().index[0] if len(df_com_motivo) > 0 else None
                     if responsavel_top:
@@ -5037,7 +5321,6 @@ if st.session_state.df_original is not None:
                             'Justificativa': f'Responsável por {df_com_motivo[df_com_motivo["Responsável_Formatado"] == responsavel_top].shape[0]} revisões'
                         })
                 
-                # Exibir recomendações
                 for rec in recomendacoes[:5]:
                     cor_classe = 'warning-card' if 'ALTA' in rec['Prioridade'] else 'info-card' if 'MÉDIA' in rec['Prioridade'] else 'performance-card'
                     st.markdown(f"""
@@ -5078,13 +5361,14 @@ if st.session_state.df_original is not None:
                         mime="text/csv",
                         use_container_width=True
                     )
-         # ============================================
+    
+    # ============================================
     # NOVA ABA: KPI IPE - ACUMULADO POR MÊS
     # ============================================
     with tab_ipe:
         st.markdown(f'<div class="section-title">🎯 KPI IPE - ÍNDICE DE PERFORMANCE DO ESPECIALISTA</div>', unsafe_allow_html=True)
         
-        if 'SRE' in df.columns and 'Status' in df.columns and 'Retorno Cliente' in df.columns:
+        if 'SRE' in df_para_analise.columns and 'Status' in df_para_analise.columns and 'Retorno Cliente' in df_para_analise.columns:
             
             def is_retorno_sim(valor):
                 """Verifica se o valor indica retorno do cliente (Sim)"""
@@ -5126,17 +5410,17 @@ if st.session_state.df_original is not None:
             col_filtro_ipe1, col_filtro_ipe2 = st.columns(2)
             
             with col_filtro_ipe1:
-                if 'Ano' in df.columns:
-                    anos_ipe = sorted(df['Ano'].dropna().unique().astype(int))
+                if 'Ano' in df_para_analise.columns:
+                    anos_ipe = sorted(df_para_analise['Ano'].dropna().unique().astype(int))
                     anos_opcoes_ipe = ['Todos'] + list(anos_ipe)
                     ano_ipe = st.selectbox("📅 Filtrar por Ano:", options=anos_opcoes_ipe, key="filtro_ano_ipe")
                 else:
                     ano_ipe = 'Todos'
             
             with col_filtro_ipe2:
-                if 'Mês' in df.columns:
+                if 'Mês' in df_para_analise.columns:
                     meses_map = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
-                    meses_disponiveis = sorted(df['Mês'].dropna().unique().astype(int))
+                    meses_disponiveis = sorted(df_para_analise['Mês'].dropna().unique().astype(int))
                     meses_opcoes_ipe = [meses_map[m] for m in meses_disponiveis]
                     meses_selecionados_nomes = st.multiselect("📆 Selecionar Mês(es):", options=meses_opcoes_ipe, default=meses_opcoes_ipe, key="filtro_meses_ipe")
                     meses_invertido = {v: k for k, v in meses_map.items()}
@@ -5145,7 +5429,7 @@ if st.session_state.df_original is not None:
                     meses_selecionados_numeros = []
             
             # APLICA FILTROS
-            df_ipe = df.copy()
+            df_ipe = df_para_analise.copy()
             if ano_ipe != 'Todos':
                 df_ipe = df_ipe[df_ipe['Ano'] == int(ano_ipe)]
             if meses_selecionados_numeros:
@@ -5275,6 +5559,15 @@ if st.session_state.df_original is not None:
                 """)
         else:
             st.warning("⚠️ Colunas necessárias ('SRE', 'Status', 'Retorno Cliente') não encontradas.")
+    
+    # ============================================
+    # NOVA ABA: ADMS vs ELIPSE
+    # ============================================
+    with tab_comparativo:
+        st.markdown(f'<div class="section-title">📊 ANÁLISE COMPARATIVA ADMS vs ELIPSE</div>', unsafe_allow_html=True)
+        
+        # Chamar a função de estatísticas comparativas
+        exibir_estatisticas_por_sistema(df_para_analise)
 
 else:
     st.markdown(f"""
