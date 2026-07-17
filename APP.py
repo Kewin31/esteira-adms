@@ -2251,7 +2251,7 @@ if st.session_state.df_original is not None:
     # ============================================
     # CRIAR TABS PRINCIPAIS
     # ============================================
-    tab_principal, tab_mapa, tab_motivos, tab_ipe = st.tabs(["📊 Dashboard Principal", "🗺️ Mapa de Sincronizações", "🔍 Motivos de Revisão", "📈 SRE Performance (KPI IPE)"])
+    tab_principal, tab_mapa, tab_motivos, tab_ipe = st.tabs(["📊 Principal", "🗺️ Mapa", "🔍 Motivos de Revisão", "📈 KPI"])
     
     with tab_principal:
         st.markdown("## 📊 Informações da Base de Dados")
