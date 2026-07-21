@@ -1589,7 +1589,7 @@ st.markdown(f"""
                 letter-spacing: -0.3px;
                 text-shadow: 0 1px 2px rgba(0,0,0,0.1);
             ">
-                📊 ESTEIRA SRE
+                📊 ESTEIRA SRE (Site Reliability Engineering)
             </h1>
             <p style="
                 color: rgba(255,255,255,0.9);
@@ -1597,7 +1597,7 @@ st.markdown(f"""
                 font-size: 0.85rem;
                 font-weight: 400;
             ">
-                Acompanhamento de Demandas - EAC | EMR | EMS | EMT | EPB | ERO | ESE | ESS | ETO
+                Acompanhamento das validações da EAC | EMR | EMS | EMT | EPB | ERO | ESE | ESS | ETO
             </p>
         </div>
         <div style="text-align: right;">
@@ -2097,7 +2097,7 @@ if st.session_state.df_original is not None:
     tab_principal, tab_mapa, tab_ipe, tab_estatistica = st.tabs(["📊 Principal", "🗺️ Mapa", "📈 KPI", "📈 Análise Estatística"])
     
     with tab_principal:
-        st.markdown("## 📊 Informações da Base de Dados")
+        st.markdown("## 📊 Base de Dados")
         
         if 'Criado' in df.columns and not df.empty:
             data_min = df['Criado'].min()
@@ -2148,8 +2148,8 @@ if st.session_state.df_original is not None:
         tab1, tab2, tab3, tab4 = st.tabs([
             "📅 Evolução de Demandas", 
             "📊 Análise de Revisões", 
-            "📈 Chamados Sincronizados por Dia",
-            "🏆 Performance dos SREs + Análise Avançada"
+            "📈 Sincronização Diária",
+            "🏆 Análise Avançada SRE"
         ])
         
         with tab1:
