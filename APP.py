@@ -3862,9 +3862,12 @@ if st.session_state.df_original is not None:
             | **ERO** | Energisa Rondônia | RO |
             | **EAC** | Energisa Acre | AC |
             """, unsafe_allow_html=True)
+            
 # ============================================
 # NOVA ABA: ANÁLISE ESTATÍSTICA
 # ============================================
+tab_principal, tab_mapa, tab_ipe, tab_estatistica = st.tabs(["📊 Principal", "🗺️ Mapa", "📈 KPI", "📈 Análise Estatística"])
+
 with tab_estatistica:
     st.markdown("## 📈 ANÁLISE ESTATÍSTICA AVANÇADA")
     st.markdown("_Análise de frequência, medidas separatrizes, moda, tendência por percentil, assimetria e testes de hipótese_")
@@ -4520,7 +4523,7 @@ with tab_estatistica:
         st.markdown("### 8️⃣ MEDIDAS DE ASSIMETRIA")
         st.markdown("_Análise da forma da distribuição dos dados_")
         
-        if 'Criado' in df_sinc_est.columns and not sinc_por_dia_est.empty:
+        if 'Criado' in df_sinc_est.columns and 'sinc_por_dia_est' in locals() and not sinc_por_dia_est.empty:
             from scipy import stats
             
             valores = sinc_por_dia_est['Quantidade']
@@ -4687,7 +4690,7 @@ with tab_estatistica:
         st.markdown("### 🔟 TESTE DE HIPÓTESE")
         st.markdown("_Análise estatística para comparar grupos e validar diferenças_")
         
-        if 'Criado' in df_sinc_est.columns and 'Dia_Semana' in df_sinc_est.columns:
+        if 'Criado' in df_sinc_est.columns and 'sinc_por_dia_est' in locals() and not sinc_por_dia_est.empty:
             from scipy import stats
             
             # Preparar dados para teste
@@ -4703,75 +4706,66 @@ with tab_estatistica:
             
             # Agrupar por dia da semana
             grupos_dia = []
+            dias_validos = []
             for dia in ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']:
                 dados_dia = df_sinc_est[df_sinc_est['Dia_Semana_PT'] == dia]
                 if not dados_dia.empty:
-                    grupos_dia.append(dados_dia.groupby('Data').size().values)
+                    valores_dia = dados_dia.groupby('Data').size().values
+                    if len(valores_dia) > 0:
+                        grupos_dia.append(valores_dia)
+                        dias_validos.append(dia)
             
             # Teste de hipótese: ANOVA para comparar dias da semana
             st.markdown("#### 📊 Comparação entre Dias da Semana (ANOVA)")
             
             if len(grupos_dia) >= 2:
-                # Verificar se todos os grupos têm dados
-                grupos_validos = [g for g in grupos_dia if len(g) > 0]
+                # ANOVA
+                f_stat, p_valor = stats.f_oneway(*grupos_dia)
                 
-                if len(grupos_validos) >= 2:
-                    # ANOVA
-                    f_stat, p_valor = stats.f_oneway(*grupos_validos)
-                    
-                    col_hip1, col_hip2, col_hip3 = st.columns(3)
-                    
-                    with col_hip1:
-                        st.metric(
-                            "📊 Estatística F",
-                            f"{f_stat:.3f}"
-                        )
-                    
-                    with col_hip2:
-                        st.metric(
-                            "🎯 p-valor",
-                            f"{p_valor:.6f}",
-                            delta="Significativo" if p_valor < 0.05 else "Não significativo",
-                            delta_color="normal" if p_valor < 0.05 else "inverse"
-                        )
-                    
-                    with col_hip3:
-                        if p_valor < 0.05:
-                            st.success("✅ **Rejeita H0** - Há diferença significativa entre os dias da semana")
-                        else:
-                            st.info("ℹ️ **Não rejeita H0** - Não há diferença significativa entre os dias da semana")
-                    
-                    # Boxplot por dia da semana
-                    fig_box_dia = go.Figure()
-                    
-                    dias_ordenados = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
-                    dados_box = []
-                    for dia in dias_ordenados:
-                        dados_dia = df_sinc_est[df_sinc_est['Dia_Semana_PT'] == dia]
-                        if not dados_dia.empty:
-                            valores_dia = dados_dia.groupby('Data').size()
-                            if not valores_dia.empty:
-                                dados_box.append(go.Box(
-                                    y=valores_dia,
-                                    name=dia,
-                                    marker_color=COR_AZUL_PETROLEO,
-                                    line_color=COR_AZUL_ESCURO,
-                                    fillcolor='rgba(2, 138, 159, 0.3)'
-                                ))
-                    
-                    if dados_box:
-                        for trace in dados_box:
-                            fig_box_dia.add_trace(trace)
-                        
-                        fig_box_dia.update_layout(
-                            title='Distribuição de Sincronizações por Dia da Semana',
-                            yaxis_title='Sincronizações',
-                            height=400,
-                            plot_bgcolor=COR_BRANCO,
-                            showlegend=False
-                        )
-                        
-                        st.plotly_chart(fig_box_dia, use_container_width=True)
+                col_hip1, col_hip2, col_hip3 = st.columns(3)
+                
+                with col_hip1:
+                    st.metric(
+                        "📊 Estatística F",
+                        f"{f_stat:.3f}"
+                    )
+                
+                with col_hip2:
+                    st.metric(
+                        "🎯 p-valor",
+                        f"{p_valor:.6f}",
+                        delta="Significativo" if p_valor < 0.05 else "Não significativo",
+                        delta_color="normal" if p_valor < 0.05 else "inverse"
+                    )
+                
+                with col_hip3:
+                    if p_valor < 0.05:
+                        st.success("✅ **Rejeita H0** - Há diferença significativa entre os dias da semana")
+                    else:
+                        st.info("ℹ️ **Não rejeita H0** - Não há diferença significativa entre os dias da semana")
+                
+                # Boxplot por dia da semana
+                fig_box_dia = go.Figure()
+                
+                for dia, dados in zip(dias_validos, grupos_dia):
+                    if len(dados) > 0:
+                        fig_box_dia.add_trace(go.Box(
+                            y=dados,
+                            name=dia,
+                            marker_color=COR_AZUL_PETROLEO,
+                            line_color=COR_AZUL_ESCURO,
+                            fillcolor='rgba(2, 138, 159, 0.3)'
+                        ))
+                
+                fig_box_dia.update_layout(
+                    title='Distribuição de Sincronizações por Dia da Semana',
+                    yaxis_title='Sincronizações',
+                    height=400,
+                    plot_bgcolor=COR_BRANCO,
+                    showlegend=False
+                )
+                
+                st.plotly_chart(fig_box_dia, use_container_width=True)
             
             # Teste de hipótese: Comparar manhã vs tarde
             st.markdown("#### 🕐 Comparação entre Períodos (Manhã vs Tarde)")
@@ -4786,10 +4780,12 @@ with tab_estatistica:
                 # Agrupar por período
                 periodos = ['Manhã (07:30-12:00)', 'Tarde (13:00-17:00)', 'Fim do Dia (17:00-19:30)']
                 grupos_periodo = []
+                periodos_validos = []
                 for periodo in periodos:
-                    dados_periodo = df_sinc_est[df_sinc_est['Periodo'] == periodo]
-                    if not dados_periodo.empty:
-                        grupos_periodo.append(dados_periodo['Hora'].values)
+                    dados_periodo = df_sinc_est[df_sinc_est['Periodo'] == periodo]['Hora'].values
+                    if len(dados_periodo) > 0:
+                        grupos_periodo.append(dados_periodo)
+                        periodos_validos.append(periodo)
                 
                 if len(grupos_periodo) >= 2:
                     # ANOVA
@@ -4816,30 +4812,30 @@ with tab_estatistica:
                             st.success("✅ **Rejeita H0** - Há diferença significativa entre os períodos do dia")
                         else:
                             st.info("ℹ️ **Não rejeita H0** - Não há diferença significativa entre os períodos do dia")
+        
+        # Explicação dos testes (movido para fora do if)
+        with st.expander("📖 Entendendo os Testes de Hipótese", expanded=False):
+            st.markdown("""
+            **🎯 ANOVA (Análise de Variância)**
             
-            # Explicação dos testes
-            with st.expander("📖 Entendendo os Testes de Hipótese", expanded=False):
-                st.markdown("""
-                **🎯 ANOVA (Análise de Variância)**
-                
-                **O que faz:** Compara as médias de três ou mais grupos para verificar se há diferença significativa entre eles.
-                
-                **Hipóteses:**
-                - **H0 (Hipótese Nula):** As médias dos grupos são iguais
-                - **H1 (Hipótese Alternativa):** Pelo menos uma média é diferente
-                
-                **Interpretação:**
-                - **p-valor < 0.05:** Rejeitamos H0. Há evidência estatística de que os grupos são diferentes.
-                - **p-valor ≥ 0.05:** Não rejeitamos H0. Não há evidência estatística de diferença entre os grupos.
-                
-                **📊 Estatística F:**
-                - Mede a razão entre a variabilidade entre grupos e a variabilidade dentro dos grupos
-                - Quanto maior o F, maior a diferença entre os grupos
-                
-                **Exemplo prático:**
-                - Se p-valor < 0.05 para comparação de dias da semana, significa que o volume de sincronizações realmente varia conforme o dia
-                - Se p-valor ≥ 0.05, as diferenças observadas podem ser apenas por acaso
-                """)
+            **O que faz:** Compara as médias de três ou mais grupos para verificar se há diferença significativa entre eles.
+            
+            **Hipóteses:**
+            - **H0 (Hipótese Nula):** As médias dos grupos são iguais
+            - **H1 (Hipótese Alternativa):** Pelo menos uma média é diferente
+            
+            **Interpretação:**
+            - **p-valor < 0.05:** Rejeitamos H0. Há evidência estatística de que os grupos são diferentes.
+            - **p-valor ≥ 0.05:** Não rejeitamos H0. Não há evidência estatística de diferença entre os grupos.
+            
+            **📊 Estatística F:**
+            - Mede a razão entre a variabilidade entre grupos e a variabilidade dentro dos grupos
+            - Quanto maior o F, maior a diferença entre os grupos
+            
+            **Exemplo prático:**
+            - Se p-valor < 0.05 para comparação de dias da semana, significa que o volume de sincronizações realmente varia conforme o dia
+            - Se p-valor ≥ 0.05, as diferenças observadas podem ser apenas por acaso
+            """)
         
         # ============================================
         # EXPORTAÇÃO DE DADOS
@@ -4851,7 +4847,7 @@ with tab_estatistica:
         
         with col_export1:
             # Exportar dados de frequência
-            if not freq_chamados.empty:
+            if 'freq_chamados' in locals() and not freq_chamados.empty:
                 csv_freq = freq_chamados.to_csv(index=False).encode('utf-8-sig')
                 st.download_button(
                     label="📥 Exportar Frequência de Chamados",
