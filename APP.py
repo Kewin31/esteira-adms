@@ -14,31 +14,48 @@ import streamlit.components.v1 as components
 warnings.filterwarnings('ignore')
 
 # ============================================
-# PALETA DE CORES - NOVA IDENTIDADE VISUAL
+# PALETA DE CORES - ESTILO FUTURISTA/EXECUTIVO
 # ============================================
-# Cores principais
-COR_VERDE_ESCURO = "#2E7D32"      # Verde escuro - principal
-COR_AZUL_PETROLEO = "#028a9f"     # Azul petróleo - secundário
-COR_AZUL_ESCURO = "#005973"       # Azul escuro - destaque
-COR_LARANJA = "#F57C00"           # Laranja - alertas/positivo
-COR_VERMELHO = "#C62828"          # Vermelho - erros/negativo
 
-# Cores neutras
-COR_CINZA_FUNDO = "#F8F9FA"       # Cinza muito claro para fundos
-COR_CINZA_BORDA = "#E9ECEF"       # Cinza para bordas
-COR_CINZA_TEXTO = "#6C757D"       # Cinza para textos secundários
-COR_BRANCO = "#FFFFFF"            # Branco
-COR_PRETO_SUAVE = "#212529"       # Preto suave para textos principais
+# Cores Principais - Tomos azul/teal com toque tecnológico
+COR_PRIMARIA = "#0A1628"          # Azul escuro profundo - base
+COR_SECUNDARIA = "#1A3A5C"        # Azul médio - secundário
+COR_DESTAQUE = "#00D4FF"          # Ciano vibrante - destaque/links
+COR_ACENTO = "#7B61FF"            # Roxo/azul - acentos
+COR_POSITIVO = "#00E676"          # Verde neon - positivo/sucesso
+COR_ALERTA = "#FFB300"            # Âmbar - alertas
+COR_NEGATIVO = "#FF5252"          # Vermelho suave - negativo/erro
 
-# Cores para gráficos
+# Cores Neutras - Escala cinza com toque azulado
+COR_FUNDO = "#0D1B2A"             # Azul muito escuro - fundo principal
+COR_CARTAO = "#1A2D3D"            # Azul escuro - cards
+COR_BORDA = "#2A4A6A"             # Azul médio-escuro - bordas
+COR_TEXTO_PRIMARIO = "#E8F0F8"    # Branco azulado - texto principal
+COR_TEXTO_SECUNDARIO = "#8AA8C8"  # Azul claro - texto secundário
+COR_TEXTO_CLARO = "#4A6A8A"       # Azul acinzentado - texto menos importante
+
+# Cores para Gráficos - Gradiente tecnológico
 CORES_GRADIENTE = [
-    COR_VERDE_ESCURO,
-    COR_AZUL_PETROLEO,
-    COR_AZUL_ESCURO,
-    COR_LARANJA,
-    COR_VERMELHO,
-    "#1E88E5"  # Azul adicional
+    "#00D4FF",  # Ciano
+    "#7B61FF",  # Roxo
+    "#00E676",  # Verde neon
+    "#FFB300",  # Âmbar
+    "#FF5252",  # Vermelho
+    "#4FC3F7",  # Azul claro
+    "#B388FF",  # Roxo claro
+    "#69F0AE",  # Verde claro
 ]
+
+# Cores para Mapas - Gradiente de intensidade
+COR_MAPA_BAIXO = "#1A3A5C"        # Azul escuro - baixo volume
+COR_MAPA_MEDIO = "#7B61FF"        # Roxo - médio volume
+COR_MAPA_ALTO = "#FF5252"         # Vermelho - alto volume
+
+# Cores para Cards de Status
+COR_STATUS_SUCESSO = "#00E676"
+COR_STATUS_ALERTA = "#FFB300"
+COR_STATUS_ERRO = "#FF5252"
+COR_STATUS_INFO = "#00D4FF"
 
 # ============================================
 # MAPEAMENTO COMPLETO DAS EMPRESAS
@@ -135,269 +152,481 @@ CAMINHOS_ALTERNATIVOS = [
 # ============================================
 st.set_page_config(
     page_title="Esteira ADMS - Dashboard",
-    page_icon="📊",
+    page_icon="✦",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ============================================
-# CSS PERSONALIZADO - NOVA PALETA
+# CSS PERSONALIZADO - ESTILO FUTURISTA/EXECUTIVO
 # ============================================
 st.markdown(f"""
 <style>
     /* Reset e estilos base */
     .stApp {{
-        background-color: {COR_CINZA_FUNDO};
+        background-color: {COR_FUNDO};
+        color: {COR_TEXTO_PRIMARIO};
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
     }}
     
-    /* Main header - estilo Monitoring Center */
-    .main-header-monitoring {{
-        background: {COR_CINZA_FUNDO};
-        padding: 1.2rem 2rem;
+    /* ========== HEADER ========== */
+    .main-header {{
+        background: linear-gradient(135deg, {COR_PRIMARIA} 0%, {COR_SECUNDARIA} 100%);
+        padding: 1rem 2rem;
         margin-bottom: 1.5rem;
-        border-bottom: 4px solid {COR_AZUL_ESCURO};
+        border-bottom: 2px solid {COR_DESTAQUE};
         border-radius: 0;
+        box-shadow: 0 4px 20px rgba(0, 212, 255, 0.1);
     }}
     
-    /* Cards de métricas */
+    .main-header h1 {{
+        font-size: 1.4rem !important;
+        font-weight: 600;
+        letter-spacing: -0.3px;
+        color: {COR_TEXTO_PRIMARIO};
+        margin: 0;
+    }}
+    
+    .main-header p {{
+        font-size: 0.75rem !important;
+        color: {COR_TEXTO_SECUNDARIO};
+        margin: 0.2rem 0 0 0;
+        font-weight: 400;
+    }}
+    
+    /* ========== CARDS DE MÉTRICAS ========== */
     .metric-card {{
-        background: {COR_BRANCO};
-        padding: 1.2rem;
+        background: {COR_CARTAO};
+        padding: 0.8rem 1rem;
         border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        border: 1px solid {COR_CINZA_BORDA};
-        margin-bottom: 1rem;
+        border: 1px solid {COR_BORDA};
+        margin-bottom: 0.8rem;
         transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }}
+    
+    .metric-card::before {{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, {COR_DESTAQUE}, {COR_ACENTO});
+        opacity: 0.6;
     }}
     
     .metric-card:hover {{
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 89, 115, 0.1);
-        border-color: {COR_AZUL_PETROLEO};
+        border-color: {COR_DESTAQUE};
+        box-shadow: 0 4px 20px rgba(0, 212, 255, 0.15);
     }}
     
     .metric-value {{
-        font-size: 2rem;
+        font-size: 1.6rem !important;
         font-weight: 700;
-        color: {COR_AZUL_ESCURO};
+        color: {COR_TEXTO_PRIMARIO};
         margin: 0;
         line-height: 1.2;
     }}
     
     .metric-label {{
-        font-size: 0.85rem;
-        color: {COR_CINZA_TEXTO};
-        margin: 0.5rem 0 0 0;
+        font-size: 0.7rem !important;
+        color: {COR_TEXTO_SECUNDARIO};
+        margin: 0.3rem 0 0 0;
         font-weight: 500;
-    }}
-    
-    /* Títulos de seção */
-    .section-title {{
-        color: {COR_AZUL_ESCURO};
-        border-left: 4px solid {COR_VERDE_ESCURO};
-        padding-left: 1rem;
-        margin-bottom: 1.5rem;
-        font-size: 1.2rem;
-        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }}
     
-    /* Sidebar */
+    .metric-icon {{
+        font-size: 1.4rem;
+        opacity: 0.8;
+    }}
+    
+    /* ========== TÍTULOS DE SEÇÃO ========== */
+    .section-title {{
+        color: {COR_TEXTO_PRIMARIO};
+        border-left: 3px solid {COR_DESTAQUE};
+        padding-left: 0.8rem;
+        margin-bottom: 1.2rem;
+        font-size: 1rem !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        opacity: 0.9;
+    }}
+    
+    /* ========== SIDEBAR ========== */
     [data-testid="stSidebar"] {{
-        background: {COR_BRANCO};
-        border-right: 1px solid {COR_CINZA_BORDA};
+        background: {COR_PRIMARIA};
+        border-right: 1px solid {COR_BORDA};
+    }}
+    
+    [data-testid="stSidebar"] .stSelectbox label,
+    [data-testid="stSidebar"] .stTextInput label,
+    [data-testid="stSidebar"] .stMultiSelect label {{
+        font-size: 0.7rem !important;
+        color: {COR_TEXTO_SECUNDARIO};
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }}
+    
+    [data-testid="stSidebar"] .stSelectbox div,
+    [data-testid="stSidebar"] .stTextInput div {{
+        font-size: 0.8rem !important;
     }}
     
     .sidebar-section {{
-        background: {COR_CINZA_FUNDO};
-        padding: 1rem;
+        background: {COR_CARTAO};
+        padding: 0.8rem;
         border-radius: 8px;
-        margin-bottom: 1rem;
-        border: 1px solid {COR_CINZA_BORDA};
+        margin-bottom: 0.8rem;
+        border: 1px solid {COR_BORDA};
     }}
     
-    /* Informações da base */
-    .info-base {{
-        background: {COR_CINZA_FUNDO};
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid {COR_VERDE_ESCURO};
-        margin-bottom: 1.5rem;
+    .sidebar-section .stSelectbox,
+    .sidebar-section .stTextInput {{
+        font-size: 0.75rem !important;
     }}
     
-    /* Rodapé */
-    .footer {{
-        text-align: center;
-        margin-top: 3rem;
-        padding-top: 1.5rem;
-        border-top: 2px solid {COR_CINZA_BORDA};
-        color: {COR_CINZA_TEXTO};
-        font-size: 0.85rem;
-    }}
-    
-    /* Status cards */
-    .status-success {{
-        background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
-        border-left: 4px solid {COR_VERDE_ESCURO};
-        padding: 0.75rem;
-        border-radius: 8px;
-    }}
-    
-    .status-warning {{
-        background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
-        border-left: 4px solid {COR_LARANJA};
-        padding: 0.75rem;
-        border-radius: 8px;
-    }}
-    
-    .status-danger {{
-        background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
-        border-left: 4px solid {COR_VERMELHO};
-        padding: 0.75rem;
-        border-radius: 8px;
-    }}
-    
-    /* Cards de performance */
-    .performance-card {{
-        background: linear-gradient(135deg, {COR_BRANCO}, #F1F8E9);
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid {COR_VERDE_ESCURO};
-        margin-bottom: 1rem;
-    }}
-    
-    .warning-card {{
-        background: linear-gradient(135deg, {COR_BRANCO}, #FFF3E0);
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid {COR_LARANJA};
-        margin-bottom: 1rem;
-    }}
-    
-    .alert-card {{
-        background: linear-gradient(135deg, {COR_BRANCO}, #FFEBEE);
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid {COR_VERMELHO};
-        margin-bottom: 1rem;
-    }}
-    
-    .info-card {{
-        background: linear-gradient(135deg, {COR_BRANCO}, #E0F7FA);
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid {COR_AZUL_PETROLEO};
-        margin-bottom: 1rem;
-    }}
-    
-    /* Botões */
-    .stButton > button {{
-        background: {COR_AZUL_ESCURO};
-        color: {COR_BRANCO};
-        border: none;
-        border-radius: 6px;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }}
-    
-    .stButton > button:hover {{
-        background: {COR_AZUL_PETROLEO};
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 89, 115, 0.3);
-    }}
-    
-    /* Badges e tags */
-    .badge-success {{
-        background-color: {COR_VERDE_ESCURO};
-        color: {COR_BRANCO};
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }}
-    
-    .badge-warning {{
-        background-color: {COR_LARANJA};
-        color: {COR_BRANCO};
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }}
-    
-    .badge-danger {{
-        background-color: {COR_VERMELHO};
-        color: {COR_BRANCO};
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }}
-    
-    .badge-info {{
-        background-color: {COR_AZUL_PETROLEO};
-        color: {COR_BRANCO};
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }}
-    
-    /* Quadrantes da matriz */
-    .matrix-quadrant {{
-        padding: 10px;
-        border-radius: 8px;
-        margin: 5px;
-        font-weight: bold;
-        text-align: center;
-    }}
-    
-    .quadrant-stars {{
-        background-color: #E8F5E9;
-        color: {COR_VERDE_ESCURO};
-        border: 2px solid {COR_VERDE_ESCURO};
-    }}
-    
-    .quadrant-efficient {{
-        background-color: #FFF3E0;
-        color: {COR_LARANJA};
-        border: 2px solid {COR_LARANJA};
-    }}
-    
-    .quadrant-careful {{
-        background-color: #E0F7FA;
-        color: {COR_AZUL_PETROLEO};
-        border: 2px solid {COR_AZUL_PETROLEO};
-    }}
-    
-    .quadrant-needs-help {{
-        background-color: #FFEBEE;
-        color: {COR_VERMELHO};
-        border: 2px solid {COR_VERMELHO};
-    }}
-    
-    /* Tabelas */
+    /* ========== TABELAS ========== */
     .dataframe {{
+        font-size: 0.75rem !important;
         border-collapse: collapse;
         width: 100%;
+        background: {COR_CARTAO};
+        border-radius: 8px;
+        overflow: hidden;
     }}
     
     .dataframe th {{
-        background-color: {COR_AZUL_ESCURO};
-        color: {COR_BRANCO};
-        padding: 10px;
+        background: {COR_SECUNDARIA};
+        color: {COR_TEXTO_PRIMARIO};
+        padding: 8px 12px;
         text-align: left;
+        font-size: 0.7rem !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }}
     
     .dataframe td {{
-        padding: 8px;
-        border-bottom: 1px solid {COR_CINZA_BORDA};
+        padding: 6px 12px;
+        border-bottom: 1px solid {COR_BORDA};
+        font-size: 0.75rem !important;
+        color: {COR_TEXTO_SECUNDARIO};
     }}
     
-    .dataframe tr:hover {{
-        background-color: {COR_CINZA_FUNDO};
+    .dataframe tr:hover td {{
+        background: {COR_BORDA};
+        color: {COR_TEXTO_PRIMARIO};
+    }}
+    
+    /* ========== STATUS CARDS ========== */
+    .status-success {{
+        background: linear-gradient(135deg, {COR_CARTAO}, rgba(0, 230, 118, 0.1));
+        border-left: 3px solid {COR_POSITIVO};
+        padding: 0.6rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.75rem !important;
+    }}
+    
+    .status-warning {{
+        background: linear-gradient(135deg, {COR_CARTAO}, rgba(255, 179, 0, 0.1));
+        border-left: 3px solid {COR_ALERTA};
+        padding: 0.6rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.75rem !important;
+    }}
+    
+    .status-danger {{
+        background: linear-gradient(135deg, {COR_CARTAO}, rgba(255, 82, 82, 0.1));
+        border-left: 3px solid {COR_NEGATIVO};
+        padding: 0.6rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.75rem !important;
+    }}
+    
+    /* ========== BOTÕES ========== */
+    .stButton > button {{
+        background: linear-gradient(135deg, {COR_DESTAQUE}, {COR_ACENTO});
+        color: {COR_PRIMARIA};
+        border: none;
+        border-radius: 6px;
+        padding: 0.4rem 1rem;
+        font-weight: 600;
+        font-size: 0.75rem !important;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }}
+    
+    .stButton > button:hover {{
+        transform: translateY(-1px);
+        box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+        opacity: 0.9;
+    }}
+    
+    .stButton > button:active {{
+        transform: scale(0.98);
+    }}
+    
+    /* ========== TABS ========== */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 4px;
+        background: {COR_CARTAO};
+        border-radius: 8px;
+        padding: 4px;
+        border: 1px solid {COR_BORDA};
+    }}
+    
+    .stTabs [data-baseweb="tab"] {{
+        font-size: 0.7rem !important;
+        font-weight: 500;
+        padding: 6px 16px;
+        border-radius: 6px;
+        background: transparent;
+        color: {COR_TEXTO_SECUNDARIO};
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }}
+    
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {{
+        background: linear-gradient(135deg, {COR_DESTAQUE}, {COR_ACENTO});
+        color: {COR_PRIMARIA};
+        font-weight: 600;
+    }}
+    
+    .stTabs [data-baseweb="tab"]:hover {{
+        color: {COR_TEXTO_PRIMARIO};
+    }}
+    
+    /* ========== EXPANDERS ========== */
+    .streamlit-expanderHeader {{
+        font-size: 0.75rem !important;
+        font-weight: 500;
+        color: {COR_TEXTO_SECUNDARIO};
+        background: {COR_CARTAO};
+        border: 1px solid {COR_BORDA};
+        border-radius: 6px;
+        padding: 6px 12px;
+    }}
+    
+    .streamlit-expanderHeader:hover {{
+        border-color: {COR_DESTAQUE};
+        color: {COR_TEXTO_PRIMARIO};
+    }}
+    
+    /* ========== METRICAS STREAMLIT ========== */
+    [data-testid="stMetricValue"] {{
+        font-size: 1.2rem !important;
+        font-weight: 700;
+        color: {COR_TEXTO_PRIMARIO};
+    }}
+    
+    [data-testid="stMetricLabel"] {{
+        font-size: 0.6rem !important;
+        color: {COR_TEXTO_SECUNDARIO};
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }}
+    
+    [data-testid="stMetricDelta"] {{
+        font-size: 0.65rem !important;
+    }}
+    
+    /* ========== TEXTO GERAL ========== */
+    .stMarkdown {{
+        font-size: 0.8rem !important;
+        color: {COR_TEXTO_SECUNDARIO};
+    }}
+    
+    .stMarkdown h1 {{
+        font-size: 1.6rem !important;
+        color: {COR_TEXTO_PRIMARIO};
+    }}
+    
+    .stMarkdown h2 {{
+        font-size: 1.2rem !important;
+        color: {COR_TEXTO_PRIMARIO};
+    }}
+    
+    .stMarkdown h3 {{
+        font-size: 1rem !important;
+        color: {COR_TEXTO_PRIMARIO};
+    }}
+    
+    .stMarkdown h4 {{
+        font-size: 0.85rem !important;
+        color: {COR_TEXTO_PRIMARIO};
+    }}
+    
+    .stMarkdown p {{
+        font-size: 0.8rem !important;
+        color: {COR_TEXTO_SECUNDARIO};
+        line-height: 1.5;
+    }}
+    
+    .stMarkdown small {{
+        font-size: 0.65rem !important;
+        color: {COR_TEXTO_CLARO};
+    }}
+    
+    /* ========== SELECTBOX E INPUTS ========== */
+    .stSelectbox div,
+    .stTextInput div,
+    .stMultiSelect div {{
+        font-size: 0.75rem !important;
+    }}
+    
+    .stSelectbox label,
+    .stTextInput label,
+    .stMultiSelect label {{
+        font-size: 0.65rem !important;
+        color: {COR_TEXTO_SECUNDARIO};
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }}
+    
+    /* ========== SLIDER ========== */
+    .stSlider label {{
+        font-size: 0.65rem !important;
+        color: {COR_TEXTO_SECUNDARIO};
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }}
+    
+    .stSlider div {{
+        font-size: 0.7rem !important;
+    }}
+    
+    /* ========== INFO BASE ========== */
+    .info-base {{
+        background: {COR_CARTAO};
+        padding: 0.8rem 1rem;
+        border-radius: 8px;
+        border-left: 3px solid {COR_DESTAQUE};
+        margin-bottom: 1.2rem;
+        font-size: 0.75rem !important;
+    }}
+    
+    .info-base p {{
+        margin: 0;
+        color: {COR_TEXTO_SECUNDARIO};
+    }}
+    
+    .info-base strong {{
+        color: {COR_TEXTO_PRIMARIO};
+    }}
+    
+    /* ========== RODAPÉ ========== */
+    .footer {{
+        text-align: center;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid {COR_BORDA};
+        font-size: 0.65rem !important;
+        color: {COR_TEXTO_CLARO};
+    }}
+    
+    .footer a {{
+        color: {COR_DESTAQUE};
+        text-decoration: none;
+    }}
+    
+    .footer a:hover {{
+        color: {COR_ACENTO};
+        text-decoration: underline;
+    }}
+    
+    /* ========== BADGES ========== */
+    .badge-success {{
+        background: {COR_POSITIVO};
+        color: {COR_PRIMARIA};
+        padding: 0.15rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.6rem !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }}
+    
+    .badge-warning {{
+        background: {COR_ALERTA};
+        color: {COR_PRIMARIA};
+        padding: 0.15rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.6rem !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }}
+    
+    .badge-danger {{
+        background: {COR_NEGATIVO};
+        color: {COR_PRIMARIA};
+        padding: 0.15rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.6rem !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }}
+    
+    .badge-info {{
+        background: {COR_DESTAQUE};
+        color: {COR_PRIMARIA};
+        padding: 0.15rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.6rem !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }}
+    
+    /* ========== GLOW EFFECTS ========== */
+    .glow-text {{
+        color: {COR_TEXTO_PRIMARIO};
+        text-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+    }}
+    
+    .glow-border {{
+        border: 1px solid {COR_DESTAQUE};
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.05);
+    }}
+    
+    /* ========== SCROLLBAR ========== */
+    ::-webkit-scrollbar {{
+        width: 6px;
+        height: 6px;
+    }}
+    
+    ::-webkit-scrollbar-track {{
+        background: {COR_PRIMARIA};
+    }}
+    
+    ::-webkit-scrollbar-thumb {{
+        background: {COR_BORDA};
+        border-radius: 3px;
+    }}
+    
+    ::-webkit-scrollbar-thumb:hover {{
+        background: {COR_DESTAQUE};
+    }}
+    
+    /* ========== PLOTLY ========== */
+    .js-plotly-plot .plotly .main-svg {{
+        background: transparent !important;
+    }}
+    
+    .js-plotly-plot .plotly .main-svg .cartesianlayer {{
+        background: transparent !important;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -438,7 +667,7 @@ def formatar_nome_responsavel(nome):
     return nome_str.title()
 
 def criar_card_indicador_simples(valor, label, icone="📊"):
-    """Cria card de indicador SIMPLES - sem delta"""
+    """Cria card de indicador SIMPLES - estilo futurista"""
     if isinstance(valor, (int, float)):
         valor_formatado = f"{valor:,}"
     else:
@@ -447,8 +676,8 @@ def criar_card_indicador_simples(valor, label, icone="📊"):
     return f'''
     <div class="metric-card">
         <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 1.8rem;">{icone}</span>
-            <div>
+            <span class="metric-icon">{icone}</span>
+            <div style="flex: 1;">
                 <div class="metric-value">{valor_formatado}</div>
                 <div class="metric-label">{label}</div>
             </div>
@@ -667,139 +896,143 @@ def criar_popup_indicadores(df):
         texto_principal = f"✅ **SRE VALIDOU {cards_validados} CARDS SEM RETORNO DE ERRO!**"
         subtexto = f"Performance excepcional em {nome_mes_pt} - 100% de aprovação direta"
         emoji_titulo = "🎯"
-        cor_destaque = COR_VERDE_ESCURO
+        cor_destaque = COR_POSITIVO
     elif taxa_erro <= 5:
         texto_principal = f"⚡ **SRE VALIDOU {cards_validados} CARDS COM APENAS {cards_com_erro} AJUSTES**"
         subtexto = f"Alta qualidade no mês de {nome_mes_pt} - Taxa de erro de apenas {taxa_erro:.1f}%"
         emoji_titulo = "🚀"
-        cor_destaque = COR_AZUL_PETROLEO
+        cor_destaque = COR_ALERTA
     else:
         texto_principal = f"📊 **SRE VALIDOU {cards_validados} CARDS, {cards_com_erro} COM RETORNO**"
         subtexto = f"Análise de {nome_mes_pt} - {taxa_sucesso:.1f}% de taxa de sucesso"
         emoji_titulo = "📈"
-        cor_destaque = COR_LARANJA
+        cor_destaque = COR_NEGATIVO
     
     popup_html = f'''
     <div id="popupOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                background: rgba(0, 0, 0, 0.7); z-index: 10000; display: flex; 
-                justify-content: center; align-items: center; backdrop-filter: blur(3px);">
-        <div style="background: {COR_BRANCO}; width: 90%; max-width: 900px; max-height: 90vh;
+                background: rgba(0, 0, 0, 0.85); z-index: 10000; display: flex; 
+                justify-content: center; align-items: center; backdrop-filter: blur(8px);">
+        <div style="background: {COR_CARTAO}; width: 90%; max-width: 900px; max-height: 90vh;
                     border-radius: 12px; padding: 0; overflow: hidden; 
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out;">
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.5); border: 1px solid {COR_BORDA};
+                    animation: slideIn 0.3s ease-out;">
             
-            <div style="background: linear-gradient(135deg, {COR_AZUL_ESCURO}, {COR_AZUL_PETROLEO}); 
-                        padding: 1.5rem 2rem; color: {COR_BRANCO};">
+            <div style="background: linear-gradient(135deg, {COR_PRIMARIA}, {COR_SECUNDARIA}); 
+                        padding: 1.5rem 2rem; border-bottom: 2px solid {COR_DESTAQUE};">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h2 style="margin: 0; font-size: 1.6rem;">{emoji_titulo} MANCHETE DO MÊS</h2>
-                        <p style="margin: 0.3rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">
+                        <h2 style="margin: 0; font-size: 1.4rem; color: {COR_TEXTO_PRIMARIO};">
+                            {emoji_titulo} MANCHETE DO MÊS
+                        </h2>
+                        <p style="margin: 0.3rem 0 0 0; color: {COR_TEXTO_SECUNDARIO}; font-size: 0.8rem;">
                         {nome_mes_pt} {ano_atual} | Resumo Executivo
                         </p>
                     </div>
                     <button onclick="document.getElementById('popupOverlay').style.display='none'" 
-                            style="background: rgba(255,255,255,0.2); color: {COR_BRANCO}; 
-                                   border: none; width: 36px; height: 36px; 
+                            style="background: rgba(255,255,255,0.1); color: {COR_TEXTO_PRIMARIO}; 
+                                   border: 1px solid {COR_BORDA}; width: 36px; height: 36px; 
                                    border-radius: 50%; font-size: 1.3rem; 
-                                   cursor: pointer;">×</button>
+                                   cursor: pointer; transition: all 0.3s ease;">
+                        ×
+                    </button>
                 </div>
             </div>
             
             <div style="padding: 2rem;">
-                <div style="background: {cor_destaque}10; padding: 1.5rem; border-radius: 8px; 
+                <div style="background: rgba(0, 212, 255, 0.05); padding: 1.5rem; border-radius: 8px; 
                             border-left: 4px solid {cor_destaque}; margin-bottom: 2rem;">
-                    <h3 style="color: {COR_PRETO_SUAVE}; margin: 0 0 0.5rem 0; font-size: 1.1rem;">{texto_principal}</h3>
-                    <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.9rem;">{subtexto}</p>
+                    <h3 style="color: {COR_TEXTO_PRIMARIO}; margin: 0 0 0.5rem 0; font-size: 1rem;">{texto_principal}</h3>
+                    <p style="color: {COR_TEXTO_SECUNDARIO}; margin: 0; font-size: 0.85rem;">{subtexto}</p>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem;">
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_ESCURO};">
+                    <div style="background: {COR_CARTAO}; padding: 1rem; border-radius: 8px; border: 1px solid {COR_BORDA};">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
+                            <div style="background: {COR_SECUNDARIA}; color: {COR_TEXTO_PRIMARIO}; width: 40px; height: 40px; 
                                         border-radius: 8px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.3rem;">📋</div>
+                                        justify-content: center; font-size: 1.2rem;">📋</div>
                             <div>
-                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_ESCURO};">
+                                <div style="font-size: 1.6rem; font-weight: 700; color: {COR_TEXTO_PRIMARIO};">
                                     {total_cards_mes}
                                 </div>
-                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">TOTAL DE CARDS</div>
+                                <div style="color: {COR_TEXTO_SECUNDARIO}; font-size: 0.7rem;">TOTAL DE CARDS</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERDE_ESCURO};">
+                    <div style="background: {COR_CARTAO}; padding: 1rem; border-radius: 8px; border: 1px solid {COR_BORDA};">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
+                            <div style="background: {COR_POSITIVO}; color: {COR_PRIMARIA}; width: 40px; height: 40px; 
                                         border-radius: 8px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.3rem;">✅</div>
+                                        justify-content: center; font-size: 1.2rem;">✅</div>
                             <div>
-                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_VERDE_ESCURO};">
+                                <div style="font-size: 1.6rem; font-weight: 700; color: {COR_POSITIVO};">
                                     {cards_validados}
                                 </div>
-                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">VALIDADOS PELO SRE</div>
+                                <div style="color: {COR_TEXTO_SECUNDARIO}; font-size: 0.7rem;">VALIDADOS PELO SRE</div>
                             </div>
                         </div>
-                        <p style="color: {COR_CINZA_TEXTO}; margin: 0.5rem 0 0 0; font-size: 0.75rem;">
+                        <p style="color: {COR_TEXTO_CLARO}; margin: 0.5rem 0 0 0; font-size: 0.7rem;">
                         {variacao:+.1f}% vs mês anterior
                         </p>
                     </div>
                     
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_PETROLEO};">
+                    <div style="background: {COR_CARTAO}; padding: 1rem; border-radius: 8px; border: 1px solid {COR_BORDA};">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: {COR_AZUL_PETROLEO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
+                            <div style="background: {COR_DESTAQUE}; color: {COR_PRIMARIA}; width: 40px; height: 40px; 
                                         border-radius: 8px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.3rem;">🎯</div>
+                                        justify-content: center; font-size: 1.2rem;">🎯</div>
                             <div>
-                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_PETROLEO};">
+                                <div style="font-size: 1.6rem; font-weight: 700; color: {COR_DESTAQUE};">
                                     {cards_sem_erro}
                                 </div>
-                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">SEM RETORNO DE ERRO</div>
+                                <div style="color: {COR_TEXTO_SECUNDARIO}; font-size: 0.7rem;">SEM RETORNO DE ERRO</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO};">
+                    <div style="background: {COR_CARTAO}; padding: 1rem; border-radius: 8px; border: 1px solid {COR_BORDA};">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO}; 
-                                        color: {COR_BRANCO}; width: 45px; height: 45px; 
+                            <div style="background: {COR_NEGATIVO}; color: {COR_PRIMARIA}; width: 40px; height: 40px; 
                                         border-radius: 8px; display: flex; align-items: center; 
-                                        justify-content: center; font-size: 1.3rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
+                                        justify-content: center; font-size: 1.2rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
                             <div>
-                                <div style="font-size: 1.8rem; font-weight: 700; 
-                                            color: {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO}">
+                                <div style="font-size: 1.6rem; font-weight: 700; 
+                                            color: {COR_NEGATIVO if cards_com_erro > 0 else COR_TEXTO_CLARO}">
                                     {cards_com_erro}
                                 </div>
-                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">COM RETORNO DE ERRO</div>
+                                <div style="color: {COR_TEXTO_SECUNDARIO}; font-size: 0.7rem;">COM RETORNO DE ERRO</div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1rem; border-radius: 8px;">
-                        <h4 style="color: {COR_PRETO_SUAVE}; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
-                        <div style="height: 180px; display: flex; align-items: end; gap: 20px;">
+                    <div style="background: {COR_CARTAO}; padding: 1rem; border-radius: 8px; border: 1px solid {COR_BORDA};">
+                        <h4 style="color: {COR_TEXTO_PRIMARIO}; margin: 0 0 1rem 0; font-size: 0.85rem;">📈 EVOLUÇÃO MENSAL</h4>
+                        <div style="height: 150px; display: flex; align-items: end; gap: 20px;">
                             <div style="text-align: center; flex: 1;">
-                                <div style="background: {COR_CINZA_TEXTO}; height: {max(10, min(100, cards_validados_anterior/5))}px; 
+                                <div style="background: {COR_TEXTO_CLARO}; height: {max(10, min(100, cards_validados_anterior/5))}px; 
                                             border-radius: 4px 4px 0 0;"></div>
-                                <div style="margin-top: 8px; font-size: 0.8rem; color: {COR_CINZA_TEXTO};">
+                                <div style="margin-top: 8px; font-size: 0.7rem; color: {COR_TEXTO_SECUNDARIO};">
                                     {mes_anterior:02d}/{ano_anterior}
                                 </div>
-                                <div style="font-weight: bold; color: {COR_PRETO_SUAVE};">{cards_validados_anterior}</div>
+                                <div style="font-weight: bold; color: {COR_TEXTO_PRIMARIO};">{cards_validados_anterior}</div>
                             </div>
                             <div style="text-align: center; flex: 1;">
-                                <div style="background: {COR_VERDE_ESCURO}; height: {max(10, min(100, cards_validados/5))}px; 
+                                <div style="background: {COR_POSITIVO}; height: {max(10, min(100, cards_validados/5))}px; 
                                             border-radius: 4px 4px 0 0;"></div>
-                                <div style="margin-top: 8px; font-size: 0.8rem; color: {COR_CINZA_TEXTO};">
+                                <div style="margin-top: 8px; font-size: 0.7rem; color: {COR_TEXTO_SECUNDARIO};">
                                     {mes_atual:02d}/{ano_atual}
                                 </div>
-                                <div style="font-weight: bold; color: {COR_PRETO_SUAVE};">{cards_validados}</div>
+                                <div style="font-weight: bold; color: {COR_TEXTO_PRIMARIO};">{cards_validados}</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div style="background: #FFF8E1; padding: 1rem; border-radius: 8px; border-left: 4px solid {COR_LARANJA};">
-                        <h4 style="color: {COR_LARANJA}; margin: 0 0 0.8rem 0;">💡 INSIGHTS</h4>
-                        <ul style="color: {COR_CINZA_TEXTO}; padding-left: 1.2rem; margin: 0; font-size: 0.85rem;">
+                    <div style="background: rgba(255, 179, 0, 0.05); padding: 1rem; border-radius: 8px; border-left: 4px solid {COR_ALERTA};">
+                        <h4 style="color: {COR_ALERTA}; margin: 0 0 0.8rem 0; font-size: 0.85rem;">💡 INSIGHTS</h4>
+                        <ul style="color: {COR_TEXTO_SECUNDARIO}; padding-left: 1.2rem; margin: 0; font-size: 0.8rem;">
                             <li style="margin-bottom: 0.5rem;">
                                 {f"🎉 Recorde de validações!" if variacao > 20 else "📊 Performance consistente"}
                             </li>
@@ -814,15 +1047,16 @@ def criar_popup_indicadores(df):
                 </div>
             </div>
             
-            <div style="background: {COR_CINZA_FUNDO}; padding: 1rem 2rem; border-top: 1px solid {COR_CINZA_BORDA};">
+            <div style="background: {COR_PRIMARIA}; padding: 0.8rem 2rem; border-top: 1px solid {COR_BORDA};">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.8rem;">
+                    <p style="color: {COR_TEXTO_CLARO}; margin: 0; font-size: 0.7rem;">
                     📅 Atualizado em {hoje.strftime('%d/%m/%Y %H:%M')}
                     </p>
                     <button onclick="document.getElementById('popupOverlay').style.display='none'"
-                            style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; border: none; 
-                                   padding: 0.5rem 1.2rem; border-radius: 6px; 
-                                   cursor: pointer; font-weight: 500;">
+                            style="background: linear-gradient(135deg, {COR_DESTAQUE}, {COR_ACENTO}); 
+                                   color: {COR_PRIMARIA}; border: none; 
+                                   padding: 0.4rem 1.2rem; border-radius: 6px; 
+                                   cursor: pointer; font-weight: 600; font-size: 0.75rem;">
                         Fechar
                     </button>
                 </div>
@@ -832,8 +1066,8 @@ def criar_popup_indicadores(df):
     
     <style>
     @keyframes slideIn {{
-        from {{ transform: translateY(-30px); opacity: 0; }}
-        to {{ transform: translateY(0); opacity: 1; }}
+        from {{ transform: translateY(-30px) scale(0.95); opacity: 0; }}
+        to {{ transform: translateY(0) scale(1); opacity: 1; }}
     }}
     </style>
     '''
@@ -936,19 +1170,19 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
 # ============================================
 def cor_gradiente_folium(valor, min_val, max_val):
     """
-    Retorna cor em hex interpolando entre azul petróleo e vermelho.
+    Retorna cor em hex interpolando entre cores futuristas
     Valores mais ALTOS → mais VERMELHO
-    Valores mais BAIXOS → mais AZUL PETRÓLEO
+    Valores mais BAIXOS → mais AZUL
     """
     if max_val == min_val:
-        return COR_AZUL_PETROLEO
+        return COR_MAPA_BAIXO
 
-    t = (valor - min_val) / (max_val - min_val)  # normaliza 0..1
+    t = (valor - min_val) / (max_val - min_val)
 
-    # Cores base
-    cor_baixo = (0x02, 0x8a, 0x9f)   # #028a9f  azul petróleo
-    cor_medio = (0xF5, 0x7C, 0x00)   # #F57C00  laranja
-    cor_alto  = (0xC6, 0x28, 0x28)   # #C62828  vermelho
+    # Cores base - estilo futurista
+    cor_baixo = (0x1A, 0x3A, 0x5C)   # Azul escuro
+    cor_medio = (0x7B, 0x61, 0xFF)   # Roxo
+    cor_alto  = (0xFF, 0x52, 0x52)   # Vermelho
 
     if t < 0.5:
         tt = t / 0.5
@@ -966,12 +1200,7 @@ def cor_gradiente_folium(valor, min_val, max_val):
 
 def criar_mapa_folium(df_mapa):
     """
-    Cria mapa Folium interativo centrado no Brasil com:
-    - Bolhas proporcionais ao volume
-    - Gradiente correto azul → laranja → vermelho
-    - Labels com sigla + número DENTRO da bolha
-    - Tooltip rico com todas as informações
-    - Legenda visual
+    Cria mapa Folium interativo centrado no Brasil com estilo futurista
     """
     try:
         import folium
@@ -992,11 +1221,11 @@ def criar_mapa_folium(df_mapa):
         prefer_canvas=True
     )
 
-    # Tile elegante (CartoDB Positron)
+    # Tile escuro futurista
     folium.TileLayer(
-        tiles='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        name='CartoDB Positron',
+        name='CartoDB Dark',
         max_zoom=19,
         subdomains='abcd'
     ).add_to(m)
@@ -1008,7 +1237,6 @@ def criar_mapa_folium(df_mapa):
     min_sinc = df_bolhas['sincronismos'].min()
     total = df_bolhas['sincronismos'].sum()
 
-    # Escala de raio: mínimo 20px, máximo 70px
     R_MIN, R_MAX = 20, 70
 
     def raio(v):
@@ -1016,7 +1244,6 @@ def criar_mapa_folium(df_mapa):
             return (R_MIN + R_MAX) / 2
         return R_MIN + (v - min_sinc) / (max_sinc - min_sinc) * (R_MAX - R_MIN)
 
-    # Ranking para badge
     df_bolhas_sorted = df_bolhas.sort_values('sincronismos', ascending=False).reset_index(drop=True)
     rank_map = {row['empresa']: i + 1 for i, row in df_bolhas_sorted.iterrows()}
 
@@ -1027,68 +1254,67 @@ def criar_mapa_folium(df_mapa):
         pct = row['sincronismos'] / total * 100 if total > 0 else 0
         medal = {1: '🥇', 2: '🥈', 3: '🥉'}.get(rank, f'#{rank}')
 
-        # Tooltip rico
         tooltip_html = f"""
         <div style="
             font-family: 'Segoe UI', sans-serif;
             min-width: 220px;
             padding: 4px;
+            background: {COR_CARTAO};
+            border: 1px solid {COR_BORDA};
+            border-radius: 8px;
         ">
             <div style="
-                background: {COR_AZUL_ESCURO};
-                color: white;
+                background: linear-gradient(135deg, {COR_PRIMARIA}, {COR_SECUNDARIA});
+                color: {COR_TEXTO_PRIMARIO};
                 padding: 10px 14px;
                 border-radius: 8px 8px 0 0;
                 font-weight: 700;
                 font-size: 14px;
+                border-bottom: 2px solid {COR_DESTAQUE};
             ">{medal} {row['empresa_nome']}</div>
             <div style="
-                background: white;
-                border: 1px solid #ddd;
-                border-top: none;
-                border-radius: 0 0 8px 8px;
+                background: {COR_CARTAO};
                 padding: 12px 14px;
+                border-radius: 0 0 8px 8px;
             ">
-                <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:4px 0;">Código</td>
-                        <td style="font-weight:700; text-align:right;">{row['empresa']}</td>
+                <table style="width:100%; border-collapse:collapse; font-size:13px; color: {COR_TEXTO_SECUNDARIO};">
+                    <tr><td style="padding:4px 0;">Código</td>
+                        <td style="font-weight:700; text-align:right; color: {COR_TEXTO_PRIMARIO};">{row['empresa']}</td>
                     </tr>
-                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:4px 0;">Estado</td>
-                        <td style="font-weight:700; text-align:right;">{row['estado']} ({row['sigla']})</td>
+                    <tr><td style="padding:4px 0;">Estado</td>
+                        <td style="font-weight:700; text-align:right; color: {COR_TEXTO_PRIMARIO};">{row['estado']} ({row['sigla']})</td>
                     </tr>
-                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:4px 0;">Região</td>
-                        <td style="font-weight:700; text-align:right;">{row['regiao']}</td>
+                    <tr><td style="padding:4px 0;">Região</td>
+                        <td style="font-weight:700; text-align:right; color: {COR_TEXTO_PRIMARIO};">{row['regiao']}</td>
                     </tr>
-                    <tr style="border-top:1px solid #eee;">
-                        <td style="color:{COR_CINZA_TEXTO}; padding:8px 0 4px;">Sincronizações</td>
+                    <tr style="border-top:1px solid {COR_BORDA};">
+                        <td style="padding:8px 0 4px; color: {COR_TEXTO_CLARO};">Sincronizações</td>
                         <td style="font-weight:800; font-size:18px; color:{cor}; text-align:right;">
                             {row['sincronismos']:,}
                         </td>
                     </tr>
-                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:4px 0;">% do Total</td>
-                        <td style="font-weight:600; text-align:right; color:{COR_AZUL_PETROLEO};">{pct:.1f}%</td>
+                    <tr><td style="padding:4px 0; color: {COR_TEXTO_CLARO};">% do Total</td>
+                        <td style="font-weight:600; text-align:right; color: {COR_DESTAQUE};">{pct:.1f}%</td>
                     </tr>
-                    <tr><td style="color:{COR_CINZA_TEXTO}; padding:4px 0;">Ranking</td>
-                        <td style="font-weight:600; text-align:right;">{medal} {rank}º lugar</td>
+                    <tr><td style="padding:4px 0; color: {COR_TEXTO_CLARO};">Ranking</td>
+                        <td style="font-weight:600; text-align:right; color: {COR_TEXTO_PRIMARIO};">{medal} {rank}º lugar</td>
                     </tr>
                 </table>
             </div>
         </div>
         """
 
-        # Círculo colorido (bolha)
         folium.CircleMarker(
             location=[row['latitude'], row['longitude']],
             radius=r,
             color=COR_BRANCO,
-            weight=3,
+            weight=2,
             fill=True,
             fill_color=cor,
             fill_opacity=0.85,
             tooltip=folium.Tooltip(tooltip_html, sticky=True),
         ).add_to(m)
 
-        # Label DENTRO da bolha
         font_size_sigla = max(10, min(16, int(r * 0.4)))
         font_size_num = max(9, min(14, int(r * 0.32)))
         
@@ -1099,18 +1325,18 @@ def criar_mapa_folium(df_mapa):
             font-weight: 800;
             line-height: 1.2;
             white-space: nowrap;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         ">
             <div style="
                 font-size: {font_size_sigla}px;
-                color: white;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+                color: {COR_TEXTO_PRIMARIO};
                 letter-spacing: 0.3px;
             ">{row['empresa']}</div>
             <div style="
                 font-size: {font_size_num}px;
-                color: white;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+                color: {COR_TEXTO_PRIMARIO};
                 font-weight: 600;
+                opacity: 0.9;
             ">{row['sincronismos']}</div>
         </div>
         """
@@ -1131,29 +1357,29 @@ def criar_mapa_folium(df_mapa):
         bottom: 30px;
         left: 20px;
         z-index: 9999;
-        background: white;
+        background: {COR_CARTAO};
         border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         padding: 14px 20px;
         font-family: 'Segoe UI', sans-serif;
         min-width: 210px;
-        border: 1px solid {COR_CINZA_BORDA};
+        border: 1px solid {COR_BORDA};
     ">
-        <div style="font-weight:800; font-size:13px; color:{COR_PRETO_SUAVE}; margin-bottom:12px; letter-spacing:0.5px;">
+        <div style="font-weight:800; font-size:13px; color:{COR_TEXTO_PRIMARIO}; margin-bottom:12px; letter-spacing:0.5px;">
             📊 VOLUME DE SINCRONIZAÇÕES
         </div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <div style="
                 width: 140px; height: 12px; border-radius: 6px;
-                background: linear-gradient(to right, {COR_AZUL_PETROLEO}, {COR_LARANJA}, {COR_VERMELHO});
-                border: 1px solid #ddd;
+                background: linear-gradient(to right, {COR_MAPA_BAIXO}, {COR_MAPA_MEDIO}, {COR_MAPA_ALTO});
+                border: 1px solid {COR_BORDA};
             "></div>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:10px; color:{COR_CINZA_TEXTO}; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; font-size:10px; color:{COR_TEXTO_SECUNDARIO}; margin-bottom:12px;">
             <span>⬅️ Menor volume</span>
             <span>Maior volume ➡️</span>
         </div>
-        <div style="border-top:1px solid {COR_CINZA_BORDA}; padding-top:10px; font-size:10px; color:{COR_CINZA_TEXTO};">
+        <div style="border-top:1px solid {COR_BORDA}; padding-top:10px; font-size:10px; color:{COR_TEXTO_CLARO};">
             <div>🔍 Passe o mouse sobre uma bolha</div>
             <div>para ver os detalhes completos</div>
         </div>
@@ -1175,16 +1401,16 @@ def criar_mapa_folium(df_mapa):
             <div style="
                 display:flex; align-items:center; gap:10px;
                 padding: 8px 0;
-                border-bottom: 1px solid {COR_CINZA_BORDA};
+                border-bottom: 1px solid {COR_BORDA};
             ">
                 <span style="font-size:18px;">{medals[i]}</span>
                 <div style="flex:1;">
-                    <div style="font-weight:700; font-size:12px; color:{COR_PRETO_SUAVE};">{row['empresa_nome'][:25]}</div>
-                    <div style="font-size:10px; color:{COR_CINZA_TEXTO};">{row['estado']}</div>
+                    <div style="font-weight:700; font-size:12px; color:{COR_TEXTO_PRIMARIO};">{row['empresa_nome'][:25]}</div>
+                    <div style="font-size:10px; color:{COR_TEXTO_SECUNDARIO};">{row['estado']}</div>
                 </div>
                 <div style="text-align:right;">
                     <div style="font-weight:800; font-size:14px; color:{cor_top};">{row['sincronismos']:,}</div>
-                    <div style="font-size:9px; color:{COR_CINZA_TEXTO};">{pct_t:.1f}%</div>
+                    <div style="font-size:9px; color:{COR_TEXTO_CLARO};">{pct_t:.1f}%</div>
                 </div>
             </div>
             """
@@ -1195,20 +1421,20 @@ def criar_mapa_folium(df_mapa):
             top: 90px;
             right: 20px;
             z-index: 9999;
-            background: white;
+            background: {COR_CARTAO};
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
             padding: 14px 18px;
             font-family: 'Segoe UI', sans-serif;
             min-width: 240px;
-            border: 1px solid {COR_CINZA_BORDA};
+            border: 1px solid {COR_BORDA};
         ">
-            <div style="font-weight:800; font-size:13px; color:{COR_PRETO_SUAVE}; margin-bottom:10px; letter-spacing:0.5px;">
+            <div style="font-weight:800; font-size:13px; color:{COR_TEXTO_PRIMARIO}; margin-bottom:10px; letter-spacing:0.5px;">
                 🏆 TOP EMPRESAS
             </div>
             {top3_html_items}
-            <div style="padding-top:10px; font-size:11px; color:{COR_CINZA_TEXTO}; text-align:center; border-top:1px solid {COR_CINZA_BORDA}; margin-top:5px;">
-                <strong style="color:{COR_AZUL_ESCURO};">Total: {total:,}</strong> sincronizações
+            <div style="padding-top:10px; font-size:11px; color:{COR_TEXTO_CLARO}; text-align:center; border-top:1px solid {COR_BORDA}; margin-top:5px;">
+                <strong style="color:{COR_DESTAQUE};">Total: {total:,}</strong> sincronizações
             </div>
         </div>
         """
@@ -1218,7 +1444,7 @@ def criar_mapa_folium(df_mapa):
 
 
 def criar_grafico_barras(df_mapa):
-    """Cria gráfico de barras comparativo com barras de progresso coloridas"""
+    """Cria gráfico de barras comparativo com estilo futurista"""
     if df_mapa.empty:
         return None
     
@@ -1227,31 +1453,29 @@ def criar_grafico_barras(df_mapa):
     
     fig = go.Figure()
     
-    # Cores baseadas no valor
     max_val = df_barras['sincronismos'].max()
     min_val = df_barras['sincronismos'].min()
     
     for idx, row in df_barras.iterrows():
         if max_val == min_val:
-            cor = COR_AZUL_PETROLEO
+            cor = COR_MAPA_BAIXO
         else:
             normalized = (row['sincronismos'] - min_val) / (max_val - min_val)
-            # Gradiente: azul petróleo -> laranja -> vermelho
+            # Gradiente: azul escuro -> roxo -> vermelho
             if normalized < 0.5:
                 tt = normalized / 0.5
-                r = int(2 + tt * (245 - 2))
-                g = int(138 + tt * (124 - 138))
-                b = int(159 + tt * (0 - 159))
+                r = int(0x1A + tt * (0x7B - 0x1A))
+                g = int(0x3A + tt * (0x61 - 0x3A))
+                b = int(0x5C + tt * (0xFF - 0x5C))
             else:
                 tt = (normalized - 0.5) / 0.5
-                r = int(245 + tt * (198 - 245))
-                g = int(124 + tt * (40 - 124))
-                b = int(0 + tt * (40 - 0))
+                r = int(0x7B + tt * (0xFF - 0x7B))
+                g = int(0x61 + tt * (0x52 - 0x61))
+                b = int(0xFF + tt * (0x52 - 0xFF))
             cor = f'rgb({r}, {g}, {b})'
         
         percentual = (row['sincronismos'] / total * 100) if total > 0 else 0
         
-        # Adicionar barra
         fig.add_trace(go.Bar(
             x=[row['sincronismos']],
             y=[f"{row['empresa']} - {row['empresa_nome'][:20]}"],
@@ -1259,7 +1483,7 @@ def criar_grafico_barras(df_mapa):
             text=[f"{row['sincronismos']:,} ({percentual:.1f}%)"],
             textposition='outside',
             marker_color=cor,
-            marker_line_color=COR_AZUL_ESCURO,
+            marker_line_color=COR_DESTAQUE,
             marker_line_width=1,
             hovertemplate=f"<b>{row['empresa_nome']}</b><br>" +
                           f"Sincronizações: {row['sincronismos']:,}<br>" +
@@ -1271,23 +1495,25 @@ def criar_grafico_barras(df_mapa):
     
     fig.update_layout(
         title=dict(
-            text="<b>RANKING </b>",
-            font=dict(size=16, color=COR_AZUL_ESCURO),
+            text="<b>RANKING</b>",
+            font=dict(size=16, color=COR_TEXTO_PRIMARIO),
             x=0.5
         ),
         xaxis_title="Número de Sincronizações",
         yaxis_title="",
         height=450,
         showlegend=False,
-        plot_bgcolor=COR_BRANCO,
+        plot_bgcolor=COR_FUNDO,
+        paper_bgcolor=COR_FUNDO,
         xaxis=dict(
-            gridcolor=COR_CINZA_BORDA,
+            gridcolor=COR_BORDA,
             tickformat="d",
-            title_font=dict(size=12)
+            title_font=dict(size=12, color=COR_TEXTO_SECUNDARIO),
+            tickfont=dict(color=COR_TEXTO_SECUNDARIO)
         ),
         yaxis=dict(
-            gridcolor=COR_CINZA_BORDA,
-            tickfont=dict(size=11),
+            gridcolor=COR_BORDA,
+            tickfont=dict(size=11, color=COR_TEXTO_SECUNDARIO),
             categoryorder='total ascending'
         ),
         margin=dict(l=20, r=80, t=60, b=20),
@@ -1303,8 +1529,12 @@ def criar_grafico_barras(df_mapa):
 with st.sidebar:
     st.markdown(f"""
     <div style="text-align: center; padding: 1rem 0;">
-        <h3 style="color: {COR_AZUL_ESCURO}; margin: 0;">⚙️ Painel de Controle</h3>
-        <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.85rem;">Filtros e Configurações</p>
+        <h3 style="color: {COR_DESTAQUE}; margin: 0; font-size: 1rem; letter-spacing: 1px;">
+            ⚙️ PAINEL DE CONTROLE
+        </h3>
+        <p style="color: {COR_TEXTO_SECUNDARIO}; margin: 0; font-size: 0.65rem; letter-spacing: 0.5px;">
+            FILTROS E CONFIGURAÇÕES
+        </p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1321,7 +1551,7 @@ with st.sidebar:
     if st.session_state.df_original is not None:
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-            st.markdown("**🔍 Filtros de Análise**")
+            st.markdown("**🔍 FILTROS DE ANÁLISE**")
             
             df = st.session_state.df_original.copy()
             
@@ -1414,7 +1644,7 @@ with st.sidebar:
     
     with st.container():
         st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-        st.markdown("**🔄 Controles de Atualização**")
+        st.markdown("**🔄 CONTROLES DE ATUALIZAÇÃO**")
         
         if st.session_state.df_original is not None:
             arquivo_atual = st.session_state.arquivo_atual
@@ -1424,10 +1654,10 @@ with st.sidebar:
                 ultima_mod = datetime.fromtimestamp(os.path.getmtime(arquivo_atual))
                 
                 st.markdown(f"""
-                <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
-                    <p style="margin: 0; font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{os.path.basename(arquivo_atual)}</p>
-                    <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: {COR_CINZA_TEXTO};">
+                <div style="background: {COR_CARTAO}; padding: 0.6rem; border-radius: 8px; margin-bottom: 0.8rem; border: 1px solid {COR_BORDA};">
+                    <p style="margin: 0 0 0.2rem 0; font-weight: 600; font-size: 0.7rem; color: {COR_TEXTO_PRIMARIO};">📄 Arquivo atual:</p>
+                    <p style="margin: 0; font-size: 0.75rem; color: {COR_TEXTO_SECUNDARIO};">{os.path.basename(arquivo_atual)}</p>
+                    <p style="margin: 0.2rem 0 0 0; font-size: 0.6rem; color: {COR_TEXTO_CLARO};">
                     📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
                     </p>
                 </div>
@@ -1490,15 +1720,15 @@ with st.sidebar:
             
             st.markdown("---")
         
-        st.markdown("**📤 Importar Dados**")
+        st.markdown("**📤 IMPORTAR DADOS**")
         
         if st.session_state.df_original is not None:
             ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
             st.markdown(f"""
             <div class="status-success">
                 <strong>📊 Status atual:</strong><br>
-                <small>Registros: {len(st.session_state.df_original):,}</small><br>
-                <small>Atualizado: {ultima_atualizacao}</small>
+                <small style="font-size: 0.65rem;">Registros: {len(st.session_state.df_original):,}</small><br>
+                <small style="font-size: 0.6rem;">Atualizado: {ultima_atualizacao}</small>
             </div>
             """, unsafe_allow_html=True)
         
@@ -1569,58 +1799,55 @@ with st.sidebar:
                     st.error(f"❌ {status}")
 
 # ============================================
-# HEADER - ESTILO GRADIENTE AZUL PETRÓLEO
+# HEADER - ESTILO FUTURISTA/EXECUTIVO
 # ============================================
 st.markdown(f"""
-<div style="
-    background: linear-gradient(135deg, {COR_AZUL_PETROLEO} 0%, {COR_AZUL_ESCURO} 100%);
-    padding: 1.5rem 2rem;
-    margin-bottom: 1.5rem;
-    border-radius: 0;
-    box-shadow: 0 4px 15px rgba(2, 138, 159, 0.3);
-">
+<div class="main-header">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
         <div>
             <h1 style="
-                color: {COR_BRANCO};
+                color: {COR_TEXTO_PRIMARIO};
                 margin: 0;
-                font-size: 1.6rem;
+                font-size: 1.4rem;
                 font-weight: 600;
                 letter-spacing: -0.3px;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
             ">
-                📊 ESTEIRA SRE
+                <span style="color: {COR_DESTAQUE};">✦</span> ESTEIRA SRE
             </h1>
             <p style="
-                color: rgba(255,255,255,0.9);
-                margin: 0.3rem 0 0 0;
-                font-size: 0.85rem;
+                color: {COR_TEXTO_SECUNDARIO};
+                margin: 0.2rem 0 0 0;
+                font-size: 0.7rem;
                 font-weight: 400;
+                letter-spacing: 0.3px;
             ">
-                Acompanhamento de Demandas - EAC | EMR | EMS | EMT | EPB | ERO | ESE | ESS | ETO
+                Acompanhamento de Demandas · EAC · EMR · EMS · EMT · EPB · ERO · ESE · ESS · ETO
             </p>
         </div>
         <div style="text-align: right;">
             <p style="
-                color: rgba(255,255,255,0.9);
+                color: {COR_TEXTO_SECUNDARIO};
                 margin: 0;
-                font-size: 0.85rem;
-                font-weight: 500;
-            ">
-                Dashboard de Performance
-            </p>
-            <p style="
-                color: rgba(255,255,255,0.8);
-                margin: 0.2rem 0 0 0;
-                font-size: 0.75rem;
-            ">
-                v5.5 | Sistema de Performance SRE
-            </p>
-            <p style="
-                color: rgba(255,255,255,0.7);
-                margin: 0.3rem 0 0 0;
                 font-size: 0.7rem;
                 font-weight: 500;
+                letter-spacing: 0.5px;
+            ">
+                DASHBOARD DE PERFORMANCE
+            </p>
+            <p style="
+                color: {COR_TEXTO_CLARO};
+                margin: 0.2rem 0 0 0;
+                font-size: 0.6rem;
+                letter-spacing: 0.3px;
+            ">
+                v6.0 · Sistema de Performance SRE
+            </p>
+            <p style="
+                color: {COR_TEXTO_CLARO};
+                margin: 0.2rem 0 0 0;
+                font-size: 0.55rem;
+                font-weight: 500;
+                opacity: 0.7;
             ">
                 {datetime.now().strftime('%d/%m/%Y')}
             </p>
@@ -1817,10 +2044,10 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 x=periodos,
                 y=cards_totais,
                 name='Total Cards',
-                marker_color=COR_AZUL_ESCURO,
+                marker_color=COR_SECUNDARIA,
                 text=cards_totais,
                 textposition='outside',
-                textfont=dict(size=10),
+                textfont=dict(size=10, color=COR_TEXTO_PRIMARIO),
                 width=0.35
             ))
             
@@ -1828,10 +2055,10 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 x=periodos,
                 y=cards_validados,
                 name='Validados',
-                marker_color=COR_VERDE_ESCURO,
+                marker_color=COR_POSITIVO,
                 text=cards_validados,
                 textposition='outside',
-                textfont=dict(size=10),
+                textfont=dict(size=10, color=COR_TEXTO_PRIMARIO),
                 width=0.35
             ))
             
@@ -1841,34 +2068,37 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 name='Taxa Sucesso',
                 yaxis='y2',
                 mode='lines+markers+text',
-                line=dict(color=COR_LARANJA, width=2),
-                marker=dict(size=8, color=COR_LARANJA),
+                line=dict(color=COR_DESTAQUE, width=2),
+                marker=dict(size=8, color=COR_DESTAQUE),
                 text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
                 textposition='top center',
-                textfont=dict(size=9)
+                textfont=dict(size=9, color=COR_TEXTO_PRIMARIO)
             ))
             
             fig_comparativo.update_layout(
                 title=dict(
                     text='Comparativo: Período Atual vs Anterior',
-                    font=dict(size=14)
+                    font=dict(size=14, color=COR_TEXTO_PRIMARIO)
                 ),
                 barmode='group',
+                plot_bgcolor=COR_FUNDO,
+                paper_bgcolor=COR_FUNDO,
                 yaxis=dict(
-                    title=dict(text='Quantidade', font=dict(size=11)),
-                    gridcolor='rgba(0,0,0,0.05)',
-                    rangemode='tozero'
+                    title=dict(text='Quantidade', font=dict(size=11, color=COR_TEXTO_SECUNDARIO)),
+                    gridcolor=COR_BORDA,
+                    rangemode='tozero',
+                    tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                 ),
                 yaxis2=dict(
-                    title=dict(text='Taxa Sucesso (%)', font=dict(size=11)),
+                    title=dict(text='Taxa Sucesso (%)', font=dict(size=11, color=COR_TEXTO_SECUNDARIO)),
                     overlaying='y',
                     side='right',
                     range=[0, max(100, max(taxa_sucesso_vals) * 1.1)],
-                    gridcolor='rgba(0,0,0,0.02)'
+                    gridcolor=COR_BORDA,
+                    tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                 ),
                 height=300,
                 showlegend=True,
-                plot_bgcolor=COR_BRANCO,
                 margin=dict(l=50, r=50, t=50, b=50),
                 legend=dict(
                     orientation="h",
@@ -1876,9 +2106,9 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                     y=1.02,
                     xanchor="center",
                     x=0.5,
-                    font=dict(size=10)
+                    font=dict(size=10, color=COR_TEXTO_SECUNDARIO)
                 ),
-                xaxis=dict(tickfont=dict(size=10))
+                xaxis=dict(tickfont=dict(size=10, color=COR_TEXTO_SECUNDARIO))
             )
             
             fig_comparativo.update_traces(
@@ -2027,24 +2257,26 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         st.markdown("---")
         
         st.markdown(f"""
-        <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border: 1px solid {COR_CINZA_BORDA};">
+        <div style="background: {COR_CARTAO}; padding: 1rem; border-radius: 8px; border: 1px solid {COR_BORDA};">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 600;">Ações disponíveis</p>
-                    <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.85rem;">
+                    <p style="margin: 0; color: {COR_TEXTO_PRIMARIO}; font-weight: 600; font-size: 0.8rem;">Ações disponíveis</p>
+                    <p style="margin: 0.2rem 0 0 0; color: {COR_TEXTO_SECUNDARIO}; font-size: 0.7rem;">
                     Exporte o relatório completo ou feche a manchete
                     </p>
                 </div>
                 <div style="display: flex; gap: 0.8rem;">
                     <button onclick="document.getElementById('exportBtn').click()" 
-                            style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; border: none; padding: 0.6rem 1.2rem; 
-                                   border-radius: 6px; cursor: pointer; font-weight: 500;">
+                            style="background: {COR_DESTAQUE}; color: {COR_PRIMARIA}; border: none; padding: 0.4rem 1rem; 
+                                   border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.7rem;
+                                   transition: all 0.3s ease;">
                         📥 Exportar PDF
                     </button>
                     <button onclick="document.getElementById('closeBtn').click()" 
-                            style="background: {COR_CINZA_TEXTO}; color: {COR_BRANCO}; border: none; 
-                                   padding: 0.6rem 1.2rem; border-radius: 6px; 
-                                   cursor: pointer; font-weight: 500;">
+                            style="background: {COR_BORDA}; color: {COR_TEXTO_PRIMARIO}; border: none; 
+                                   padding: 0.4rem 1rem; border-radius: 6px; 
+                                   cursor: pointer; font-weight: 600; font-size: 0.7rem;
+                                   transition: all 0.3s ease;">
                         ✕ Fechar
                     </button>
                 </div>
@@ -2078,10 +2310,10 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 st.rerun()
         
         st.markdown(f"""
-        <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 6px; margin-top: 1rem;">
-            <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
-            <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
-            <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small>
+        <div style="background: {COR_CARTAO}; padding: 0.6rem; border-radius: 6px; margin-top: 1rem; border: 1px solid {COR_BORDA};">
+            <small style="color: {COR_TEXTO_SECUNDARIO}; font-size: 0.6rem;">📅 <strong style="color: {COR_TEXTO_PRIMARIO};">Período analisado:</strong> {periodo_titulo}</small><br>
+            <small style="color: {COR_TEXTO_SECUNDARIO}; font-size: 0.6rem;">🕒 <strong style="color: {COR_TEXTO_PRIMARIO};">Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
+            <small style="color: {COR_TEXTO_SECUNDARIO}; font-size: 0.6rem;">📊 <strong style="color: {COR_TEXTO_PRIMARIO};">Base de dados:</strong> {len(df):,} registros totais</small>
         </div>
         """, unsafe_allow_html=True)
 
@@ -2105,8 +2337,8 @@ if st.session_state.df_original is not None:
             
             st.markdown(f"""
             <div class="info-base">
-                <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
-                <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO};">
+                <p style="margin: 0; font-weight: 600; color: {COR_TEXTO_PRIMARIO};">📅 Base atualizada em: {get_horario_brasilia()}</p>
+                <p style="margin: 0.2rem 0 0 0; color: {COR_TEXTO_SECUNDARIO};">
                 Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
                 Total de registros: {len(df):,}
                 </p>
@@ -2195,30 +2427,33 @@ if st.session_state.df_original is not None:
                         y=demandas_completas['Quantidade'],
                         mode='lines+markers+text',
                         name='Demandas',
-                        line=dict(color=COR_AZUL_ESCURO, width=3),
-                        marker=dict(size=10, color=COR_AZUL_PETROLEO),
+                        line=dict(color=COR_DESTAQUE, width=3),
+                        marker=dict(size=10, color=COR_ACENTO),
                         text=demandas_completas['Quantidade'],
                         textposition='top center',
-                        textfont=dict(size=12, color=COR_AZUL_ESCURO)
+                        textfont=dict(size=12, color=COR_TEXTO_PRIMARIO)
                     ))
                     
                     fig_mes.update_layout(
                         title=f"Demandas em {ano_selecionado}",
                         xaxis_title="Mês",
                         yaxis_title="Número de Demandas",
-                        plot_bgcolor=COR_BRANCO,
+                        plot_bgcolor=COR_FUNDO,
+                        paper_bgcolor=COR_FUNDO,
                         height=450,
                         showlegend=False,
                         margin=dict(t=50, b=50, l=50, r=50),
                         xaxis=dict(
-                            gridcolor='rgba(0,0,0,0.05)',
+                            gridcolor=COR_BORDA,
                             tickmode='array',
                             tickvals=list(range(12)),
-                            ticktext=ordem_meses_abreviados
+                            ticktext=ordem_meses_abreviados,
+                            tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                         ),
                         yaxis=dict(
-                            gridcolor='rgba(0,0,0,0.05)',
-                            rangemode='tozero'
+                            gridcolor=COR_BORDA,
+                            rangemode='tozero',
+                            tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                         )
                     )
                     
@@ -2228,9 +2463,9 @@ if st.session_state.df_original is not None:
                         xref="paper", yref="paper",
                         text=f"Total no ano: {total_ano:,} demandas",
                         showarrow=False,
-                        font=dict(size=12, color=COR_AZUL_ESCURO, weight="bold"),
-                        bgcolor="rgba(255,255,255,0.9)",
-                        bordercolor=COR_AZUL_ESCURO,
+                        font=dict(size=12, color=COR_TEXTO_PRIMARIO, weight="bold"),
+                        bgcolor=COR_CARTAO,
+                        bordercolor=COR_DESTAQUE,
                         borderwidth=1,
                         borderpad=4
                     )
@@ -2314,13 +2549,13 @@ if st.session_state.df_original is not None:
                     colors = []
                     for valor in revisoes_por_responsavel['Total_Revisões']:
                         if max_revisoes == min_revisoes:
-                            colors.append(COR_VERMELHO)
+                            colors.append(COR_NEGATIVO)
                         else:
                             normalized = (valor - min_revisoes) / (max_revisoes - min_revisoes)
-                            red = int(198 * normalized + 40 * (1 - normalized))
-                            green = int(40 * normalized + 167 * (1 - normalized))
-                            blue = int(40 * normalized + 69 * (1 - normalized))
-                            colors.append(f'rgb({red}, {green}, {blue})')
+                            r = int(0x7B * normalized + 0x1A * (1 - normalized))
+                            g = int(0x61 * normalized + 0x3A * (1 - normalized))
+                            b = int(0xFF * normalized + 0x5C * (1 - normalized))
+                            colors.append(f'rgb({r}, {g}, {b})')
                     
                     fig_revisoes.add_trace(go.Bar(
                         x=revisoes_por_responsavel['Responsável'].head(15),
@@ -2329,7 +2564,7 @@ if st.session_state.df_original is not None:
                         text=revisoes_por_responsavel['Total_Revisões'].head(15),
                         textposition='outside',
                         marker_color=colors[:15],
-                        marker_line_color=COR_PRETO_SUAVE,
+                        marker_line_color=COR_DESTAQUE,
                         marker_line_width=1.5,
                         opacity=0.8
                     ))
@@ -2338,16 +2573,19 @@ if st.session_state.df_original is not None:
                         title=titulo_rev,
                         xaxis_title='Responsável',
                         yaxis_title='Total de Revisões',
-                        plot_bgcolor=COR_BRANCO,
+                        plot_bgcolor=COR_FUNDO,
+                        paper_bgcolor=COR_FUNDO,
                         height=500,
                         showlegend=False,
                         margin=dict(t=50, b=100, l=50, r=50),
                         xaxis=dict(
                             tickangle=45,
-                            gridcolor='rgba(0,0,0,0.05)'
+                            gridcolor=COR_BORDA,
+                            tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                         ),
                         yaxis=dict(
-                            gridcolor='rgba(0,0,0,0.05)'
+                            gridcolor=COR_BORDA,
+                            tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                         )
                     )
                     
@@ -2545,13 +2783,13 @@ if st.session_state.df_original is not None:
                     colors = []
                     for valor in sinc_por_dia_recente['Quantidade']:
                         if max_quant == min_quant:
-                            colors.append(COR_AZUL_ESCURO)
+                            colors.append(COR_DESTAQUE)
                         else:
                             normalized = (valor - min_quant) / (max_quant - min_quant)
-                            red = int(0 * normalized + 0 * (1 - normalized))
-                            green = int(89 * normalized + 89 * (1 - normalized))
-                            blue = int(115 * normalized + 115 * (1 - normalized))
-                            colors.append(f'rgb({red}, {green}, {blue})')
+                            r = int(0x1A * normalized + 0x00 * (1 - normalized))
+                            g = int(0x3A * normalized + 0xD4 * (1 - normalized))
+                            b = int(0x5C * normalized + 0xFF * (1 - normalized))
+                            colors.append(f'rgb({r}, {g}, {b})')
                     
                     fig_dias.add_trace(go.Bar(
                         x=sinc_por_dia_recente['Data_Formatada'],
@@ -2560,7 +2798,7 @@ if st.session_state.df_original is not None:
                         text=sinc_por_dia_recente['Quantidade'],
                         textposition='outside',
                         marker_color=colors,
-                        marker_line_color=COR_AZUL_PETROLEO,
+                        marker_line_color=COR_DESTAQUE,
                         marker_line_width=1.5,
                         opacity=0.8
                     ))
@@ -2570,16 +2808,19 @@ if st.session_state.df_original is not None:
                         xaxis_title='Data (Dia/Mês)',
                         yaxis_title='Quantidade de Sincronizações',
                         height=400,
-                        plot_bgcolor=COR_BRANCO,
+                        plot_bgcolor=COR_FUNDO,
+                        paper_bgcolor=COR_FUNDO,
                         showlegend=False,
                         margin=dict(t=50, b=50, l=50, r=50),
                         xaxis=dict(
-                            gridcolor='rgba(0,0,0,0.05)',
-                            tickangle=45
+                            gridcolor=COR_BORDA,
+                            tickangle=45,
+                            tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                         ),
                         yaxis=dict(
-                            gridcolor='rgba(0,0,0,0.05)',
-                            rangemode='tozero'
+                            gridcolor=COR_BORDA,
+                            rangemode='tozero',
+                            tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                         )
                     )
                     
@@ -2620,11 +2861,14 @@ if st.session_state.df_original is not None:
                         
                         fig_sre = go.Figure()
                         
-                        for sre in pivot_sre.columns[1:]:
+                        colors_sre = ['#00D4FF', '#7B61FF', '#00E676', '#FFB300', '#FF5252', '#4FC3F7']
+                        
+                        for idx, sre in enumerate(pivot_sre.columns[1:]):
                             fig_sre.add_trace(go.Bar(
                                 x=pivot_sre['Data'],
                                 y=pivot_sre[sre],
                                 name=sre,
+                                marker_color=colors_sre[idx % len(colors_sre)],
                                 hovertemplate='Data: %{x|%d/%m/%Y}<br>SRE: ' + sre + '<br>Quantidade: %{y}<extra></extra>'
                             ))
                         
@@ -2634,9 +2878,12 @@ if st.session_state.df_original is not None:
                             height=400,
                             xaxis_title="Data",
                             yaxis_title="Quantidade de Sincronizações",
+                            plot_bgcolor=COR_FUNDO,
+                            paper_bgcolor=COR_FUNDO,
                             xaxis=dict(
                                 tickformat='%d/%m',
-                                tickangle=45
+                                tickangle=45,
+                                tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                             ),
                             showlegend=True,
                             legend=dict(
@@ -2644,7 +2891,8 @@ if st.session_state.df_original is not None:
                                 yanchor="bottom",
                                 y=1.02,
                                 xanchor="right",
-                                x=1
+                                x=1,
+                                font=dict(color=COR_TEXTO_SECUNDARIO)
                             )
                         )
                         
@@ -2670,14 +2918,17 @@ if st.session_state.df_original is not None:
                             fig_tipo = go.Figure()
                             
                             top_tipos = df_sincronizados['Tipo_Chamado'].value_counts().head(5).index.tolist()
+                            colors_tipo = ['#00D4FF', '#7B61FF', '#00E676', '#FFB300', '#4FC3F7']
                             
-                            for tipo in top_tipos:
+                            for idx, tipo in enumerate(top_tipos):
                                 if tipo in pivot_tipo.columns:
                                     fig_tipo.add_trace(go.Scatter(
                                         x=pivot_tipo['Data'],
                                         y=pivot_tipo[tipo],
                                         mode='lines+markers',
                                         name=tipo,
+                                        line=dict(color=colors_tipo[idx % len(colors_tipo)], width=2),
+                                        marker=dict(size=6, color=colors_tipo[idx % len(colors_tipo)]),
                                         hovertemplate='Data: %{x|%d/%m/%Y}<br>Tipo: ' + tipo + '<br>Quantidade: %{y}<extra></extra>'
                                     ))
                             
@@ -2686,11 +2937,22 @@ if st.session_state.df_original is not None:
                                 height=350,
                                 xaxis_title="Data",
                                 yaxis_title="Quantidade",
+                                plot_bgcolor=COR_FUNDO,
+                                paper_bgcolor=COR_FUNDO,
                                 xaxis=dict(
                                     tickformat='%d/%m',
-                                    tickangle=45
+                                    tickangle=45,
+                                    tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                                 ),
-                                showlegend=True
+                                showlegend=True,
+                                legend=dict(
+                                    orientation="h",
+                                    yanchor="bottom",
+                                    y=1.02,
+                                    xanchor="right",
+                                    x=1,
+                                    font=dict(color=COR_TEXTO_SECUNDARIO)
+                                )
                             )
                             
                             st.plotly_chart(fig_tipo, use_container_width=True)
@@ -2703,9 +2965,9 @@ if st.session_state.df_original is not None:
                             st.markdown("**📊 Distribuição por Tipo:**")
                             for idx, row in tipo_dist.head(5).iterrows():
                                 st.markdown(f"""
-                                <div style="padding: 8px; margin-bottom: 5px; background: {COR_CINZA_FUNDO}; border-radius: 5px;">
-                                    <strong>{row['Tipo']}</strong><br>
-                                    <small>{row['Quantidade']} ({row['Percentual']}%)</small>
+                                <div style="padding: 6px; margin-bottom: 4px; background: {COR_CARTAO}; border-radius: 5px; border: 1px solid {COR_BORDA};">
+                                    <strong style="color: {COR_TEXTO_PRIMARIO}; font-size: 0.75rem;">{row['Tipo']}</strong><br>
+                                    <small style="color: {COR_TEXTO_SECUNDARIO}; font-size: 0.65rem;">{row['Quantidade']} ({row['Percentual']}%)</small>
                                 </div>
                                 """, unsafe_allow_html=True)
                     
@@ -2729,8 +2991,9 @@ if st.session_state.df_original is not None:
                             fig_empresa = go.Figure()
                             
                             top_empresas = df_sincronizados['Empresa'].value_counts().head(5).index.tolist()
+                            colors_emp = ['#00D4FF', '#7B61FF', '#00E676', '#FFB300', '#4FC3F7']
                             
-                            for empresa in top_empresas:
+                            for idx, empresa in enumerate(top_empresas):
                                 if empresa in pivot_empresa.columns:
                                     fig_empresa.add_trace(go.Scatter(
                                         x=pivot_empresa['Data'],
@@ -2738,6 +3001,9 @@ if st.session_state.df_original is not None:
                                         mode='lines',
                                         name=empresa,
                                         stackgroup='one',
+                                        line=dict(width=0.5, color=colors_emp[idx % len(colors_emp)]),
+                                        fillcolor=colors_emp[idx % len(colors_emp)],
+                                        opacity=0.7,
                                         hovertemplate='Data: %{x|%d/%m/%Y}<br>Empresa: ' + empresa + '<br>Quantidade: %{y}<extra></extra>'
                                     ))
                             
@@ -2746,11 +3012,22 @@ if st.session_state.df_original is not None:
                                 height=350,
                                 xaxis_title="Data",
                                 yaxis_title="Quantidade",
+                                plot_bgcolor=COR_FUNDO,
+                                paper_bgcolor=COR_FUNDO,
                                 xaxis=dict(
                                     tickformat='%d/%m',
-                                    tickangle=45
+                                    tickangle=45,
+                                    tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                                 ),
-                                showlegend=True
+                                showlegend=True,
+                                legend=dict(
+                                    orientation="h",
+                                    yanchor="bottom",
+                                    y=1.02,
+                                    xanchor="right",
+                                    x=1,
+                                    font=dict(color=COR_TEXTO_SECUNDARIO)
+                                )
                             )
                             
                             st.plotly_chart(fig_empresa, use_container_width=True)
@@ -2763,10 +3040,11 @@ if st.session_state.df_original is not None:
                             st.markdown("**🏆 Ranking Empresas:**")
                             for idx, row in empresa_rank.head(5).iterrows():
                                 medal = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][idx]
+                                cores_medal = [COR_DESTAQUE, COR_ACENTO, COR_ALERTA, COR_TEXTO_SECUNDARIO, COR_TEXTO_CLARO]
                                 st.markdown(f"""
-                                <div style="padding: 8px; margin-bottom: 5px; background: {COR_CINZA_FUNDO}; border-radius: 5px; border-left: 4px solid {COR_AZUL_ESCURO if idx==0 else COR_VERDE_ESCURO if idx==1 else COR_LARANJA if idx==2 else COR_CINZA_TEXTO}">
-                                    <strong>{medal} {row['Empresa']}</strong><br>
-                                    <small>{row['Quantidade']} ({row['Percentual']}%)</small>
+                                <div style="padding: 6px; margin-bottom: 4px; background: {COR_CARTAO}; border-radius: 5px; border-left: 3px solid {cores_medal[idx]};">
+                                    <strong style="color: {COR_TEXTO_PRIMARIO}; font-size: 0.75rem;">{medal} {row['Empresa']}</strong><br>
+                                    <small style="color: {COR_TEXTO_SECUNDARIO}; font-size: 0.65rem;">{row['Quantidade']} ({row['Percentual']}%)</small>
                                 </div>
                                 """, unsafe_allow_html=True)
                     
@@ -2848,13 +3126,13 @@ if st.session_state.df_original is not None:
                     colors = []
                     for valor in sinc_por_sre_nome['Sincronizados']:
                         if max_sinc == min_sinc:
-                            colors.append(COR_AZUL_ESCURO)
+                            colors.append(COR_DESTAQUE)
                         else:
                             normalized = (valor - min_sinc) / (max_sinc - min_sinc)
-                            red = int(0 * normalized + 0 * (1 - normalized))
-                            green = int(89 * normalized + 89 * (1 - normalized))
-                            blue = int(115 * normalized + 115 * (1 - normalized))
-                            colors.append(f'rgb({red}, {green}, {blue})')
+                            r = int(0x00 * normalized + 0x1A * (1 - normalized))
+                            g = int(0xD4 * normalized + 0x3A * (1 - normalized))
+                            b = int(0xFF * normalized + 0x5C * (1 - normalized))
+                            colors.append(f'rgb({r}, {g}, {b})')
                     
                     fig_sinc_bar.add_trace(go.Bar(
                         x=sinc_por_sre_nome['SRE_Nome'].head(15),
@@ -2863,7 +3141,7 @@ if st.session_state.df_original is not None:
                         text=sinc_por_sre_nome['Sincronizados'].head(15),
                         textposition='outside',
                         marker_color=colors[:15],
-                        marker_line_color=COR_AZUL_PETROLEO,
+                        marker_line_color=COR_DESTAQUE,
                         marker_line_width=1.5,
                         opacity=0.8
                     ))
@@ -2888,18 +3166,21 @@ if st.session_state.df_original is not None:
                         title=titulo_grafico,
                         xaxis_title='SRE',
                         yaxis_title='Número de Sincronizados',
-                        plot_bgcolor=COR_BRANCO,
+                        plot_bgcolor=COR_FUNDO,
+                        paper_bgcolor=COR_FUNDO,
                         height=500,
                         showlegend=False,
                         margin=dict(t=50, b=100, l=50, r=50),
                         xaxis=dict(
                             tickangle=45,
-                            gridcolor='rgba(0,0,0,0.05)',
-                            categoryorder='total descending'
+                            gridcolor=COR_BORDA,
+                            categoryorder='total descending',
+                            tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                         ),
                         yaxis=dict(
-                            gridcolor='rgba(0,0,0,0.05)',
-                            rangemode='tozero'
+                            gridcolor=COR_BORDA,
+                            rangemode='tozero',
+                            tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                         )
                     )
                     
@@ -3076,18 +3357,20 @@ if st.session_state.df_original is not None:
                             x=dados_dia['Dia'],
                             y=dados_dia['Total_Demandas'],
                             name='Total Demandas',
-                            marker_color=COR_AZUL_ESCURO,
+                            marker_color=COR_SECUNDARIA,
                             text=dados_dia['Total_Demandas'],
-                            textposition='auto'
+                            textposition='auto',
+                            textfont=dict(color=COR_TEXTO_PRIMARIO)
                         ))
                         
                         fig_dias.add_trace(go.Bar(
                             x=dados_dia['Dia'],
                             y=dados_dia['Sincronizados'],
                             name='Sincronizados',
-                            marker_color=COR_VERDE_ESCURO,
+                            marker_color=COR_POSITIVO,
                             text=dados_dia['Sincronizados'],
-                            textposition='auto'
+                            textposition='auto',
+                            textfont=dict(color=COR_TEXTO_PRIMARIO)
                         ))
                         
                         fig_dias.add_trace(go.Scatter(
@@ -3096,22 +3379,38 @@ if st.session_state.df_original is not None:
                             name='Taxa Sinc (%)',
                             yaxis='y2',
                             mode='lines+markers',
-                            line=dict(color=COR_LARANJA, width=3),
-                            marker=dict(size=8)
+                            line=dict(color=COR_DESTAQUE, width=3),
+                            marker=dict(size=8, color=COR_DESTAQUE)
                         ))
                         
                         fig_dias.update_layout(
                             title='Demandas e Sincronizações por Dia da Semana',
                             barmode='group',
-                            yaxis=dict(title='Quantidade'),
+                            plot_bgcolor=COR_FUNDO,
+                            paper_bgcolor=COR_FUNDO,
+                            yaxis=dict(
+                                title='Quantidade',
+                                gridcolor=COR_BORDA,
+                                tickfont=dict(color=COR_TEXTO_SECUNDARIO)
+                            ),
                             yaxis2=dict(
                                 title='Taxa Sinc (%)',
                                 overlaying='y',
                                 side='right',
-                                range=[0, 100]
+                                range=[0, 100],
+                                gridcolor=COR_BORDA,
+                                tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                             ),
                             height=400,
-                            showlegend=True
+                            showlegend=True,
+                            legend=dict(
+                                orientation="h",
+                                yanchor="bottom",
+                                y=1.02,
+                                xanchor="center",
+                                x=0.5,
+                                font=dict(color=COR_TEXTO_SECUNDARIO)
+                            )
                         )
                         
                         st.plotly_chart(fig_dias, use_container_width=True)
@@ -3182,8 +3481,8 @@ if st.session_state.df_original is not None:
                             y=dados_hora['Total_Demandas'],
                             name='Total Demandas',
                             mode='lines+markers',
-                            line=dict(color=COR_AZUL_ESCURO, width=3),
-                            marker=dict(size=8)
+                            line=dict(color=COR_DESTAQUE, width=3),
+                            marker=dict(size=8, color=COR_DESTAQUE)
                         ))
                         
                         fig_horas.add_trace(go.Scatter(
@@ -3191,8 +3490,8 @@ if st.session_state.df_original is not None:
                             y=dados_hora['Sincronizados'],
                             name='Sincronizados',
                             mode='lines+markers',
-                            line=dict(color=COR_VERDE_ESCURO, width=3),
-                            marker=dict(size=8)
+                            line=dict(color=COR_POSITIVO, width=3),
+                            marker=dict(size=8, color=COR_POSITIVO)
                         ))
                         
                         if not dados_hora.empty:
@@ -3210,8 +3509,9 @@ if st.session_state.df_original is not None:
                                 arrowhead=2,
                                 ax=0,
                                 ay=-40,
-                                bgcolor="white",
-                                bordercolor="black"
+                                bgcolor=COR_CARTAO,
+                                bordercolor=COR_DESTAQUE,
+                                font=dict(color=COR_TEXTO_PRIMARIO, size=10)
                             )
                             
                             fig_horas.add_annotation(
@@ -3222,8 +3522,9 @@ if st.session_state.df_original is not None:
                                 arrowhead=2,
                                 ax=0,
                                 ay=40,
-                                bgcolor="white",
-                                bordercolor="green"
+                                bgcolor=COR_CARTAO,
+                                bordercolor=COR_POSITIVO,
+                                font=dict(color=COR_TEXTO_PRIMARIO, size=10)
                             )
                         
                         fig_horas.update_layout(
@@ -3231,7 +3532,25 @@ if st.session_state.df_original is not None:
                             xaxis_title='Hora do Dia',
                             yaxis_title='Quantidade',
                             height=400,
-                            showlegend=True
+                            plot_bgcolor=COR_FUNDO,
+                            paper_bgcolor=COR_FUNDO,
+                            showlegend=True,
+                            legend=dict(
+                                orientation="h",
+                                yanchor="bottom",
+                                y=1.02,
+                                xanchor="center",
+                                x=0.5,
+                                font=dict(color=COR_TEXTO_SECUNDARIO)
+                            ),
+                            xaxis=dict(
+                                tickfont=dict(color=COR_TEXTO_SECUNDARIO),
+                                gridcolor=COR_BORDA
+                            ),
+                            yaxis=dict(
+                                tickfont=dict(color=COR_TEXTO_SECUNDARIO),
+                                gridcolor=COR_BORDA
+                            )
                         )
                         
                         st.plotly_chart(fig_horas, use_container_width=True)
@@ -3375,18 +3694,20 @@ if st.session_state.df_original is not None:
                             x=dados_mes['Mês'],
                             y=dados_mes['Total'],
                             name='Total Demandas',
-                            marker_color=COR_AZUL_ESCURO,
+                            marker_color=COR_SECUNDARIA,
                             text=dados_mes['Total'],
-                            textposition='auto'
+                            textposition='auto',
+                            textfont=dict(color=COR_TEXTO_PRIMARIO)
                         ))
                         
                         fig_mes_saz.add_trace(go.Bar(
                             x=dados_mes['Mês'],
                             y=dados_mes['Sincronizados'],
                             name='Sincronizados',
-                            marker_color=COR_VERDE_ESCURO,
+                            marker_color=COR_POSITIVO,
                             text=dados_mes['Sincronizados'],
-                            textposition='auto'
+                            textposition='auto',
+                            textfont=dict(color=COR_TEXTO_PRIMARIO)
                         ))
                         
                         fig_mes_saz.add_trace(go.Scatter(
@@ -3395,22 +3716,38 @@ if st.session_state.df_original is not None:
                             name='Taxa Sinc (%)',
                             yaxis='y2',
                             mode='lines+markers',
-                            line=dict(color=COR_LARANJA, width=3),
-                            marker=dict(size=8)
+                            line=dict(color=COR_DESTAQUE, width=3),
+                            marker=dict(size=8, color=COR_DESTAQUE)
                         ))
                         
                         fig_mes_saz.update_layout(
                             title=titulo_grafico,
                             barmode='group',
-                            yaxis=dict(title='Quantidade'),
+                            plot_bgcolor=COR_FUNDO,
+                            paper_bgcolor=COR_FUNDO,
+                            yaxis=dict(
+                                title='Quantidade',
+                                gridcolor=COR_BORDA,
+                                tickfont=dict(color=COR_TEXTO_SECUNDARIO)
+                            ),
                             yaxis2=dict(
                                 title='Taxa Sinc (%)',
                                 overlaying='y',
                                 side='right',
-                                range=[0, 100]
+                                range=[0, 100],
+                                gridcolor=COR_BORDA,
+                                tickfont=dict(color=COR_TEXTO_SECUNDARIO)
                             ),
                             height=400,
-                            showlegend=True
+                            showlegend=True,
+                            legend=dict(
+                                orientation="h",
+                                yanchor="bottom",
+                                y=1.02,
+                                xanchor="center",
+                                x=0.5,
+                                font=dict(color=COR_TEXTO_SECUNDARIO)
+                            )
                         )
                         
                         st.plotly_chart(fig_mes_saz, use_container_width=True)
@@ -3449,25 +3786,28 @@ if st.session_state.df_original is not None:
                             orientation='h',
                             text='Demandas',
                             color='Demandas',
-                            color_continuous_scale='Blues'
+                            color_continuous_scale='Blues',
+                            title=''
                         )
                         
                         fig_top.update_traces(
                             texttemplate='%{text}',
                             textposition='outside',
-                            marker_line_color=COR_AZUL_PETROLEO,
+                            marker_line_color=COR_DESTAQUE,
                             marker_line_width=1.5,
                             opacity=0.9
                         )
                         
                         fig_top.update_layout(
                             height=500,
-                            plot_bgcolor=COR_BRANCO,
+                            plot_bgcolor=COR_FUNDO,
+                            paper_bgcolor=COR_FUNDO,
                             showlegend=False,
                             yaxis={'categoryorder': 'total ascending'},
                             margin=dict(t=20, b=20, l=20, r=20),
                             xaxis_title="Número de Demandas",
-                            yaxis_title=""
+                            yaxis_title="",
+                            font=dict(color=COR_TEXTO_SECUNDARIO)
                         )
                         
                         st.plotly_chart(fig_top, use_container_width=True)
@@ -3495,19 +3835,21 @@ if st.session_state.df_original is not None:
                         fig_tipos.update_traces(
                             texttemplate='%{text}',
                             textposition='outside',
-                            marker_line_color=COR_AZUL_ESCURO,
+                            marker_line_color=COR_DESTAQUE,
                             marker_line_width=1,
                             opacity=0.9
                         )
                         
                         fig_tipos.update_layout(
                             height=500,
-                            plot_bgcolor=COR_BRANCO,
+                            plot_bgcolor=COR_FUNDO,
+                            paper_bgcolor=COR_FUNDO,
                             showlegend=False,
                             yaxis={'categoryorder': 'total ascending'},
                             margin=dict(t=20, b=20, l=20, r=20),
                             xaxis_title="Quantidade",
-                            yaxis_title=""
+                            yaxis_title="",
+                            font=dict(color=COR_TEXTO_SECUNDARIO)
                         )
                         
                         st.plotly_chart(fig_tipos, use_container_width=True)
@@ -3751,8 +4093,8 @@ if st.session_state.df_original is not None:
             <div style="
                 border-radius: 12px;
                 overflow: hidden;
-                box-shadow: 0 4px 20px rgba(0,89,115,0.12);
-                border: 1px solid {COR_CINZA_BORDA};
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                border: 1px solid {COR_BORDA};
                 margin-bottom: 20px;
             ">
                 {mapa_html}
@@ -3829,15 +4171,15 @@ if st.session_state.df_original is not None:
             ### 🎨 Escala de Cores
             
             <div style="display: flex; gap: 30px; margin: 15px 0;">
-                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_AZUL_PETROLEO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Baixo volume</strong> - Até 33% do máximo</div>
-                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_LARANJA}; border-radius: 4px; vertical-align: middle;"></span> <strong>Médio volume</strong> - 33% a 66% do máximo</div>
-                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_VERMELHO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Alto volume</strong> - Acima de 66% do máximo</div>
+                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_MAPA_BAIXO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Baixo volume</strong> - Até 33% do máximo</div>
+                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_MAPA_MEDIO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Médio volume</strong> - 33% a 66% do máximo</div>
+                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_MAPA_ALTO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Alto volume</strong> - Acima de 66% do máximo</div>
             </div>
             
             ### 📍 Mapa de Bolhas
             
-            - Quanto mais **<span style="color: {COR_VERMELHO};">vermelha</span>** a bolha, maior o número de sincronizações
-            - Quanto mais **<span style="color: {COR_AZUL_PETROLEO};">azul</span>** a bolha, menor o número de sincronizações
+            - Quanto mais **<span style="color: {COR_MAPA_ALTO};">vermelha</span>** a bolha, maior o número de sincronizações
+            - Quanto mais **<span style="color: {COR_MAPA_BAIXO};">azul</span>** a bolha, menor o número de sincronizações
             - O **tamanho** da bolha também é proporcional ao volume
             - O texto **dentro da bolha** mostra a sigla da empresa e o número de sincronizações
             - **Passe o mouse** sobre cada bolha para ver detalhes completos
@@ -4013,18 +4355,37 @@ if st.session_state.df_original is not None:
                         x=df_acum['Mês'], 
                         y=df_acum['IPE Acumulado (%)'], 
                         mode='lines+markers+text', 
-                        line=dict(color=COR_AZUL_ESCURO, width=4), 
-                        marker=dict(size=12, color=COR_AZUL_PETROLEO), 
+                        line=dict(color=COR_DESTAQUE, width=4), 
+                        marker=dict(size=12, color=COR_DESTAQUE), 
                         text=df_acum['IPE Acumulado (%)'].apply(lambda x: f'{x:.1f}%'), 
-                        textposition='top center', 
+                        textposition='top center',
+                        textfont=dict(color=COR_TEXTO_PRIMARIO, size=10),
                         name='IPE Acumulado',
                         hovertemplate='<b>%{x}</b><br>IPE: %{y:.1f}%<br>CD: %{customdata[0]:,}<br>CA: %{customdata[1]:,}<br>CR: %{customdata[2]:,}<br>SREs: %{customdata[3]}<extra></extra>',
                         customdata=df_acum[['CD_Acum', 'CA_Acum', 'CR_Acum', 'NA_Acum']].values
                     ))
-                    fig_linha.add_hline(y=95, line_dash="dash", line_color=COR_AZUL_PETROLEO, annotation_text="🎯 Meta 95%")
-                    fig_linha.add_hline(y=100, line_dash="dot", line_color=COR_CINZA_TEXTO, annotation_text="Limite 100%")
-                    fig_linha.add_trace(go.Scatter(x=df_acum['Mês'], y=df_acum['IPE Acumulado (%)'], fill='tozeroy', fillcolor='rgba(2, 138, 159, 0.1)', line=dict(width=0), showlegend=False, hoverinfo='skip'))
-                    fig_linha.update_layout(title='📈 Evolução do IPE Acumulado por Mês', xaxis_title='Mês', yaxis_title='IPE Acumulado (%)', yaxis=dict(range=[0, 105]), height=500, plot_bgcolor=COR_BRANCO)
+                    fig_linha.add_hline(y=95, line_dash="dash", line_color=COR_POSITIVO, annotation_text="🎯 Meta 95%", annotation_font=dict(color=COR_TEXTO_PRIMARIO))
+                    fig_linha.add_hline(y=100, line_dash="dot", line_color=COR_TEXTO_CLARO, annotation_text="Limite 100%", annotation_font=dict(color=COR_TEXTO_CLARO))
+                    fig_linha.add_trace(go.Scatter(
+                        x=df_acum['Mês'], 
+                        y=df_acum['IPE Acumulado (%)'], 
+                        fill='tozeroy', 
+                        fillcolor='rgba(0, 212, 255, 0.1)', 
+                        line=dict(width=0), 
+                        showlegend=False, 
+                        hoverinfo='skip'
+                    ))
+                    fig_linha.update_layout(
+                        title='📈 Evolução do IPE Acumulado por Mês',
+                        xaxis_title='Mês',
+                        yaxis_title='IPE Acumulado (%)',
+                        yaxis=dict(range=[0, 105], gridcolor=COR_BORDA, tickfont=dict(color=COR_TEXTO_SECUNDARIO)),
+                        height=500,
+                        plot_bgcolor=COR_FUNDO,
+                        paper_bgcolor=COR_FUNDO,
+                        xaxis=dict(tickfont=dict(color=COR_TEXTO_SECUNDARIO), gridcolor=COR_BORDA),
+                        showlegend=False
+                    )
                     st.plotly_chart(fig_linha, use_container_width=True)
                     
                     # CARDS RESUMO
@@ -4163,34 +4524,43 @@ if st.session_state.df_original is not None:
                         x=valores,
                         nbinsx=20,
                         name='Frequência',
-                        marker_color='rgba(2, 138, 159, 0.5)',
-                        marker_line_color=COR_AZUL_ESCURO,
+                        marker_color='rgba(0, 212, 255, 0.3)',
+                        marker_line_color=COR_DESTAQUE,
                         marker_line_width=1,
                         hovertemplate='Intervalo: %{x}<br>Frequência: %{y}<extra></extra>'
                     ))
                     
                     # Linhas dos percentis
-                    fig_sep.add_vline(x=mediana, line_dash="dash", line_color=COR_VERDE_ESCURO, 
-                                      annotation_text=f"P50 (Mediana): {mediana:.0f}", annotation_position="top")
-                    fig_sep.add_vline(x=q1, line_dash="dot", line_color=COR_AZUL_PETROLEO,
-                                      annotation_text=f"Q1 (P25): {q1:.0f}", annotation_position="top")
-                    fig_sep.add_vline(x=q3, line_dash="dot", line_color=COR_AZUL_PETROLEO,
-                                      annotation_text=f"Q3 (P75): {q3:.0f}", annotation_position="top")
-                    fig_sep.add_vline(x=p10, line_dash="dot", line_color=COR_CINZA_TEXTO,
-                                      annotation_text=f"P10: {p10:.0f}", annotation_position="bottom")
-                    fig_sep.add_vline(x=p90, line_dash="dot", line_color=COR_CINZA_TEXTO,
-                                      annotation_text=f"P90: {p90:.0f}", annotation_position="bottom")
-                    fig_sep.add_vline(x=p_selecionado, line_dash="dash", line_color=COR_VERMELHO, line_width=3,
-                                      annotation_text=f"P{percentil_param}: {p_selecionado:.0f}", annotation_position="bottom")
+                    fig_sep.add_vline(x=mediana, line_dash="dash", line_color=COR_POSITIVO, 
+                                      annotation_text=f"P50 (Mediana): {mediana:.0f}", annotation_position="top",
+                                      annotation_font=dict(color=COR_TEXTO_PRIMARIO, size=10))
+                    fig_sep.add_vline(x=q1, line_dash="dot", line_color=COR_DESTAQUE,
+                                      annotation_text=f"Q1 (P25): {q1:.0f}", annotation_position="top",
+                                      annotation_font=dict(color=COR_TEXTO_PRIMARIO, size=10))
+                    fig_sep.add_vline(x=q3, line_dash="dot", line_color=COR_DESTAQUE,
+                                      annotation_text=f"Q3 (P75): {q3:.0f}", annotation_position="top",
+                                      annotation_font=dict(color=COR_TEXTO_PRIMARIO, size=10))
+                    fig_sep.add_vline(x=p10, line_dash="dot", line_color=COR_TEXTO_CLARO,
+                                      annotation_text=f"P10: {p10:.0f}", annotation_position="bottom",
+                                      annotation_font=dict(color=COR_TEXTO_CLARO, size=9))
+                    fig_sep.add_vline(x=p90, line_dash="dot", line_color=COR_TEXTO_CLARO,
+                                      annotation_text=f"P90: {p90:.0f}", annotation_position="bottom",
+                                      annotation_font=dict(color=COR_TEXTO_CLARO, size=9))
+                    fig_sep.add_vline(x=p_selecionado, line_dash="dash", line_color=COR_ACENTO, line_width=3,
+                                      annotation_text=f"P{percentil_param}: {p_selecionado:.0f}", annotation_position="bottom",
+                                      annotation_font=dict(color=COR_ACENTO, size=10, weight='bold'))
                     
                     fig_sep.update_layout(
                         title=f'Distribuição de Sincronizações Diárias - {ano_est if ano_est != "Todos os Anos" else ""} {mes_est if mes_est != "Todos os Meses" else ""}'.strip(),
                         xaxis_title='Número de Sincronizações por Dia',
                         yaxis_title='Frequência',
                         height=450,
-                        plot_bgcolor=COR_BRANCO,
+                        plot_bgcolor=COR_FUNDO,
+                        paper_bgcolor=COR_FUNDO,
                         showlegend=False,
-                        barmode='overlay'
+                        barmode='overlay',
+                        xaxis=dict(tickfont=dict(color=COR_TEXTO_SECUNDARIO), gridcolor=COR_BORDA),
+                        yaxis=dict(tickfont=dict(color=COR_TEXTO_SECUNDARIO), gridcolor=COR_BORDA)
                     )
                     
                     st.plotly_chart(fig_sep, use_container_width=True)
@@ -4255,8 +4625,11 @@ if st.session_state.df_original is not None:
                         y=df_tendencia[f'P{percentil_param}'],
                         mode='lines+markers',
                         name=f'P{percentil_param}',
-                        line=dict(color=COR_VERMELHO, width=3),
-                        marker=dict(size=10, color=COR_VERMELHO)
+                        line=dict(color=COR_ACENTO, width=3),
+                        marker=dict(size=10, color=COR_ACENTO),
+                        text=df_tendencia[f'P{percentil_param}'].apply(lambda x: f'{x:.1f}'),
+                        textposition='top center',
+                        textfont=dict(color=COR_TEXTO_PRIMARIO, size=9)
                     ))
                     
                     fig_tendencia.add_trace(go.Scatter(
@@ -4264,8 +4637,11 @@ if st.session_state.df_original is not None:
                         y=df_tendencia['P50'],
                         mode='lines+markers',
                         name='P50 (Mediana)',
-                        line=dict(color=COR_AZUL_ESCURO, width=2),
-                        marker=dict(size=8, color=COR_AZUL_ESCURO)
+                        line=dict(color=COR_DESTAQUE, width=2),
+                        marker=dict(size=8, color=COR_DESTAQUE),
+                        text=df_tendencia['P50'].apply(lambda x: f'{x:.1f}'),
+                        textposition='top center',
+                        textfont=dict(color=COR_TEXTO_SECUNDARIO, size=8)
                     ))
                     
                     fig_tendencia.add_trace(go.Scatter(
@@ -4273,8 +4649,11 @@ if st.session_state.df_original is not None:
                         y=df_tendencia['Média'],
                         mode='lines+markers',
                         name='Média',
-                        line=dict(color=COR_VERDE_ESCURO, width=2, dash='dash'),
-                        marker=dict(size=8, color=COR_VERDE_ESCURO)
+                        line=dict(color=COR_POSITIVO, width=2, dash='dash'),
+                        marker=dict(size=8, color=COR_POSITIVO),
+                        text=df_tendencia['Média'].apply(lambda x: f'{x:.1f}'),
+                        textposition='top center',
+                        textfont=dict(color=COR_TEXTO_SECUNDARIO, size=8)
                     ))
                     
                     # Adicionar área entre P25 e P90
@@ -4292,7 +4671,7 @@ if st.session_state.df_original is not None:
                         y=df_tendencia['P25'],
                         mode='lines',
                         fill='tonexty',
-                        fillcolor='rgba(2, 138, 159, 0.2)',
+                        fillcolor='rgba(0, 212, 255, 0.15)',
                         line=dict(width=0),
                         name='P25-P90 (Faixa)'
                     ))
@@ -4302,15 +4681,19 @@ if st.session_state.df_original is not None:
                         xaxis_title='Mês',
                         yaxis_title='Sincronizações por Dia',
                         height=450,
-                        plot_bgcolor=COR_BRANCO,
+                        plot_bgcolor=COR_FUNDO,
+                        paper_bgcolor=COR_FUNDO,
                         hovermode='x unified',
                         legend=dict(
                             orientation="h",
                             yanchor="bottom",
                             y=1.02,
                             xanchor="center",
-                            x=0.5
-                        )
+                            x=0.5,
+                            font=dict(color=COR_TEXTO_SECUNDARIO)
+                        ),
+                        xaxis=dict(tickfont=dict(color=COR_TEXTO_SECUNDARIO), gridcolor=COR_BORDA),
+                        yaxis=dict(tickfont=dict(color=COR_TEXTO_SECUNDARIO), gridcolor=COR_BORDA)
                     )
                     
                     st.plotly_chart(fig_tendencia, use_container_width=True)
@@ -4413,16 +4796,16 @@ if st.session_state.df_original is not None:
 
 else:
     st.markdown(f"""
-    <div style="text-align: center; padding: 4rem; background: {COR_CINZA_FUNDO}; border-radius: 12px; border: 2px dashed {COR_CINZA_BORDA};">
-        <h3 style="color: {COR_PRETO_SUAVE};">📊 Esteira ADMS Dashboard</h3>
-        <p style="color: {COR_CINZA_TEXTO}; margin-bottom: 2rem;">
+    <div style="text-align: center; padding: 4rem; background: {COR_CARTAO}; border-radius: 12px; border: 2px dashed {COR_BORDA};">
+        <h3 style="color: {COR_TEXTO_PRIMARIO};">📊 Esteira ADMS Dashboard</h3>
+        <p style="color: {COR_TEXTO_SECUNDARIO}; margin-bottom: 2rem;">
             Sistema de análise e monitoramento de chamados - Setor SRE
         </p>
-        <div style="margin-top: 2rem; padding: 2rem; background: {COR_BRANCO}; border-radius: 8px; display: inline-block;">
-            <h4 style="color: {COR_AZUL_ESCURO};">📋 Para começar:</h4>
-            <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
-            <p>2. <strong>Use a seção "Importar Dados"</strong> no final da barra lateral</p>
-            <p>3. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
+        <div style="margin-top: 2rem; padding: 2rem; background: {COR_PRIMARIA}; border-radius: 8px; display: inline-block; border: 1px solid {COR_BORDA};">
+            <h4 style="color: {COR_DESTAQUE};">📋 Para começar:</h4>
+            <p style="color: {COR_TEXTO_SECUNDARIO};">1. <strong style="color: {COR_TEXTO_PRIMARIO};">Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
+            <p style="color: {COR_TEXTO_SECUNDARIO};">2. <strong style="color: {COR_TEXTO_PRIMARIO};">Use a seção "Importar Dados"</strong> no final da barra lateral</p>
+            <p style="color: {COR_TEXTO_SECUNDARIO};">3. <strong style="color: {COR_TEXTO_PRIMARIO};">Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -4434,19 +4817,19 @@ ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_bras
 st.markdown(f"""
 <div class="footer">
     <div style="margin-bottom: 0.8rem;">
-        <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 500;">
-        Desenvolvido por: <span style="color: {COR_AZUL_ESCURO};">Kewin Marcel Ramirez Ferreira | GEAT</span>
+        <p style="margin: 0; color: {COR_TEXTO_SECUNDARIO}; font-weight: 500; font-size: 0.7rem;">
+        Desenvolvido por: <span style="color: {COR_DESTAQUE};">Kewin Marcel Ramirez Ferreira | GEAT</span>
         </p>
-        <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">
-        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: {COR_AZUL_ESCURO}; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
+        <p style="margin: 0.2rem 0 0 0; color: {COR_TEXTO_CLARO}; font-size: 0.6rem;">
+        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: {COR_DESTAQUE}; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
         </p>
     </div>
     <div>
-        <p style="margin: 0; color: {COR_CINZA_TEXTO}; font-size: 0.75rem;">
-        © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
+        <p style="margin: 0; color: {COR_TEXTO_CLARO}; font-size: 0.55rem; letter-spacing: 0.5px;">
+        © 2024 Esteira ADMS Dashboard · Sistema proprietário · Energisa Group
         </p>
-        <p style="margin: 0.2rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.7rem;">
-        Versão 5.5 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
+        <p style="margin: 0.2rem 0 0 0; color: {COR_TEXTO_CLARO}; font-size: 0.5rem; letter-spacing: 0.3px; opacity: 0.7;">
+        Versão 6.0 · Sistema de Performance SRE · Última atualização: {ultima_atualizacao} (Brasília)
         </p>
     </div>
 </div>
