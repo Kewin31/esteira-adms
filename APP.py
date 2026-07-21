@@ -4065,8 +4065,8 @@ if st.session_state.df_original is not None:
     # NOVA ABA: ANÁLISE ESTATÍSTICA
     # ============================================
     with tab_estatistica:
-        st.markdown("## 📈 ANÁLISE ESTATÍSTICA AVANÇADA")
-        st.markdown("_Análise de frequência, medidas separatrizes, moda, tendência por percentil, assimetria e testes de hipótese_")
+        st.markdown("## 📈 ANÁLISE ESTATÍSTICA")
+        st.markdown("_Medidas separatrizes, percentis, tendência, assimetria e testes de hipótese_")
         
         # ============================================
         # FILTROS DA ANÁLISE ESTATÍSTICA
@@ -4132,145 +4132,10 @@ if st.session_state.df_original is not None:
         else:
             
             # ============================================
-            # 1. FREQUÊNCIA DE CHAMADOS COM REVISÃO
+            # MEDIDAS SEPARATRIZES (Mediana, Quartis, Percentis) - EM FORMATO DE GRÁFICO
             # ============================================
             st.markdown("---")
-            st.markdown("### 1️⃣ FREQUÊNCIA DE CHAMADOS COM REVISÃO")
-            st.markdown("_Cards que foram criados mais de uma vez para correção_")
-            
-            # Filtrar chamados com revisão
-            df_com_revisao = df_est[df_est['Revisões'] > 0].copy()
-            total_com_revisao = len(df_com_revisao)
-            
-            # Cards de métricas
-            col_freq1, col_freq2, col_freq3 = st.columns(3)
-            
-            with col_freq1:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">{total_com_revisao:,}</div>
-                    <div class="metric-label">Chamados com Revisão</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_freq2:
-                pct_revisao = (total_com_revisao / len(df_est) * 100) if len(df_est) > 0 else 0
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">{pct_revisao:.1f}%</div>
-                    <div class="metric-label">% de Chamados com Revisão</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_freq3:
-                media_revisoes = df_est['Revisões'].mean() if len(df_est) > 0 else 0
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">{media_revisoes:.2f}</div>
-                    <div class="metric-label">Média de Revisões por Chamado</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Tabela de frequência por número de revisões
-            if not df_com_revisao.empty:
-                st.markdown("#### 📊 Distribuição por Número de Revisões")
-                
-                freq_revisoes = df_com_revisao['Revisões'].value_counts().sort_index().reset_index()
-                freq_revisoes.columns = ['Revisões', 'Quantidade']
-                freq_revisoes['Percentual'] = (freq_revisoes['Quantidade'] / total_com_revisao * 100).round(1)
-                freq_revisoes['Percentual_Acumulado'] = freq_revisoes['Percentual'].cumsum().round(1)
-                
-                # Gráfico de barras
-                fig_freq = go.Figure()
-                
-                fig_freq.add_trace(go.Bar(
-                    x=freq_revisoes['Revisões'].astype(str),
-                    y=freq_revisoes['Quantidade'],
-                    text=freq_revisoes['Quantidade'],
-                    textposition='outside',
-                    marker_color=freq_revisoes['Revisões'].apply(lambda x: COR_VERMELHO if x > 3 else COR_AZUL_PETROLEO if x > 1 else COR_AZUL_ESCURO),
-                    name='Frequência'
-                ))
-                
-                fig_freq.update_layout(
-                    title='Distribuição de Chamados por Número de Revisões',
-                    xaxis_title='Número de Revisões',
-                    yaxis_title='Quantidade de Chamados',
-                    height=350,
-                    plot_bgcolor=COR_BRANCO,
-                    showlegend=False
-                )
-                
-                st.plotly_chart(fig_freq, use_container_width=True)
-                
-                # Tabela detalhada
-                with st.expander("📋 Ver Tabela de Frequência Detalhada", expanded=False):
-                    st.dataframe(
-                        freq_revisoes,
-                        use_container_width=True,
-                        column_config={
-                            "Revisões": st.column_config.NumberColumn("Revisões", format="%d"),
-                            "Quantidade": st.column_config.NumberColumn("Quantidade", format="%d"),
-                            "Percentual": st.column_config.NumberColumn("Percentual", format="%.1f%%"),
-                            "Percentual_Acumulado": st.column_config.NumberColumn("Acumulado", format="%.1f%%")
-                        }
-                    )
-                
-                # Polígono de frequência cumulada
-                st.markdown("#### 📈 Polígono de Frequência Cumulada")
-                
-                fig_poligono = go.Figure()
-                
-                # Frequência acumulada
-                acumulado = freq_revisoes['Percentual_Acumulado'].values
-                
-                fig_poligono.add_trace(go.Scatter(
-                    x=freq_revisoes['Revisões'].astype(str),
-                    y=acumulado,
-                    mode='lines+markers+text',
-                    text=acumulado,
-                    textposition='top center',
-                    line=dict(color=COR_VERDE_ESCURO, width=3),
-                    marker=dict(size=10, color=COR_AZUL_PETROLEO),
-                    name='% Acumulado',
-                    fill='tozeroy',
-                    fillcolor='rgba(2, 138, 159, 0.2)'
-                ))
-                
-                fig_poligono.update_layout(
-                    title='Polígono de Frequência Cumulada - Revisões',
-                    xaxis_title='Número de Revisões',
-                    yaxis_title='Percentual Acumulado (%)',
-                    height=350,
-                    plot_bgcolor=COR_BRANCO,
-                    showlegend=False,
-                    yaxis=dict(range=[0, 105])
-                )
-                
-                st.plotly_chart(fig_poligono, use_container_width=True)
-                
-                # Chamados com maior número de revisões
-                st.markdown("#### 🔍 Chamados com Mais Revisões")
-                
-                top_revisoes = df_com_revisao.nlargest(10, 'Revisões')[['Chamado', 'Revisões', 'Responsável_Formatado', 'Tipo_Chamado', 'Empresa']].copy()
-                
-                st.dataframe(
-                    top_revisoes,
-                    use_container_width=True,
-                    column_config={
-                        "Chamado": st.column_config.TextColumn("Chamado"),
-                        "Revisões": st.column_config.NumberColumn("Revisões", format="%d"),
-                        "Responsável_Formatado": st.column_config.TextColumn("Responsável"),
-                        "Tipo_Chamado": st.column_config.TextColumn("Tipo"),
-                        "Empresa": st.column_config.TextColumn("Empresa")
-                    }
-                )
-            
-            # ============================================
-            # 2. MEDIDAS SEPARATRIZES (Mediana, Quartis, Percentis)
-            # ============================================
-            st.markdown("---")
-            st.markdown("### 2️⃣ MEDIDAS SEPARATRIZES")
+            st.markdown("### 📊 MEDIDAS SEPARATRIZES")
             st.markdown(f"_Mediana, Quartis e Percentis - Percentil de Referência: {percentil_param}%_")
             
             # Calcular métricas para sincronizados por dia
@@ -4283,260 +4148,96 @@ if st.session_state.df_original is not None:
                     valores = sinc_por_dia_est['Quantidade']
                     
                     # Calcular medidas
-                    col_sep1, col_sep2, col_sep3, col_sep4 = st.columns(4)
+                    mediana = valores.median()
+                    q1 = valores.quantile(0.25)
+                    q3 = valores.quantile(0.75)
+                    p10 = valores.quantile(0.10)
+                    p90 = valores.quantile(0.90)
+                    p_selecionado = valores.quantile(percentil_param/100)
                     
-                    with col_sep1:
-                        st.metric("📊 Mediana (P50)", f"{valores.median():.0f}")
+                    # Gráfico principal - Curva de Distribuição com Percentis
+                    fig_sep = go.Figure()
                     
-                    with col_sep2:
-                        st.metric("📊 Q1 (P25)", f"{valores.quantile(0.25):.0f}")
+                    # Histograma
+                    fig_sep.add_trace(go.Histogram(
+                        x=valores,
+                        nbinsx=20,
+                        name='Frequência',
+                        marker_color='rgba(2, 138, 159, 0.5)',
+                        marker_line_color=COR_AZUL_ESCURO,
+                        marker_line_width=1,
+                        hovertemplate='Intervalo: %{x}<br>Frequência: %{y}<extra></extra>'
+                    ))
                     
-                    with col_sep3:
-                        st.metric("📊 Q3 (P75)", f"{valores.quantile(0.75):.0f}")
+                    # Linhas dos percentis
+                    fig_sep.add_vline(x=mediana, line_dash="dash", line_color=COR_VERDE_ESCURO, 
+                                      annotation_text=f"P50 (Mediana): {mediana:.0f}", annotation_position="top")
+                    fig_sep.add_vline(x=q1, line_dash="dot", line_color=COR_AZUL_PETROLEO,
+                                      annotation_text=f"Q1 (P25): {q1:.0f}", annotation_position="top")
+                    fig_sep.add_vline(x=q3, line_dash="dot", line_color=COR_AZUL_PETROLEO,
+                                      annotation_text=f"Q3 (P75): {q3:.0f}", annotation_position="top")
+                    fig_sep.add_vline(x=p10, line_dash="dot", line_color=COR_CINZA_TEXTO,
+                                      annotation_text=f"P10: {p10:.0f}", annotation_position="bottom")
+                    fig_sep.add_vline(x=p90, line_dash="dot", line_color=COR_CINZA_TEXTO,
+                                      annotation_text=f"P90: {p90:.0f}", annotation_position="bottom")
+                    fig_sep.add_vline(x=p_selecionado, line_dash="dash", line_color=COR_VERMELHO, line_width=3,
+                                      annotation_text=f"P{percentil_param}: {p_selecionado:.0f}", annotation_position="bottom")
                     
-                    with col_sep4:
-                        st.metric(f"🎯 P{percentil_param}", f"{valores.quantile(percentil_param/100):.0f}")
-                    
-                    # Tabela completa de percentis
-                    st.markdown("#### 📋 Tabela de Percentis")
-                    
-                    percentis_lista = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 99]
-                    df_percentis = pd.DataFrame({
-                        'Percentil': [f"P{p}" for p in percentis_lista],
-                        'Valor': [valores.quantile(p/100) for p in percentis_lista]
-                    })
-                    df_percentis['Valor'] = df_percentis['Valor'].round(0).astype(int)
-                    
-                    st.dataframe(
-                        df_percentis,
-                        use_container_width=True,
-                        column_config={
-                            "Percentil": st.column_config.TextColumn("Percentil"),
-                            "Valor": st.column_config.NumberColumn("Valor (Sinc./Dia)", format="%d")
-                        }
+                    fig_sep.update_layout(
+                        title=f'Distribuição de Sincronizações Diárias - {ano_est if ano_est != "Todos os Anos" else ""} {mes_est if mes_est != "Todos os Meses" else ""}'.strip(),
+                        xaxis_title='Número de Sincronizações por Dia',
+                        yaxis_title='Frequência',
+                        height=450,
+                        plot_bgcolor=COR_BRANCO,
+                        showlegend=False,
+                        barmode='overlay'
                     )
                     
-                    # Boxplot dos dados
-                    st.markdown("#### 📊 Boxplot - Distribuição de Sincronizações por Dia")
+                    st.plotly_chart(fig_sep, use_container_width=True)
                     
-                    fig_box = go.Figure()
+                    # Cards com os valores
+                    col_sep1, col_sep2, col_sep3, col_sep4, col_sep5 = st.columns(5)
                     
-                    fig_box.add_trace(go.Box(
+                    with col_sep1:
+                        st.metric("📊 P10", f"{p10:.0f}")
+                    with col_sep2:
+                        st.metric("📊 Q1 (P25)", f"{q1:.0f}")
+                    with col_sep3:
+                        st.metric("📊 Mediana (P50)", f"{mediana:.0f}")
+                    with col_sep4:
+                        st.metric("📊 Q3 (P75)", f"{q3:.0f}")
+                    with col_sep5:
+                        st.metric(f"🎯 P{percentil_param}", f"{p_selecionado:.0f}")
+                    
+                    # Boxplot compacto
+                    st.markdown("#### 📦 Boxplot - Distribuição")
+                    
+                    fig_box_small = go.Figure()
+                    
+                    fig_box_small.add_trace(go.Box(
                         y=valores,
                         name='Sincronizações por Dia',
                         boxmean='sd',
                         marker_color=COR_AZUL_PETROLEO,
                         line_color=COR_AZUL_ESCURO,
-                        fillcolor='rgba(2, 138, 159, 0.3)'
+                        fillcolor='rgba(2, 138, 159, 0.3)',
+                        boxpoints=False
                     ))
                     
-                    # Adicionar linha da mediana
-                    fig_box.add_hline(
-                        y=valores.median(),
-                        line_dash="dash",
-                        line_color=COR_VERDE_ESCURO,
-                        annotation_text=f"Mediana: {valores.median():.0f}",
-                        annotation_position="right"
-                    )
-                    
-                    # Adicionar linha do percentil selecionado
-                    p_valor = valores.quantile(percentil_param/100)
-                    fig_box.add_hline(
-                        y=p_valor,
-                        line_dash="dash",
-                        line_color=COR_LARANJA,
-                        annotation_text=f"P{percentil_param}: {p_valor:.0f}",
-                        annotation_position="right"
-                    )
-                    
-                    fig_box.update_layout(
-                        title='Distribuição de Sincronizações Diárias',
-                        yaxis_title='Número de Sincronizações',
-                        height=400,
-                        plot_bgcolor=COR_BRANCO,
-                        showlegend=False
-                    )
-                    
-                    st.plotly_chart(fig_box, use_container_width=True)
-            
-            # ============================================
-            # 3. TABELA POPULAÇÃO/EMPRESAS
-            # ============================================
-            st.markdown("---")
-            st.markdown("### 3️⃣ TABELA POR EMPRESA")
-            st.markdown("_População, quantidade de chamados e amostra sincronizada_")
-            
-            # Agrupar por empresa
-            empresa_stats = df_est.groupby('Empresa').agg({
-                'Chamado': 'count',
-                'Status': lambda x: (x == 'Sincronizado').sum()
-            }).reset_index()
-            empresa_stats.columns = ['Empresa', 'Total_Chamados', 'Sincronizados']
-            empresa_stats['Taxa_Sinc'] = (empresa_stats['Sincronizados'] / empresa_stats['Total_Chamados'] * 100).round(1)
-            
-            # Ordenar por total de chamados
-            empresa_stats = empresa_stats.sort_values('Total_Chamados', ascending=False)
-            
-            # Adicionar informações de localização
-            empresa_stats['Estado'] = empresa_stats['Empresa'].map(lambda x: MAPEAMENTO_EMPRESAS.get(x, {}).get('estado', 'N/A'))
-            empresa_stats['Região'] = empresa_stats['Empresa'].map(lambda x: MAPEAMENTO_EMPRESAS.get(x, {}).get('regiao', 'N/A'))
-            
-            col_emp1, col_emp2 = st.columns([2, 1])
-            
-            with col_emp1:
-                st.dataframe(
-                    empresa_stats,
-                    use_container_width=True,
-                    column_config={
-                        "Empresa": st.column_config.TextColumn("Empresa"),
-                        "Total_Chamados": st.column_config.NumberColumn("Total Chamados", format="%d"),
-                        "Sincronizados": st.column_config.NumberColumn("Sincronizados", format="%d"),
-                        "Taxa_Sinc": st.column_config.NumberColumn("Taxa Sinc. %", format="%.1f%%"),
-                        "Estado": st.column_config.TextColumn("Estado"),
-                        "Região": st.column_config.TextColumn("Região")
-                    }
-                )
-            
-            with col_emp2:
-                st.markdown("#### 📊 Resumo por Empresa")
-                
-                total_geral = empresa_stats['Total_Chamados'].sum()
-                total_sinc_geral = empresa_stats['Sincronizados'].sum()
-                
-                st.metric("🏢 Total Empresas", len(empresa_stats))
-                st.metric("📋 Total Chamados", f"{total_geral:,}")
-                st.metric("✅ Total Sincronizados", f"{total_sinc_geral:,}")
-                st.metric("📈 Taxa Geral", f"{(total_sinc_geral/total_geral*100):.1f}%" if total_geral > 0 else "0%")
-            
-            # Gráfico de barras por empresa
-            st.markdown("#### 📊 Chamados por Empresa")
-            
-            fig_emp = go.Figure()
-            
-            fig_emp.add_trace(go.Bar(
-                x=empresa_stats['Empresa'],
-                y=empresa_stats['Total_Chamados'],
-                name='Total Chamados',
-                marker_color=COR_AZUL_ESCURO,
-                text=empresa_stats['Total_Chamados'],
-                textposition='outside'
-            ))
-            
-            fig_emp.add_trace(go.Bar(
-                x=empresa_stats['Empresa'],
-                y=empresa_stats['Sincronizados'],
-                name='Sincronizados',
-                marker_color=COR_VERDE_ESCURO,
-                text=empresa_stats['Sincronizados'],
-                textposition='outside'
-            ))
-            
-            fig_emp.update_layout(
-                title='Chamados Totais vs Sincronizados por Empresa',
-                barmode='group',
-                height=400,
-                plot_bgcolor=COR_BRANCO,
-                xaxis_title='Empresa',
-                yaxis_title='Quantidade'
-            )
-            
-            st.plotly_chart(fig_emp, use_container_width=True)
-            
-            # ============================================
-            # 4. MODA (Chamado que mais se repetiu)
-            # ============================================
-            st.markdown("---")
-            st.markdown("### 4️⃣ MODA - CHAMADO MAIS RECORRENTE")
-            st.markdown("_Chamado que mais se repetiu no período selecionado_")
-            
-            if 'Chamado' in df_est.columns:
-                # Contar frequência de chamados
-                freq_chamados = df_est['Chamado'].value_counts().reset_index()
-                freq_chamados.columns = ['Chamado', 'Frequência']
-                
-                if not freq_chamados.empty:
-                    # Moda - chamado mais frequente
-                    moda_chamado = freq_chamados.iloc[0]
-                    
-                    col_moda1, col_moda2, col_moda3 = st.columns(3)
-                    
-                    with col_moda1:
-                        st.markdown(f"""
-                        <div class="metric-card" style="border-left: 4px solid {COR_VERMELHO};">
-                            <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">🏆 Chamado Mais Frequente</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: {COR_VERMELHO};">{moda_chamado['Chamado']}</div>
-                            <div style="font-size: 0.9rem; color: {COR_PRETO_SUAVE};">{moda_chamado['Frequência']} ocorrências</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Informações do chamado mais frequente
-                    chamado_info = df_est[df_est['Chamado'] == moda_chamado['Chamado']].iloc[0]
-                    
-                    with col_moda2:
-                        st.markdown(f"""
-                        <div class="metric-card">
-                            <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">📋 Tipo</div>
-                            <div style="font-size: 1.2rem; font-weight: 600; color: {COR_PRETO_SUAVE};">{chamado_info.get('Tipo_Chamado', 'N/A')}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col_moda3:
-                        st.markdown(f"""
-                        <div class="metric-card">
-                            <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">🏢 Empresa</div>
-                            <div style="font-size: 1.2rem; font-weight: 600; color: {COR_PRETO_SUAVE};">{chamado_info.get('Empresa', 'N/A')}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Top 10 chamados mais frequentes
-                    st.markdown("#### 📊 Top 10 Chamados Mais Frequentes")
-                    
-                    top_chamados = freq_chamados.head(10).copy()
-                    top_chamados['Percentual'] = (top_chamados['Frequência'] / len(df_est) * 100).round(1)
-                    
-                    fig_top_chamados = go.Figure()
-                    
-                    fig_top_chamados.add_trace(go.Bar(
-                        x=top_chamados['Frequência'],
-                        y=top_chamados['Chamado'],
-                        orientation='h',
-                        text=top_chamados['Frequência'],
-                        textposition='outside',
-                        marker_color=top_chamados['Frequência'].apply(
-                            lambda x: COR_VERMELHO if x == top_chamados['Frequência'].max() else COR_AZUL_PETROLEO
-                        ),
-                        hovertemplate='<b>%{y}</b><br>Frequência: %{x}<br>Percentual: %{customdata}%<extra></extra>',
-                        customdata=top_chamados['Percentual']
-                    ))
-                    
-                    fig_top_chamados.update_layout(
-                        title='Top 10 Chamados Mais Frequentes',
-                        xaxis_title='Frequência',
-                        yaxis_title='Chamado',
-                        height=400,
+                    fig_box_small.update_layout(
+                        height=250,
                         plot_bgcolor=COR_BRANCO,
                         showlegend=False,
-                        yaxis={'categoryorder': 'total ascending'}
+                        yaxis_title='Sincronizações'
                     )
                     
-                    st.plotly_chart(fig_top_chamados, use_container_width=True)
-                    
-                    # Tabela completa
-                    with st.expander("📋 Ver Todos os Chamados com Repetição", expanded=False):
-                        st.dataframe(
-                            freq_chamados[freq_chamados['Frequência'] > 1],
-                            use_container_width=True,
-                            column_config={
-                                "Chamado": st.column_config.TextColumn("Chamado"),
-                                "Frequência": st.column_config.NumberColumn("Frequência", format="%d")
-                            }
-                        )
+                    st.plotly_chart(fig_box_small, use_container_width=True)
             
             # ============================================
             # 5. ANÁLISE DE PERCENTIL PARA TENDÊNCIA
             # ============================================
             st.markdown("---")
-            st.markdown("### 5️⃣ ANÁLISE DE PERCENTIL PARA TENDÊNCIA")
+            st.markdown("### 📈 ANÁLISE DE PERCENTIL PARA TENDÊNCIA")
             st.markdown(f"_Evolução dos percentis ao longo do tempo - Percentil de Referência: {percentil_param}%_")
             
             if 'Criado' in df_sinc_est.columns:
@@ -4706,168 +4407,189 @@ if st.session_state.df_original is not None:
             # 8. MEDIDAS DE ASSIMETRIA
             # ============================================
             st.markdown("---")
-            st.markdown("### 8️⃣ MEDIDAS DE ASSIMETRIA")
+            st.markdown("### 📐 MEDIDAS DE ASSIMETRIA")
             st.markdown("_Análise da forma da distribuição dos dados_")
             
             if 'Criado' in df_sinc_est.columns and 'sinc_por_dia_est' in locals() and not sinc_por_dia_est.empty:
-                from scipy import stats
-                
-                valores = sinc_por_dia_est['Quantidade']
-                
-                # Calcular medidas de assimetria
-                skewness = stats.skew(valores)
-                skewness_pearson = (valores.mean() - valores.median()) / valores.std() if valores.std() > 0 else 0
-                
-                # Classificar assimetria
-                if abs(skewness) < 0.5:
-                    classificacao_skew = "📊 Simétrica (distribuição equilibrada)"
-                    cor_skew = COR_VERDE_ESCURO
-                elif skewness > 0:
-                    classificacao_skew = f"📈 Assimetria Positiva ({skewness:.2f}) - Cauda à direita"
-                    cor_skew = COR_LARANJA
-                else:
-                    classificacao_skew = f"📉 Assimetria Negativa ({skewness:.2f}) - Cauda à esquerda"
-                    cor_skew = COR_AZUL_PETROLEO
-                
-                # Cards
-                col_skew1, col_skew2, col_skew3 = st.columns(3)
-                
-                with col_skew1:
-                    st.markdown(f"""
-                    <div class="metric-card" style="border-left: 4px solid {cor_skew};">
-                        <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">📐 Coeficiente de Assimetria</div>
-                        <div style="font-size: 1.8rem; font-weight: 700; color: {cor_skew};">{skewness:.3f}</div>
-                        <div style="font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{classificacao_skew}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col_skew2:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">📊 Assimetria de Pearson</div>
-                        <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_ESCURO};">{skewness_pearson:.3f}</div>
-                        <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">
-                            {'' if abs(skewness_pearson) < 0.1 else 'Média ≠ Mediana' if skewness_pearson > 0 else 'Média < Mediana'}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col_skew3:
-                    # Kurtosis (curtose) usando percentis
-                    p90 = valores.quantile(0.90)
-                    p10 = valores.quantile(0.10)
-                    p75 = valores.quantile(0.75)
-                    p25 = valores.quantile(0.25)
-                    
-                    if (p75 - p25) > 0:
-                        curtose_percentilica = (p90 - p10) / (p75 - p25)
-                    else:
-                        curtose_percentilica = 1.0
-                    
-                    if curtose_percentilica > 1.5:
-                        class_curtose = "🔺 Leptocúrtica (distribuição mais concentrada)"
-                    elif curtose_percentilica < 0.8:
-                        class_curtose = "🔻 Platicúrtica (distribuição mais dispersa)"
-                    else:
-                        class_curtose = "📊 Mesocúrtica (distribuição normal)"
-                    
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">📏 Coeficiente Percentílico de Curtose</div>
-                        <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_ESCURO};">{curtose_percentilica:.3f}</div>
-                        <div style="font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{class_curtose}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                # Gráfico de distribuição
-                st.markdown("#### 📊 Distribuição dos Dados")
-                
-                col_dist1, col_dist2 = st.columns(2)
-                
-                with col_dist1:
-                    # Histograma com curva de densidade
-                    fig_hist = go.Figure()
-                    
-                    fig_hist.add_trace(go.Histogram(
-                        x=valores,
-                        nbinsx=20,
-                        name='Frequência',
-                        marker_color='rgba(2, 138, 159, 0.7)',
-                        marker_line_color=COR_AZUL_ESCURO,
-                        marker_line_width=1
-                    ))
-                    
-                    fig_hist.update_layout(
-                        title='Histograma - Sincronizações por Dia',
-                        xaxis_title='Sincronizações',
-                        yaxis_title='Frequência',
-                        height=350,
-                        plot_bgcolor=COR_BRANCO,
-                        showlegend=False
-                    )
-                    
-                    st.plotly_chart(fig_hist, use_container_width=True)
-                
-                with col_dist2:
-                    # Gráfico Q-Q para normalidade
+                try:
                     from scipy import stats
-                    
-                    # Calcular quantis teóricos e observados
-                    theoretical_quantiles = stats.norm.ppf(np.linspace(0.01, 0.99, len(valores)))
-                    sorted_values = np.sort(valores)
-                    
-                    fig_qq = go.Figure()
-                    
-                    fig_qq.add_trace(go.Scatter(
-                        x=theoretical_quantiles,
-                        y=sorted_values,
-                        mode='markers',
-                        name='Dados',
-                        marker=dict(color=COR_AZUL_PETROLEO, size=6)
-                    ))
-                    
-                    # Linha de referência (y = x * std + mean)
-                    mean_val = valores.mean()
-                    std_val = valores.std()
-                    x_line = np.array([-3, 3])
-                    y_line = x_line * std_val + mean_val
-                    
-                    fig_qq.add_trace(go.Scatter(
-                        x=x_line,
-                        y=y_line,
-                        mode='lines',
-                        name='Referência',
-                        line=dict(color=COR_VERMELHO, width=2, dash='dash')
-                    ))
-                    
-                    fig_qq.update_layout(
-                        title='Gráfico Q-Q (Normalidade)',
-                        xaxis_title='Quantis Teóricos',
-                        yaxis_title='Quantis Observados',
-                        height=350,
-                        plot_bgcolor=COR_BRANCO,
-                        showlegend=False
-                    )
-                    
-                    st.plotly_chart(fig_qq, use_container_width=True)
+                except ImportError:
+                    st.warning("⚠️ Biblioteca 'scipy' não encontrada. Instale com: pip install scipy")
+                    stats = None
                 
-                # Interpretação
-                with st.expander("📖 Interpretação das Medidas de Assimetria", expanded=False):
-                    st.markdown(f"""
-                    **📐 Coeficiente de Assimetria (Skewness) = {skewness:.3f}**
+                if stats:
+                    valores = sinc_por_dia_est['Quantidade']
                     
-                    - **{classificacao_skew}**
-                    - {'A média é maior que a mediana, indicando que há dias com volume muito alto.' if skewness > 0.5 else 'A média é menor que a mediana, indicando que há dias com volume muito baixo.' if skewness < -0.5 else 'A média e a mediana são próximas, indicando distribuição equilibrada.'}
+                    # Calcular medidas de assimetria
+                    skewness = stats.skew(valores)
+                    skewness_pearson = (valores.mean() - valores.median()) / valores.std() if valores.std() > 0 else 0
                     
-                    **📊 Interpretação:**
+                    # Classificar assimetria
+                    if abs(skewness) < 0.5:
+                        classificacao_skew = "📊 Simétrica (distribuição equilibrada)"
+                        cor_skew = COR_VERDE_ESCURO
+                    elif skewness > 0:
+                        classificacao_skew = f"📈 Assimetria Positiva ({skewness:.2f}) - Cauda à direita"
+                        cor_skew = COR_LARANJA
+                    else:
+                        classificacao_skew = f"📉 Assimetria Negativa ({skewness:.2f}) - Cauda à esquerda"
+                        cor_skew = COR_AZUL_PETROLEO
                     
-                    {'📈 **Assimetria Positiva:** A maioria dos dias tem volume abaixo da média, mas há alguns dias com volume excepcionalmente alto que puxam a média para cima.' if skewness > 0.5 else '📉 **Assimetria Negativa:** A maioria dos dias tem volume acima da média, mas há alguns dias com volume excepcionalmente baixo que puxam a média para baixo.' if skewness < -0.5 else '✅ **Simétrica:** A distribuição é equilibrada. A média e a mediana são próximas, indicando consistência nos volumes diários.'}
+                    # Cards
+                    col_skew1, col_skew2, col_skew3 = st.columns(3)
                     
-                    **📏 Coeficiente Percentílico de Curtose = {curtose_percentilica:.3f}**
+                    with col_skew1:
+                        st.markdown(f"""
+                        <div class="metric-card" style="border-left: 4px solid {cor_skew};">
+                            <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">📐 Coeficiente de Assimetria</div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: {cor_skew};">{skewness:.3f}</div>
+                            <div style="font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{classificacao_skew}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                     
-                    - **{class_curtose}**
-                    - {'A distribuição é mais concentrada no centro (leptocúrtica), indicando que a maioria dos dias tem volume muito similar.' if curtose_percentilica > 1.5 else 'A distribuição é mais dispersa (platicúrtica), indicando maior variabilidade nos volumes diários.' if curtose_percentilica < 0.8 else 'A distribuição tem formato normal (mesocúrtica).'}
-                    """)
+                    with col_skew2:
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">📊 Assimetria de Pearson</div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_ESCURO};">{skewness_pearson:.3f}</div>
+                            <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">
+                                {'' if abs(skewness_pearson) < 0.1 else 'Média ≠ Mediana' if skewness_pearson > 0 else 'Média < Mediana'}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col_skew3:
+                        # Kurtosis (curtose) usando percentis
+                        p90 = valores.quantile(0.90)
+                        p10 = valores.quantile(0.10)
+                        p75 = valores.quantile(0.75)
+                        p25 = valores.quantile(0.25)
+                        
+                        if (p75 - p25) > 0:
+                            curtose_percentilica = (p90 - p10) / (p75 - p25)
+                        else:
+                            curtose_percentilica = 1.0
+                        
+                        if curtose_percentilica > 1.5:
+                            class_curtose = "🔺 Leptocúrtica (distribuição mais concentrada)"
+                        elif curtose_percentilica < 0.8:
+                            class_curtose = "🔻 Platicúrtica (distribuição mais dispersa)"
+                        else:
+                            class_curtose = "📊 Mesocúrtica (distribuição normal)"
+                        
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <div style="font-size: 0.85rem; color: {COR_CINZA_TEXTO};">📏 Coeficiente Percentílico de Curtose</div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_ESCURO};">{curtose_percentilica:.3f}</div>
+                            <div style="font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{class_curtose}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Gráfico de distribuição
+                    st.markdown("#### 📊 Distribuição dos Dados")
+                    
+                    col_dist1, col_dist2 = st.columns(2)
+                    
+                    with col_dist1:
+                        # Histograma
+                        fig_hist = go.Figure()
+                        
+                        fig_hist.add_trace(go.Histogram(
+                            x=valores,
+                            nbinsx=15,
+                            name='Frequência',
+                            marker_color='rgba(2, 138, 159, 0.7)',
+                            marker_line_color=COR_AZUL_ESCURO,
+                            marker_line_width=1
+                        ))
+                        
+                        # Adicionar linha da média
+                        fig_hist.add_vline(
+                            x=valores.mean(),
+                            line_dash="dash",
+                            line_color=COR_VERMELHO,
+                            annotation_text=f"Média: {valores.mean():.1f}",
+                            annotation_position="top"
+                        )
+                        
+                        # Adicionar linha da mediana
+                        fig_hist.add_vline(
+                            x=valores.median(),
+                            line_dash="dash",
+                            line_color=COR_VERDE_ESCURO,
+                            annotation_text=f"Mediana: {valores.median():.1f}",
+                            annotation_position="bottom"
+                        )
+                        
+                        fig_hist.update_layout(
+                            title='Histograma - Sincronizações por Dia',
+                            xaxis_title='Sincronizações',
+                            yaxis_title='Frequência',
+                            height=350,
+                            plot_bgcolor=COR_BRANCO,
+                            showlegend=False
+                        )
+                        
+                        st.plotly_chart(fig_hist, use_container_width=True)
+                    
+                    with col_dist2:
+                        if stats:
+                            # Gráfico Q-Q para normalidade
+                            theoretical_quantiles = stats.norm.ppf(np.linspace(0.01, 0.99, len(valores)))
+                            sorted_values = np.sort(valores)
+                            
+                            fig_qq = go.Figure()
+                            
+                            fig_qq.add_trace(go.Scatter(
+                                x=theoretical_quantiles,
+                                y=sorted_values,
+                                mode='markers',
+                                name='Dados',
+                                marker=dict(color=COR_AZUL_PETROLEO, size=6)
+                            ))
+                            
+                            # Linha de referência
+                            mean_val = valores.mean()
+                            std_val = valores.std()
+                            x_line = np.array([-3, 3])
+                            y_line = x_line * std_val + mean_val
+                            
+                            fig_qq.add_trace(go.Scatter(
+                                x=x_line,
+                                y=y_line,
+                                mode='lines',
+                                name='Referência',
+                                line=dict(color=COR_VERMELHO, width=2, dash='dash')
+                            ))
+                            
+                            fig_qq.update_layout(
+                                title='Gráfico Q-Q (Normalidade)',
+                                xaxis_title='Quantis Teóricos',
+                                yaxis_title='Quantis Observados',
+                                height=350,
+                                plot_bgcolor=COR_BRANCO,
+                                showlegend=False
+                            )
+                            
+                            st.plotly_chart(fig_qq, use_container_width=True)
+                    
+                    # Interpretação
+                    with st.expander("📖 Interpretação das Medidas de Assimetria", expanded=False):
+                        st.markdown(f"""
+                        **📐 Coeficiente de Assimetria (Skewness) = {skewness:.3f}**
+                        
+                        - **{classificacao_skew}**
+                        - {'A média é maior que a mediana, indicando que há dias com volume muito alto.' if skewness > 0.5 else 'A média é menor que a mediana, indicando que há dias com volume muito baixo.' if skewness < -0.5 else 'A média e a mediana são próximas, indicando distribuição equilibrada.'}
+                        
+                        **📊 Interpretação:**
+                        
+                        {'📈 **Assimetria Positiva:** A maioria dos dias tem volume abaixo da média, mas há alguns dias com volume excepcionalmente alto que puxam a média para cima.' if skewness > 0.5 else '📉 **Assimetria Negativa:** A maioria dos dias tem volume acima da média, mas há alguns dias com volume excepcionalmente baixo que puxam a média para baixo.' if skewness < -0.5 else '✅ **Simétrica:** A distribuição é equilibrada. A média e a mediana são próximas, indicando consistência nos volumes diários.'}
+                        
+                        **📏 Coeficiente Percentílico de Curtose = {curtose_percentilica:.3f}**
+                        
+                        - **{class_curtose}**
+                        - {'A distribuição é mais concentrada no centro (leptocúrtica), indicando que a maioria dos dias tem volume muito similar.' if curtose_percentilica > 1.5 else 'A distribuição é mais dispersa (platicúrtica), indicando maior variabilidade nos volumes diários.' if curtose_percentilica < 0.8 else 'A distribuição tem formato normal (mesocúrtica).'}
+                        """)
             
             # ============================================
             # 10. TESTE DE HIPÓTESE
@@ -4877,127 +4599,131 @@ if st.session_state.df_original is not None:
             st.markdown("_Análise estatística para comparar grupos e validar diferenças_")
             
             if 'Criado' in df_sinc_est.columns and 'sinc_por_dia_est' in locals() and not sinc_por_dia_est.empty:
-                from scipy import stats
+                try:
+                    from scipy import stats
+                except ImportError:
+                    stats = None
                 
-                # Preparar dados para teste
-                df_sinc_est['Dia_Semana_PT'] = df_sinc_est['Criado'].dt.day_name().map({
-                    'Monday': 'Segunda',
-                    'Tuesday': 'Terça',
-                    'Wednesday': 'Quarta',
-                    'Thursday': 'Quinta',
-                    'Friday': 'Sexta',
-                    'Saturday': 'Sábado',
-                    'Sunday': 'Domingo'
-                })
-                
-                # Agrupar por dia da semana
-                grupos_dia = []
-                dias_validos = []
-                for dia in ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']:
-                    dados_dia = df_sinc_est[df_sinc_est['Dia_Semana_PT'] == dia]
-                    if not dados_dia.empty:
-                        valores_dia = dados_dia.groupby('Data').size().values
-                        if len(valores_dia) > 0:
-                            grupos_dia.append(valores_dia)
-                            dias_validos.append(dia)
-                
-                # Teste de hipótese: ANOVA para comparar dias da semana
-                st.markdown("#### 📊 Comparação entre Dias da Semana (ANOVA)")
-                
-                if len(grupos_dia) >= 2:
-                    # ANOVA
-                    f_stat, p_valor = stats.f_oneway(*grupos_dia)
+                if stats:
+                    # Preparar dados para teste
+                    df_sinc_est['Dia_Semana_PT'] = df_sinc_est['Criado'].dt.day_name().map({
+                        'Monday': 'Segunda',
+                        'Tuesday': 'Terça',
+                        'Wednesday': 'Quarta',
+                        'Thursday': 'Quinta',
+                        'Friday': 'Sexta',
+                        'Saturday': 'Sábado',
+                        'Sunday': 'Domingo'
+                    })
                     
-                    col_hip1, col_hip2, col_hip3 = st.columns(3)
+                    # Agrupar por dia da semana
+                    grupos_dia = []
+                    dias_validos = []
+                    for dia in ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']:
+                        dados_dia = df_sinc_est[df_sinc_est['Dia_Semana_PT'] == dia]
+                        if not dados_dia.empty:
+                            valores_dia = dados_dia.groupby('Data').size().values
+                            if len(valores_dia) > 0:
+                                grupos_dia.append(valores_dia)
+                                dias_validos.append(dia)
                     
-                    with col_hip1:
-                        st.metric(
-                            "📊 Estatística F",
-                            f"{f_stat:.3f}"
-                        )
+                    # Teste de hipótese: ANOVA para comparar dias da semana
+                    st.markdown("#### 📊 Comparação entre Dias da Semana (ANOVA)")
                     
-                    with col_hip2:
-                        st.metric(
-                            "🎯 p-valor",
-                            f"{p_valor:.6f}",
-                            delta="Significativo" if p_valor < 0.05 else "Não significativo",
-                            delta_color="normal" if p_valor < 0.05 else "inverse"
-                        )
-                    
-                    with col_hip3:
-                        if p_valor < 0.05:
-                            st.success("✅ **Rejeita H0** - Há diferença significativa entre os dias da semana")
-                        else:
-                            st.info("ℹ️ **Não rejeita H0** - Não há diferença significativa entre os dias da semana")
-                    
-                    # Boxplot por dia da semana
-                    fig_box_dia = go.Figure()
-                    
-                    for dia, dados in zip(dias_validos, grupos_dia):
-                        if len(dados) > 0:
-                            fig_box_dia.add_trace(go.Box(
-                                y=dados,
-                                name=dia,
-                                marker_color=COR_AZUL_PETROLEO,
-                                line_color=COR_AZUL_ESCURO,
-                                fillcolor='rgba(2, 138, 159, 0.3)'
-                            ))
-                    
-                    fig_box_dia.update_layout(
-                        title='Distribuição de Sincronizações por Dia da Semana',
-                        yaxis_title='Sincronizações',
-                        height=400,
-                        plot_bgcolor=COR_BRANCO,
-                        showlegend=False
-                    )
-                    
-                    st.plotly_chart(fig_box_dia, use_container_width=True)
-                
-                # Teste de hipótese: Comparar manhã vs tarde
-                st.markdown("#### 🕐 Comparação entre Períodos (Manhã vs Tarde)")
-                
-                if 'Hora' in df_sinc_est.columns:
-                    df_sinc_est['Periodo'] = df_sinc_est['Hora'].apply(
-                        lambda x: 'Manhã (07:30-12:00)' if 7 <= x < 12 else 
-                                 'Tarde (13:00-17:00)' if 13 <= x < 17 else 
-                                 'Fim do Dia (17:00-19:30)' if 17 <= x < 20 else 'Fora do Expediente'
-                    )
-                    
-                    # Agrupar por período
-                    periodos = ['Manhã (07:30-12:00)', 'Tarde (13:00-17:00)', 'Fim do Dia (17:00-19:30)']
-                    grupos_periodo = []
-                    periodos_validos = []
-                    for periodo in periodos:
-                        dados_periodo = df_sinc_est[df_sinc_est['Periodo'] == periodo]['Hora'].values
-                        if len(dados_periodo) > 0:
-                            grupos_periodo.append(dados_periodo)
-                            periodos_validos.append(periodo)
-                    
-                    if len(grupos_periodo) >= 2:
+                    if len(grupos_dia) >= 2:
                         # ANOVA
-                        f_stat_periodo, p_valor_periodo = stats.f_oneway(*grupos_periodo)
+                        f_stat, p_valor = stats.f_oneway(*grupos_dia)
                         
-                        col_hip4, col_hip5, col_hip6 = st.columns(3)
+                        col_hip1, col_hip2, col_hip3 = st.columns(3)
                         
-                        with col_hip4:
+                        with col_hip1:
                             st.metric(
                                 "📊 Estatística F",
-                                f"{f_stat_periodo:.3f}"
+                                f"{f_stat:.3f}"
                             )
                         
-                        with col_hip5:
+                        with col_hip2:
                             st.metric(
                                 "🎯 p-valor",
-                                f"{p_valor_periodo:.6f}",
-                                delta="Significativo" if p_valor_periodo < 0.05 else "Não significativo",
-                                delta_color="normal" if p_valor_periodo < 0.05 else "inverse"
+                                f"{p_valor:.6f}",
+                                delta="Significativo" if p_valor < 0.05 else "Não significativo",
+                                delta_color="normal" if p_valor < 0.05 else "inverse"
                             )
                         
-                        with col_hip6:
-                            if p_valor_periodo < 0.05:
-                                st.success("✅ **Rejeita H0** - Há diferença significativa entre os períodos do dia")
+                        with col_hip3:
+                            if p_valor < 0.05:
+                                st.success("✅ **Rejeita H0** - Há diferença significativa entre os dias da semana")
                             else:
-                                st.info("ℹ️ **Não rejeita H0** - Não há diferença significativa entre os períodos do dia")
+                                st.info("ℹ️ **Não rejeita H0** - Não há diferença significativa entre os dias da semana")
+                        
+                        # Boxplot por dia da semana
+                        fig_box_dia = go.Figure()
+                        
+                        for dia, dados in zip(dias_validos, grupos_dia):
+                            if len(dados) > 0:
+                                fig_box_dia.add_trace(go.Box(
+                                    y=dados,
+                                    name=dia,
+                                    marker_color=COR_AZUL_PETROLEO,
+                                    line_color=COR_AZUL_ESCURO,
+                                    fillcolor='rgba(2, 138, 159, 0.3)'
+                                ))
+                        
+                        fig_box_dia.update_layout(
+                            title='Distribuição de Sincronizações por Dia da Semana',
+                            yaxis_title='Sincronizações',
+                            height=350,
+                            plot_bgcolor=COR_BRANCO,
+                            showlegend=False
+                        )
+                        
+                        st.plotly_chart(fig_box_dia, use_container_width=True)
+                    
+                    # Teste de hipótese: Comparar manhã vs tarde
+                    st.markdown("#### 🕐 Comparação entre Períodos (Manhã vs Tarde)")
+                    
+                    if 'Hora' in df_sinc_est.columns:
+                        df_sinc_est['Periodo'] = df_sinc_est['Hora'].apply(
+                            lambda x: 'Manhã (07:30-12:00)' if 7 <= x < 12 else 
+                                     'Tarde (13:00-17:00)' if 13 <= x < 17 else 
+                                     'Fim do Dia (17:00-19:30)' if 17 <= x < 20 else 'Fora do Expediente'
+                        )
+                        
+                        # Agrupar por período
+                        periodos = ['Manhã (07:30-12:00)', 'Tarde (13:00-17:00)', 'Fim do Dia (17:00-19:30)']
+                        grupos_periodo = []
+                        periodos_validos = []
+                        for periodo in periodos:
+                            dados_periodo = df_sinc_est[df_sinc_est['Periodo'] == periodo]['Hora'].values
+                            if len(dados_periodo) > 0:
+                                grupos_periodo.append(dados_periodo)
+                                periodos_validos.append(periodo)
+                        
+                        if len(grupos_periodo) >= 2:
+                            # ANOVA
+                            f_stat_periodo, p_valor_periodo = stats.f_oneway(*grupos_periodo)
+                            
+                            col_hip4, col_hip5, col_hip6 = st.columns(3)
+                            
+                            with col_hip4:
+                                st.metric(
+                                    "📊 Estatística F",
+                                    f"{f_stat_periodo:.3f}"
+                                )
+                            
+                            with col_hip5:
+                                st.metric(
+                                    "🎯 p-valor",
+                                    f"{p_valor_periodo:.6f}",
+                                    delta="Significativo" if p_valor_periodo < 0.05 else "Não significativo",
+                                    delta_color="normal" if p_valor_periodo < 0.05 else "inverse"
+                                )
+                            
+                            with col_hip6:
+                                if p_valor_periodo < 0.05:
+                                    st.success("✅ **Rejeita H0** - Há diferença significativa entre os períodos do dia")
+                                else:
+                                    st.info("ℹ️ **Não rejeita H0** - Não há diferença significativa entre os períodos do dia")
             
             # Explicação dos testes
             with st.expander("📖 Entendendo os Testes de Hipótese", expanded=False):
@@ -5032,18 +4758,6 @@ if st.session_state.df_original is not None:
             col_export1, col_export2 = st.columns(2)
             
             with col_export1:
-                # Exportar dados de frequência
-                if 'freq_chamados' in locals() and not freq_chamados.empty:
-                    csv_freq = freq_chamados.to_csv(index=False).encode('utf-8-sig')
-                    st.download_button(
-                        label="📥 Exportar Frequência de Chamados",
-                        data=csv_freq,
-                        file_name=f"frequencia_chamados_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
-            
-            with col_export2:
                 # Exportar dados de tendência
                 if 'df_tendencia' in locals() and not df_tendencia.empty:
                     csv_tendencia = df_tendencia.to_csv(index=False).encode('utf-8-sig')
@@ -5051,6 +4765,18 @@ if st.session_state.df_original is not None:
                         label="📥 Exportar Tendência de Percentis",
                         data=csv_tendencia,
                         file_name=f"tendencia_percentis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+            
+            with col_export2:
+                # Exportar dados de sincronização
+                if 'sinc_por_dia_est' in locals() and not sinc_por_dia_est.empty:
+                    csv_sinc = sinc_por_dia_est.to_csv(index=False).encode('utf-8-sig')
+                    st.download_button(
+                        label="📥 Exportar Sincronizações Diárias",
+                        data=csv_sinc,
+                        file_name=f"sincronizacoes_diarias_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                         mime="text/csv",
                         use_container_width=True
                     )
