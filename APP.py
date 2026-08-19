@@ -11,7 +11,13 @@ import warnings
 from pytz import timezone
 import numpy as np
 import streamlit.components.v1 as components
+import requests
 warnings.filterwarnings('ignore')
+
+# ============================================
+# CONFIGURAÇÃO GITHUB
+# ============================================
+GITHUB_CSV_URL = "https://raw.githubusercontent.com/Kewin31/esteira-adms/main/Esteira%20de%20Demandas%20ADMS%20(72).csv"
 
 # ============================================
 # PALETA DE CORES - NOVA IDENTIDADE VISUAL
@@ -461,8 +467,110 @@ def calcular_hash_arquivo(conteudo):
     return hashlib.md5(conteudo).hexdigest()
 
 @st.cache_data(ttl=300)
+def carregar_dados_github():
+    """
+    Carrega o arquivo CSV diretamente do GitHub com o formato específico
+    """
+    try:
+        # Baixa o arquivo
+        response = requests.get(GITHUB_CSV_URL, timeout=30)
+        response.raise_for_status()
+        
+        # Decodifica o conteúdo
+        content = response.text
+        
+        # Remove BOM se presente
+        if content.startswith('\ufeff'):
+            content = content[1:]
+        
+        # Lê o CSV com os parâmetros corretos
+        df = pd.read_csv(
+            io.StringIO(content),
+            quotechar='"',
+            delimiter=',',
+            encoding='utf-8',
+            dtype=str
+        )
+        
+        # Renomeia colunas para o padrão esperado pelo dashboard
+        col_mapping = {
+            'Título': 'Chamado',
+            'Tipo Chamado': 'Tipo_Chamado',
+            'Responsável': 'Responsável',
+            'Status': 'Status',
+            'Criado': 'Criado',
+            'Modificado': 'Modificado',
+            'Modificado por': 'Modificado_por',
+            'Prioridade': 'Prioridade',
+            'Sincronização': 'Sincronização',
+            'SRE': 'SRE',
+            'Empresa': 'Empresa',
+            'Revisões': 'Revisões',
+            'Motivo Revisão': 'Motivo_Revisao',
+            'Retorno Cliente': 'Retorno Cliente'
+        }
+        
+        df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
+        
+        # Verifica se as colunas essenciais existem
+        if 'Chamado' not in df.columns:
+            # Tenta encontrar a coluna de chamado
+            for col in df.columns:
+                if 'chamado' in col.lower() or 'título' in col.lower():
+                    df = df.rename(columns={col: 'Chamado'})
+                    break
+        
+        # Formata nomes dos responsáveis
+        if 'Responsável' in df.columns:
+            df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
+        
+        # Processa datas
+        date_columns = ['Criado', 'Modificado']
+        for col in date_columns:
+            if col in df.columns:
+                # Tenta vários formatos de data
+                try:
+                    df[col] = pd.to_datetime(df[col], format='%d/%m/%Y %H:%M', errors='coerce')
+                except:
+                    try:
+                        df[col] = pd.to_datetime(df[col], format='%d/%m/%Y', errors='coerce')
+                    except:
+                        df[col] = pd.to_datetime(df[col], errors='coerce')
+        
+        # Cria colunas de data
+        if 'Criado' in df.columns and not df['Criado'].isna().all():
+            df['Ano'] = df['Criado'].dt.year
+            df['Mês'] = df['Criado'].dt.month
+            df['Mês_Num'] = df['Criado'].dt.month
+            df['Dia'] = df['Criado'].dt.day
+            df['Hora'] = df['Criado'].dt.hour
+            df['Mês_Ano'] = df['Criado'].dt.strftime('%b/%Y')
+            df['Nome_Mês'] = df['Criado'].dt.month.map({
+                1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+            })
+            df['Nome_Mês_Completo'] = df['Criado'].dt.month.map({
+                1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+                5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+                9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+            })
+            df['Ano_Mês'] = df['Criado'].dt.strftime('%Y-%m')
+        
+        # Converte Revisões para número
+        if 'Revisões' in df.columns:
+            df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
+        
+        return df, f"✅ {len(df):,} registros carregados do GitHub!"
+    
+    except requests.exceptions.RequestException as e:
+        return None, f"❌ Erro ao baixar do GitHub: {str(e)}"
+    except Exception as e:
+        return None, f"❌ Erro ao processar CSV: {str(e)}"
+
+@st.cache_data(ttl=300)
 def carregar_dados(uploaded_file=None, caminho_arquivo=None):
-    """Carrega e processa os dados"""
+    """Carrega e processa os dados - versão de fallback"""
     try:
         if uploaded_file:
             conteudo_bytes = uploaded_file.getvalue()
@@ -478,15 +586,9 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         
         header_line = None
         for i, line in enumerate(lines):
-            if line.startswith('"Chamado","Tipo Chamado"'):
+            if line.startswith('"Chamado"') or line.startswith('"Título"'):
                 header_line = i
                 break
-        
-        if header_line is None:
-            for i, line in enumerate(lines):
-                if '"Chamado"' in line and '"Tipo Chamado"' in line:
-                    header_line = i
-                    break
         
         if header_line is None:
             return None, "Formato de arquivo inválido", None
@@ -496,6 +598,7 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         
         col_mapping = {
             'Chamado': 'Chamado',
+            'Título': 'Chamado',
             'Tipo Chamado': 'Tipo_Chamado',
             'Responsável': 'Responsável',
             'Status': 'Status',
@@ -507,7 +610,8 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             'SRE': 'SRE',
             'Empresa': 'Empresa',
             'Revisões': 'Revisões',
-            'Motivo Revisão': 'Motivo_Revisao'
+            'Motivo Revisão': 'Motivo_Revisao',
+            'Retorno Cliente': 'Retorno Cliente'
         }
         
         df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
@@ -518,9 +622,12 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         date_columns = ['Criado', 'Modificado']
         for col in date_columns:
             if col in df.columns:
-                df[col] = pd.to_datetime(df[col], errors='coerce')
+                try:
+                    df[col] = pd.to_datetime(df[col], format='%d/%m/%Y %H:%M', errors='coerce')
+                except:
+                    df[col] = pd.to_datetime(df[col], errors='coerce')
         
-        if 'Criado' in df.columns:
+        if 'Criado' in df.columns and not df['Criado'].isna().all():
             df['Ano'] = df['Criado'].dt.year
             df['Mês'] = df['Criado'].dt.month
             df['Mês_Num'] = df['Criado'].dt.month
@@ -1296,6 +1403,55 @@ def criar_grafico_barras(df_mapa):
     
     return fig
 
+# ============================================
+# CARREGAMENTO INICIAL DOS DADOS
+# ============================================
+if 'df_original' not in st.session_state:
+    st.session_state.df_original = None
+    st.session_state.df_filtrado = None
+    st.session_state.arquivo_atual = None
+    st.session_state.file_hash = None
+    st.session_state.uploaded_file_name = None
+    st.session_state.ultima_atualizacao = None
+    st.session_state.fonte_dados = None
+
+# Tenta carregar do GitHub primeiro
+if st.session_state.df_original is None:
+    with st.spinner('🔄 Carregando dados do GitHub...'):
+        try:
+            df_github, status_github = carregar_dados_github()
+            
+            if df_github is not None:
+                st.session_state.df_original = df_github
+                st.session_state.df_filtrado = df_github.copy()
+                st.session_state.arquivo_atual = "GitHub - Esteira de Demandas ADMS"
+                st.session_state.fonte_dados = "GitHub"
+                st.session_state.ultima_atualizacao = get_horario_brasilia()
+                st.success(status_github)
+                st.rerun()
+            else:
+                st.warning(f"⚠️ {status_github}")
+                st.info("📂 Tentando carregar arquivo local...")
+                
+                # Fallback para arquivo local
+                caminho_encontrado = encontrar_arquivo_dados()
+                if caminho_encontrado:
+                    df_local, status_local, _ = carregar_dados(caminho_arquivo=caminho_encontrado)
+                    if df_local is not None:
+                        st.session_state.df_original = df_local
+                        st.session_state.df_filtrado = df_local.copy()
+                        st.session_state.arquivo_atual = caminho_encontrado
+                        st.session_state.fonte_dados = "Local"
+                        st.session_state.ultima_atualizacao = get_horario_brasilia()
+                        st.success(f"✅ {len(df_local):,} registros carregados do arquivo local!")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {status_local}")
+                else:
+                    st.info("📤 Faça upload de um arquivo CSV na barra lateral para começar.")
+        except Exception as e:
+            st.error(f"❌ Erro ao carregar do GitHub: {str(e)}")
+            st.info("📤 Faça upload do arquivo CSV manualmente na barra lateral.")
 
 # ============================================
 # SIDEBAR - FILTROS E CONTROLES
@@ -1310,14 +1466,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    if 'df_original' not in st.session_state:
-        st.session_state.df_original = None
-        st.session_state.df_filtrado = None
-        st.session_state.arquivo_atual = None
-        st.session_state.file_hash = None
-        st.session_state.uploaded_file_name = None
-        st.session_state.ultima_atualizacao = None
-    
     if st.session_state.df_original is not None:
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
@@ -1325,7 +1473,7 @@ with st.sidebar:
             
             df = st.session_state.df_original.copy()
             
-            if 'Ano' in df.columns:
+            if 'Ano' in df.columns and not df['Ano'].isna().all():
                 anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
                 if anos_disponiveis:
                     anos_opcoes = ['Todos os Anos'] + list(anos_disponiveis)
@@ -1337,7 +1485,7 @@ with st.sidebar:
                     if ano_selecionado != 'Todos os Anos':
                         df = df[df['Ano'] == int(ano_selecionado)]
             
-            if 'Mês' in df.columns:
+            if 'Mês' in df.columns and not df['Mês'].isna().all():
                 meses_disponiveis = sorted(df['Mês'].dropna().unique().astype(int))
                 if meses_disponiveis:
                     meses_opcoes = ['Todos os Meses'] + [str(m) for m in meses_disponiveis]
@@ -1417,61 +1565,46 @@ with st.sidebar:
         st.markdown("**🔄 Controles de Atualização**")
         
         if st.session_state.df_original is not None:
-            arquivo_atual = st.session_state.arquivo_atual
-            
-            if arquivo_atual and isinstance(arquivo_atual, str) and os.path.exists(arquivo_atual):
-                tamanho_kb = os.path.getsize(arquivo_atual) / 1024
-                ultima_mod = datetime.fromtimestamp(os.path.getmtime(arquivo_atual))
-                
-                st.markdown(f"""
-                <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
-                    <p style="margin: 0; font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{os.path.basename(arquivo_atual)}</p>
-                    <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: {COR_CINZA_TEXTO};">
-                    📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if verificar_e_atualizar_arquivo():
-                    st.warning("⚠️ O arquivo local foi modificado! Clique em 'Recarregar Local' para atualizar.")
+            fonte = st.session_state.get('fonte_dados', 'Desconhecida')
+            st.markdown(f"""
+            <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
+                <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Fonte de dados:</p>
+                <p style="margin: 0; font-size: 0.85rem; color: {COR_PRETO_SUAVE};">
+                    {fonte}
+                </p>
+                <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: {COR_CINZA_TEXTO};">
+                    {len(st.session_state.df_original):,} registros
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
             
             col_btn1, col_btn2 = st.columns(2)
             
             with col_btn1:
-                if st.button("🔄 Recarregar Local", 
+                if st.button("🔄 Recarregar GitHub", 
                            use_container_width=True,
                            type="primary",
-                           help="Recarrega os dados do arquivo local",
-                           key="btn_recarregar"):
+                           help="Recarrega os dados do GitHub",
+                           key="btn_recarregar_github"):
                     
-                    caminho_atual = encontrar_arquivo_dados()
-                    
-                    if caminho_atual and os.path.exists(caminho_atual):
-                        with st.spinner('Recarregando dados do arquivo local...'):
-                            try:
-                                carregar_dados.clear()
-                                
-                                df_atualizado, status, hash_conteudo = carregar_dados(caminho_arquivo=caminho_atual)
-                                
-                                if df_atualizado is not None:
-                                    st.session_state.df_original = df_atualizado
-                                    st.session_state.df_filtrado = df_atualizado.copy()
-                                    st.session_state.arquivo_atual = caminho_atual
-                                    st.session_state.file_hash = hash_conteudo
-                                    st.session_state.ultima_atualizacao = get_horario_brasilia()
-                                    
-                                    st.session_state.ultima_modificacao = os.path.getmtime(caminho_atual)
-                                    
-                                    st.success(f"✅ Dados atualizados! {len(df_atualizado):,} registros")
-                                    time.sleep(1)
-                                    st.rerun()
-                                else:
-                                    st.error(f"❌ Erro ao recarregar: {status}")
-                            except Exception as e:
-                                st.error(f"❌ Erro: {str(e)}")
-                    else:
-                        st.error("❌ Arquivo local não encontrado.")
+                    with st.spinner('🔄 Recarregando do GitHub...'):
+                        try:
+                            st.cache_data.clear()
+                            df_atualizado, status = carregar_dados_github()
+                            
+                            if df_atualizado is not None:
+                                st.session_state.df_original = df_atualizado
+                                st.session_state.df_filtrado = df_atualizado.copy()
+                                st.session_state.arquivo_atual = "GitHub - Esteira de Demandas ADMS"
+                                st.session_state.fonte_dados = "GitHub"
+                                st.session_state.ultima_atualizacao = get_horario_brasilia()
+                                st.success(f"✅ {len(df_atualizado):,} registros recarregados!")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error(f"❌ {status}")
+                        except Exception as e:
+                            st.error(f"❌ Erro: {str(e)}")
             
             with col_btn2:
                 if st.button("🗑️ Limpar Tudo", 
@@ -1481,9 +1614,7 @@ with st.sidebar:
                            key="btn_limpar"):
                     
                     st.cache_data.clear()
-                    
                     limpar_sessao_dados()
-                    
                     st.success("✅ Dados e cache limpos!")
                     time.sleep(1)
                     st.rerun()
@@ -1537,6 +1668,7 @@ with st.sidebar:
                         st.session_state.file_hash = hash_conteudo
                         st.session_state.uploaded_file_name = uploaded_file.name
                         st.session_state.ultima_atualizacao = get_horario_brasilia()
+                        st.session_state.fonte_dados = "Upload"
                         
                         if 'filtros_aplicados' in st.session_state:
                             del st.session_state.filtros_aplicados
@@ -1549,24 +1681,6 @@ with st.sidebar:
                         st.error(f"❌ {status}")
         
         st.markdown('</div>', unsafe_allow_html=True)
-    
-    if st.session_state.df_original is None:
-        caminho_encontrado = encontrar_arquivo_dados()
-        
-        if caminho_encontrado:
-            with st.spinner('Carregando dados locais...'):
-                df_local, status, hash_conteudo = carregar_dados(caminho_arquivo=caminho_encontrado)
-                if df_local is not None:
-                    st.session_state.df_original = df_local
-                    st.session_state.df_filtrado = df_local.copy()
-                    st.session_state.arquivo_atual = caminho_encontrado
-                    st.session_state.file_hash = hash_conteudo
-                    st.session_state.ultima_atualizacao = get_horario_brasilia()
-                    if os.path.exists(caminho_encontrado):
-                        st.session_state.ultima_modificacao = os.path.getmtime(caminho_encontrado)
-                    st.rerun()
-                else:
-                    st.error(f"❌ {status}")
 
 # ============================================
 # HEADER - ESTILO GRADIENTE AZUL PETRÓLEO
@@ -1650,11 +1764,13 @@ if st.session_state.df_original is not None:
     if verificar_e_atualizar_arquivo():
         st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
 
+# ============================================
+# CONTINUAÇÃO DO DASHBOARD PRINCIPAL
+# ============================================
 if st.session_state.df_original is not None and st.session_state.show_popup:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
     
     with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
-        
         st.markdown("### 📰 MANCHETE - RELATÓRIO ")
         st.markdown("---")
         
@@ -1679,7 +1795,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             )
         
         with col_periodo2:
-            if 'Ano' in df.columns:
+            if 'Ano' in df.columns and not df['Ano'].isna().all():
                 anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
                 if anos_disponiveis:
                     ano_especifico = st.selectbox(
@@ -2099,7 +2215,7 @@ if st.session_state.df_original is not None:
     with tab_principal:
         st.markdown("## 📊 Base de Dados")
         
-        if 'Criado' in df.columns and not df.empty:
+        if 'Criado' in df.columns and not df.empty and not df['Criado'].isna().all():
             data_min = df['Criado'].min()
             data_max = df['Criado'].max()
             
@@ -2107,7 +2223,7 @@ if st.session_state.df_original is not None:
             <div class="info-base">
                 <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
                 <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO};">
-                Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
+                Período coberto: {data_min.strftime('%d/%m/%Y') if pd.notna(data_min) else 'N/A'} a {data_max.strftime('%d/%m/%Y') if pd.notna(data_max) else 'N/A'} | 
                 Total de registros: {len(df):,}
                 </p>
             </div>
@@ -2159,7 +2275,7 @@ if st.session_state.df_original is not None:
                 st.markdown(f'<div class="section-title">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
             
             with col_seletor:
-                if 'Ano' in df.columns:
+                if 'Ano' in df.columns and not df['Ano'].isna().all():
                     anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
                     if anos_disponiveis:
                         ano_selecionado = st.selectbox(
@@ -2170,7 +2286,7 @@ if st.session_state.df_original is not None:
                             key="ano_evolucao"
                         )
             
-            if 'Ano' in df.columns and 'Nome_Mês' in df.columns and anos_disponiveis:
+            if 'Ano' in df.columns and 'Nome_Mês' in df.columns and not df['Ano'].isna().all() and anos_disponiveis:
                 df_ano = df[df['Ano'] == ano_selecionado].copy()
                 
                 if not df_ano.empty:
@@ -2256,7 +2372,7 @@ if st.session_state.df_original is not None:
             col_rev_filtro1, col_rev_filtro2 = st.columns(2)
             
             with col_rev_filtro1:
-                if 'Ano' in df.columns:
+                if 'Ano' in df.columns and not df['Ano'].isna().all():
                     anos_rev = sorted(df['Ano'].dropna().unique().astype(int))
                     anos_opcoes_rev = ['Todos os Anos'] + list(anos_rev)
                     ano_rev = st.selectbox(
@@ -2266,7 +2382,7 @@ if st.session_state.df_original is not None:
                     )
             
             with col_rev_filtro2:
-                if 'Mês' in df.columns:
+                if 'Mês' in df.columns and not df['Mês'].isna().all():
                     meses_rev = sorted(df['Mês'].dropna().unique().astype(int))
                     meses_opcoes_rev = ['Todos os Meses'] + [str(m) for m in meses_rev]
                     mes_rev = st.selectbox(
@@ -2359,7 +2475,7 @@ if st.session_state.df_original is not None:
             col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
             
             with col_filtro1:
-                if 'Ano' in df.columns:
+                if 'Ano' in df.columns and not df['Ano'].isna().all():
                     anos_sinc = sorted(df['Ano'].dropna().unique().astype(int))
                     anos_opcoes_sinc = ['Todos os Anos'] + list(anos_sinc)
                     ano_sinc = st.selectbox(
@@ -2369,7 +2485,7 @@ if st.session_state.df_original is not None:
                     )
             
             with col_filtro2:
-                if 'Mês' in df.columns:
+                if 'Mês' in df.columns and not df['Mês'].isna().all():
                     meses_sinc = sorted(df['Mês'].dropna().unique().astype(int))
                     meses_opcoes_sinc = ['Todos os Meses'] + [str(m) for m in meses_sinc]
                     mes_sinc = st.selectbox(
@@ -2782,7 +2898,7 @@ if st.session_state.df_original is not None:
                 col_filtro1, col_filtro2 = st.columns(2)
                 
                 with col_filtro1:
-                    if 'Ano' in df.columns:
+                    if 'Ano' in df.columns and not df['Ano'].isna().all():
                         anos_sre = sorted(df['Ano'].dropna().unique().astype(int))
                         anos_opcoes_sre = ['Todos'] + list(anos_sre)
                         ano_sre = st.selectbox(
@@ -2792,7 +2908,7 @@ if st.session_state.df_original is not None:
                         )
                 
                 with col_filtro2:
-                    if 'Mês' in df.columns:
+                    if 'Mês' in df.columns and not df['Mês'].isna().all():
                         meses_sre = sorted(df['Mês'].dropna().unique().astype(int))
                         meses_opcoes_sre = ['Todos'] + [str(m) for m in meses_sre]
                         mes_sre = st.selectbox(
@@ -3013,18 +3129,21 @@ if st.session_state.df_original is not None:
                     col_saz_filtro1, col_saz_filtro2, col_saz_filtro3 = st.columns(3)
                     
                     with col_saz_filtro1:
-                        anos_saz = sorted(df['Ano'].dropna().unique().astype(int))
-                        anos_opcoes_saz = ['Todos os Anos'] + list(anos_saz)
-                        ano_saz = st.selectbox(
-                            "Selecionar Ano:",
-                            options=anos_opcoes_saz,
-                            index=len(anos_opcoes_saz)-1,
-                            key="ano_saz"
-                        )
+                        if 'Ano' in df.columns and not df['Ano'].isna().all():
+                            anos_saz = sorted(df['Ano'].dropna().unique().astype(int))
+                            anos_opcoes_saz = ['Todos os Anos'] + list(anos_saz)
+                            ano_saz = st.selectbox(
+                                "Selecionar Ano:",
+                                options=anos_opcoes_saz,
+                                index=len(anos_opcoes_saz)-1,
+                                key="ano_saz"
+                            )
+                        else:
+                            ano_saz = 'Todos os Anos'
                     
                     with col_saz_filtro2:
                         if ano_saz != 'Todos os Anos':
-                            meses_ano = df[df['Ano'] == int(ano_saz)]['Mês'].unique()
+                            meses_ano = df[df['Ano'] == int(ano_saz)]['Mês'].dropna().unique()
                             meses_opcoes = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_ano])
                             mes_saz = st.selectbox(
                                 "Selecionar Mês:",
@@ -3122,18 +3241,21 @@ if st.session_state.df_original is not None:
                         col_hora_filtro1, col_hora_filtro2 = st.columns(2)
                         
                         with col_hora_filtro1:
-                            anos_hora = sorted(df['Ano'].dropna().unique().astype(int))
-                            anos_opcoes_hora = ['Todos os Anos'] + list(anos_hora)
-                            ano_hora = st.selectbox(
-                                "Ano para análise horária:",
-                                options=anos_opcoes_hora,
-                                index=len(anos_opcoes_hora)-1,
-                                key="ano_hora"
-                            )
+                            if 'Ano' in df.columns and not df['Ano'].isna().all():
+                                anos_hora = sorted(df['Ano'].dropna().unique().astype(int))
+                                anos_opcoes_hora = ['Todos os Anos'] + list(anos_hora)
+                                ano_hora = st.selectbox(
+                                    "Ano para análise horária:",
+                                    options=anos_opcoes_hora,
+                                    index=len(anos_opcoes_hora)-1,
+                                    key="ano_hora"
+                                )
+                            else:
+                                ano_hora = 'Todos os Anos'
                         
                         with col_hora_filtro2:
                             if ano_hora != 'Todos os Anos':
-                                meses_hora = df[df['Ano'] == int(ano_hora)]['Mês'].unique()
+                                meses_hora = df[df['Ano'] == int(ano_hora)]['Mês'].dropna().unique()
                                 meses_opcoes_hora = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_hora])
                                 mes_hora = st.selectbox(
                                     "Mês para análise horária:",
@@ -3313,14 +3435,17 @@ if st.session_state.df_original is not None:
                     col_saz_mes1, col_saz_mes2 = st.columns(2)
                     
                     with col_saz_mes1:
-                        anos_saz_mes = sorted(df['Ano'].dropna().unique().astype(int))
-                        anos_opcoes_saz_mes = ['Todos os Anos'] + list(anos_saz_mes)
-                        ano_saz_mes = st.selectbox(
-                            "Selecionar Ano para análise mensal:",
-                            options=anos_opcoes_saz_mes,
-                            index=len(anos_opcoes_saz_mes)-1,
-                            key="ano_saz_mes"
-                        )
+                        if 'Ano' in df.columns and not df['Ano'].isna().all():
+                            anos_saz_mes = sorted(df['Ano'].dropna().unique().astype(int))
+                            anos_opcoes_saz_mes = ['Todos os Anos'] + list(anos_saz_mes)
+                            ano_saz_mes = st.selectbox(
+                                "Selecionar Ano para análise mensal:",
+                                options=anos_opcoes_saz_mes,
+                                index=len(anos_opcoes_saz_mes)-1,
+                                key="ano_saz_mes"
+                            )
+                        else:
+                            ano_saz_mes = 'Todos os Anos'
                     
                     with col_saz_mes2:
                         if ano_saz_mes != 'Todos os Anos':
@@ -3649,7 +3774,7 @@ if st.session_state.df_original is not None:
             )
         
         with col_mapa_filtro2:
-            if 'Ano' in df.columns:
+            if 'Ano' in df.columns and not df['Ano'].isna().all():
                 anos_disponiveis_mapa = sorted(df['Ano'].dropna().unique().astype(int))
                 anos_opcoes_mapa = ['Todos'] + list(anos_disponiveis_mapa)
                 ano_filtro_mapa = st.selectbox(
@@ -3662,7 +3787,7 @@ if st.session_state.df_original is not None:
                 ano_filtro_mapa = 'Todos'
         
         with col_mapa_filtro3:
-            if 'Mês' in df.columns and ano_filtro_mapa != 'Todos':
+            if 'Mês' in df.columns and not df['Mês'].isna().all() and ano_filtro_mapa != 'Todos':
                 df_ano_mapa = df[df['Ano'] == int(ano_filtro_mapa)]
                 meses_disponiveis_mapa = sorted(df_ano_mapa['Mês'].dropna().unique().astype(int))
                 meses_opcoes_mapa = ['Todos'] + [f"{m:02d}" for m in meses_disponiveis_mapa]
@@ -3911,7 +4036,7 @@ if st.session_state.df_original is not None:
             col_filtro_ipe1, col_filtro_ipe2 = st.columns(2)
             
             with col_filtro_ipe1:
-                if 'Ano' in df.columns:
+                if 'Ano' in df.columns and not df['Ano'].isna().all():
                     anos_ipe = sorted(df['Ano'].dropna().unique().astype(int))
                     anos_opcoes_ipe = ['Todos'] + list(anos_ipe)
                     ano_ipe = st.selectbox("📅 Filtrar por Ano:", options=anos_opcoes_ipe, key="filtro_ano_ipe")
@@ -3919,7 +4044,7 @@ if st.session_state.df_original is not None:
                     ano_ipe = 'Todos'
             
             with col_filtro_ipe2:
-                if 'Mês' in df.columns:
+                if 'Mês' in df.columns and not df['Mês'].isna().all():
                     meses_map = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
                     meses_disponiveis = sorted(df['Mês'].dropna().unique().astype(int))
                     meses_opcoes_ipe = [meses_map[m] for m in meses_disponiveis]
@@ -4074,7 +4199,7 @@ if st.session_state.df_original is not None:
         col_filtro_est1, col_filtro_est2, col_filtro_est3 = st.columns(3)
         
         with col_filtro_est1:
-            if 'Ano' in df.columns:
+            if 'Ano' in df.columns and not df['Ano'].isna().all():
                 anos_est = sorted(df['Ano'].dropna().unique().astype(int))
                 anos_opcoes_est = ['Todos os Anos'] + list(anos_est)
                 ano_est = st.selectbox(
@@ -4087,7 +4212,7 @@ if st.session_state.df_original is not None:
                 ano_est = 'Todos os Anos'
         
         with col_filtro_est2:
-            if 'Mês' in df.columns:
+            if 'Mês' in df.columns and not df['Mês'].isna().all():
                 if ano_est != 'Todos os Anos':
                     df_ano_est = df[df['Ano'] == int(ano_est)]
                     meses_est = sorted(df_ano_est['Mês'].dropna().unique().astype(int))
