@@ -17,7 +17,7 @@ warnings.filterwarnings('ignore')
 # ============================================
 # CONFIGURAÇÃO GITHUB
 # ============================================
-GITHUB_CSV_URL = "https://raw.githubusercontent.com/Kewin31/esteira-adms/main/Esteira%20de%20Demandas%20ADMS%20(72).csv"
+GITHUB_CSV_URL = "https://raw.githubusercontent.com/Kewin31/esteira-adms/refs/heads/main/data/esteira_demandas.csv"
 
 # ============================================
 # PALETA DE CORES - NOVA IDENTIDADE VISUAL
