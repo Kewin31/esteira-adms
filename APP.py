@@ -460,9 +460,12 @@ def calcular_hash_arquivo(conteudo):
     """Calcula hash do conteúdo do arquivo para detectar mudanças"""
     return hashlib.md5(conteudo).hexdigest()
 
+# ============================================
+# FUNÇÃO PRINCIPAL DE CARREGAMENTO DE DADOS (ADAPTADA)
+# ============================================
 @st.cache_data(ttl=300)
 def carregar_dados(uploaded_file=None, caminho_arquivo=None):
-    """Carrega e processa os dados"""
+    """Carrega e processa os dados - Adaptado para o formato do arquivo ADMS"""
     try:
         if uploaded_file:
             conteudo_bytes = uploaded_file.getvalue()
@@ -476,24 +479,34 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         
         lines = conteudo.split('\n')
         
+        # ============================================
+        # 🔧 BUSCA MAIS FLEXÍVEL PELO CABEÇALHO
+        # ============================================
         header_line = None
         for i, line in enumerate(lines):
-            if line.startswith('"Chamado","Tipo Chamado"'):
+            # Remove caracteres invisíveis e procura por "Chamado"
+            line_clean = line.strip().strip('\ufeff')
+            if '"Chamado"' in line_clean and '"Tipo Chamado"' in line_clean:
                 header_line = i
                 break
         
         if header_line is None:
             for i, line in enumerate(lines):
-                if '"Chamado"' in line and '"Tipo Chamado"' in line:
+                line_clean = line.strip().strip('\ufeff')
+                if '"Chamado"' in line_clean:
                     header_line = i
                     break
         
         if header_line is None:
-            return None, "Formato de arquivo inválido", None
+            return None, "Formato de arquivo inválido - cabeçalho não encontrado", None
         
+        # Usa a linha do cabeçalho encontrada
         data_str = '\n'.join(lines[header_line:])
         df = pd.read_csv(io.StringIO(data_str), quotechar='"')
         
+        # ============================================
+        # 🔧 MAPEAMENTO DE COLUNAS MAIS ROBUSTO
+        # ============================================
         col_mapping = {
             'Chamado': 'Chamado',
             'Tipo Chamado': 'Tipo_Chamado',
@@ -507,19 +520,26 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             'SRE': 'SRE',
             'Empresa': 'Empresa',
             'Revisões': 'Revisões',
-            'Motivo Revisão': 'Motivo_Revisao'
+            'Motivo Revisão': 'Motivo_Revisao',
+            'Retorno Cliente': 'Retorno_Cliente'
         }
         
-        df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
+        # Renomeia apenas colunas que existem
+        for old, new in col_mapping.items():
+            if old in df.columns:
+                df = df.rename(columns={old: new})
         
-        if 'Responsável' in df.columns:
-            df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
-        
-        date_columns = ['Criado', 'Modificado']
+        # ============================================
+        # 🔧 PROCESSAMENTO DE DATAS COM FLEXIBILIDADE
+        # ============================================
+        date_columns = ['Criado', 'Modificado', 'Vencimento']
         for col in date_columns:
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
         
+        # ============================================
+        # 🔧 CRIAÇÃO DE COLUNAS DE DATA
+        # ============================================
         if 'Criado' in df.columns:
             df['Ano'] = df['Criado'].dt.year
             df['Mês'] = df['Criado'].dt.month
@@ -539,8 +559,29 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             })
             df['Ano_Mês'] = df['Criado'].dt.strftime('%Y-%m')
         
+        # ============================================
+        # 🔧 PROCESSAMENTO DO RESPONSÁVEL
+        # ============================================
+        if 'Responsável' in df.columns:
+            df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
+        
+        # ============================================
+        # 🔧 PROCESSAMENTO DE REVISÕES
+        # ============================================
         if 'Revisões' in df.columns:
             df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
+        
+        # ============================================
+        # 🔧 PROCESSAMENTO DE EMPRESA (remove espaços extras)
+        # ============================================
+        if 'Empresa' in df.columns:
+            df['Empresa'] = df['Empresa'].astype(str).str.strip()
+        
+        # ============================================
+        # 🔧 PROCESSAMENTO DE SINCRONIZAÇÃO (remove espaços)
+        # ============================================
+        if 'Sincronização' in df.columns:
+            df['Sincronização'] = df['Sincronização'].astype(str).str.strip()
         
         hash_conteudo = calcular_hash_arquivo(conteudo_bytes)
         timestamp = time.time()
@@ -548,6 +589,8 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         return df, "✅ Dados carregados com sucesso", f"{hash_conteudo}_{timestamp}"
     
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return None, f"Erro: {str(e)}", None
 
 def encontrar_arquivo_dados():
@@ -3869,7 +3912,7 @@ if st.session_state.df_original is not None:
     with tab_ipe:
         st.markdown(f'<div class="section-title">🎯 KPI IPE - ÍNDICE DE PERFORMANCE DO ESPECIALISTA</div>', unsafe_allow_html=True)
         
-        if 'SRE' in df.columns and 'Status' in df.columns and 'Retorno Cliente' in df.columns:
+        if 'SRE' in df.columns and 'Status' in df.columns and 'Retorno_Cliente' in df.columns:
             
             def is_retorno_sim(valor):
                 """Verifica se o valor indica retorno do cliente (Sim)"""
@@ -3947,7 +3990,7 @@ if st.session_state.df_original is not None:
                 if len(df_sre_data) > 0:
                     cd = len(df_sre_data)
                     ca = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
-                    cr = len(df_sre_data[df_sre_data['Retorno Cliente'].apply(is_retorno_sim)])
+                    cr = len(df_sre_data[df_sre_data['Retorno_Cliente'].apply(is_retorno_sim)])
                     
                     ipe = calcular_ipe(ca, cr, cd, cards_total_periodo, total_sres_periodo)
                     sres_metrics.append({
@@ -3987,7 +4030,7 @@ if st.session_state.df_original is not None:
                     
                     cd_acum = len(df_ate)
                     ca_acum = len(df_ate[df_ate['Status'] == 'Sincronizado'])
-                    cr_acum = len(df_ate[df_ate['Retorno Cliente'].apply(is_retorno_sim)])
+                    cr_acum = len(df_ate[df_ate['Retorno_Cliente'].apply(is_retorno_sim)])
                     na_acum = df_ate['SRE'].nunique()
                     
                     ipe_acum = calcular_ipe(ca_acum, cr_acum, cd_acum, cd_acum, na_acum)
@@ -4059,7 +4102,7 @@ if st.session_state.df_original is not None:
                 > **Importante:** Cards sem preenchimento na coluna 'Retorno Cliente' são considerados como **'Não'** (não contam como reabertos).
                 """)
         else:
-            st.warning("⚠️ Colunas necessárias ('SRE', 'Status', 'Retorno Cliente') não encontradas.")
+            st.warning("⚠️ Colunas necessárias ('SRE', 'Status', 'Retorno_Cliente') não encontradas.")
     
     # ============================================
     # NOVA ABA: ANÁLISE ESTATÍSTICA
