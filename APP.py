@@ -2155,7 +2155,7 @@ if st.session_state.df_original is not None:
             </div>
             """, unsafe_allow_html=True)
         
-        st.markdown("## 📈 INDICADORES PRINCIPAIS")
+        st.markdown("## 📈 Key indicators")
         
         col1, col2, col3 = st.columns(3)
         
