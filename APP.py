@@ -2140,8 +2140,7 @@ if st.session_state.df_original is not None:
     tab_principal, tab_mapa, tab_ipe, tab_estatistica = st.tabs(["📊 Principal", "🗺️ Mapa", "📈 KPI", "📈 Análise Estatística"])
     
     with tab_principal:
-        st.markdown("## 📊 Base de Dados")
-        
+           
         if 'Criado' in df.columns and not df.empty:
             data_min = df['Criado'].min()
             data_max = df['Criado'].max()
@@ -4478,7 +4477,7 @@ st.markdown(f"""
 <div class="footer">
     <div style="margin-bottom: 0.8rem;">
         <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 500;">
-        Desenvolvido por: <span style="color: {COR_AZUL_ESCURO};">Kewin Marcel Ramirez Ferreira | GEAT</span>
+        Desenvolvido por: <span style="color: {COR_AZUL_ESCURO};">Time SRE | GAUT</span>
         </p>
         <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">
         📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: {COR_AZUL_ESCURO}; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
