@@ -14,21 +14,21 @@ import streamlit.components.v1 as components
 warnings.filterwarnings('ignore')
 
 # ============================================
-# PALETA DE CORES - DESIGN MODERNO
+# PALETA DE CORES - NOVA IDENTIDADE VISUAL
 # ============================================
 # Cores principais
-COR_VERDE_ESCURO = "#059669"
-COR_AZUL_PETROLEO = "#028a9f"
-COR_AZUL_ESCURO = "#0a4b5e"
-COR_LARANJA = "#f59e0b"
-COR_VERMELHO = "#ef4444"
+COR_VERDE_ESCURO = "#2E7D32"      # Verde escuro - principal
+COR_AZUL_PETROLEO = "#028a9f"     # Azul petróleo - secundário
+COR_AZUL_ESCURO = "#005973"       # Azul escuro - destaque
+COR_LARANJA = "#F57C00"           # Laranja - alertas/positivo
+COR_VERMELHO = "#C62828"          # Vermelho - erros/negativo
 
 # Cores neutras
-COR_CINZA_FUNDO = "#f0f4f8"
-COR_CINZA_BORDA = "#e2e8f0"
-COR_CINZA_TEXTO = "#64748b"
-COR_BRANCO = "#ffffff"
-COR_PRETO_SUAVE = "#1e293b"
+COR_CINZA_FUNDO = "#F8F9FA"       # Cinza muito claro para fundos
+COR_CINZA_BORDA = "#E9ECEF"       # Cinza para bordas
+COR_CINZA_TEXTO = "#6C757D"       # Cinza para textos secundários
+COR_BRANCO = "#FFFFFF"            # Branco
+COR_PRETO_SUAVE = "#212529"       # Preto suave para textos principais
 
 # Cores para gráficos
 CORES_GRADIENTE = [
@@ -37,495 +37,8 @@ CORES_GRADIENTE = [
     COR_AZUL_ESCURO,
     COR_LARANJA,
     COR_VERMELHO,
-    "#3b82f6"
+    "#1E88E5"  # Azul adicional
 ]
-
-# ============================================
-# CSS PERSONALIZADO - VERSÃO PROFISSIONAL
-# ============================================
-st.markdown(f"""
-<style>
-    /* ===== RESET E ESTILOS BASE ===== */
-    .stApp {{
-        background: {COR_CINZA_FUNDO};
-    }}
-    
-    /* ===== SCROLLBAR MODERNA ===== */
-    ::-webkit-scrollbar {{
-        width: 6px;
-        height: 6px;
-    }}
-    ::-webkit-scrollbar-track {{
-        background: {COR_CINZA_FUNDO};
-    }}
-    ::-webkit-scrollbar-thumb {{
-        background: {COR_AZUL_PETROLEO};
-        border-radius: 10px;
-    }}
-    ::-webkit-scrollbar-thumb:hover {{
-        background: {COR_AZUL_ESCURO};
-    }}
-    
-    /* ===== SIDEBAR MODERNA ===== */
-    [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, #ffffff 0%, {COR_CINZA_FUNDO} 100%);
-        border-right: 1px solid rgba(0,0,0,0.04);
-        padding: 0;
-    }}
-    
-    [data-testid="stSidebar"] .sidebar-section {{
-        background: rgba(255,255,255,0.8);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 12px;
-        padding: 1.2rem;
-        margin: 0.8rem 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        transition: all 0.3s ease;
-    }}
-    
-    [data-testid="stSidebar"] .sidebar-section:hover {{
-        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    }}
-    
-    /* ===== HEADER MODERNO COM GRADIENTE ANIMADO ===== */
-    .main-header {{
-        background: linear-gradient(135deg, {COR_AZUL_ESCURO} 0%, {COR_AZUL_PETROLEO} 50%, {COR_AZUL_ESCURO} 100%);
-        background-size: 200% 200%;
-        animation: gradientShift 10s ease infinite;
-        padding: 1.8rem 2.5rem;
-        border-radius: 0 0 24px 24px;
-        box-shadow: 0 8px 32px rgba(2, 138, 159, 0.2);
-        margin-bottom: 2rem;
-        position: relative;
-        overflow: hidden;
-    }}
-    
-    .main-header::before {{
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -20%;
-        width: 60%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
-        transform: rotate(-15deg);
-        pointer-events: none;
-    }}
-    
-    .main-header::after {{
-        content: '';
-        position: absolute;
-        bottom: -30%;
-        left: -10%;
-        width: 40%;
-        height: 150%;
-        background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
-        transform: rotate(20deg);
-        pointer-events: none;
-    }}
-    
-    @keyframes gradientShift {{
-        0% {{ background-position: 0% 50%; }}
-        50% {{ background-position: 100% 50%; }}
-        100% {{ background-position: 0% 50%; }}
-    }}
-    
-    .main-header h1 {{
-        font-size: 1.8rem;
-        font-weight: 700;
-        letter-spacing: -0.5px;
-        background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.85) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-shadow: none;
-        position: relative;
-        z-index: 1;
-    }}
-    
-    .main-header .subtitle {{
-        color: rgba(255,255,255,0.85);
-        font-size: 0.9rem;
-        font-weight: 400;
-        letter-spacing: 0.3px;
-        position: relative;
-        z-index: 1;
-    }}
-    
-    .header-badge {{
-        background: rgba(255,255,255,0.12);
-        backdrop-filter: blur(10px);
-        padding: 0.4rem 1.2rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        color: white;
-        font-weight: 500;
-        border: 1px solid rgba(255,255,255,0.08);
-        display: inline-block;
-        position: relative;
-        z-index: 1;
-    }}
-    
-    /* ===== CARDS PROFISSIONAIS ===== */
-    .metric-card {{
-        background: white;
-        padding: 1.5rem;
-        border-radius: 16px;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-        border: 1px solid rgba(0,0,0,0.04);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-        height: 100%;
-    }}
-    
-    .metric-card::before {{
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, {COR_AZUL_PETROLEO}, {COR_AZUL_ESCURO});
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }}
-    
-    .metric-card:hover {{
-        transform: translateY(-4px);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.08);
-        border-color: rgba(2, 138, 159, 0.1);
-    }}
-    
-    .metric-card:hover::before {{
-        opacity: 1;
-    }}
-    
-    .metric-value {{
-        font-size: 2.2rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, {COR_AZUL_ESCURO}, {COR_AZUL_PETROLEO});
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        line-height: 1.2;
-    }}
-    
-    .metric-label {{
-        font-size: 0.85rem;
-        color: {COR_CINZA_TEXTO};
-        font-weight: 500;
-        margin-top: 0.3rem;
-    }}
-    
-    .metric-icon {{
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        background: linear-gradient(135deg, rgba(2, 138, 159, 0.08), rgba(10, 75, 94, 0.08));
-    }}
-    
-    /* ===== TABS MODERNAS ===== */
-    .stTabs [data-baseweb="tab-list"] {{
-        gap: 0.3rem;
-        background: rgba(255,255,255,0.6);
-        padding: 0.4rem;
-        border-radius: 12px;
-        border: 1px solid rgba(0,0,0,0.04);
-        margin-bottom: 1.5rem;
-        backdrop-filter: blur(10px);
-    }}
-    
-    .stTabs [data-baseweb="tab"] {{
-        padding: 0.6rem 1.2rem;
-        border-radius: 8px;
-        font-weight: 500;
-        color: {COR_CINZA_TEXTO};
-        transition: all 0.3s ease;
-        background: transparent;
-        font-size: 0.85rem;
-    }}
-    
-    .stTabs [data-baseweb="tab"]:hover {{
-        background: rgba(2, 138, 159, 0.06);
-        color: {COR_AZUL_PETROLEO};
-    }}
-    
-    .stTabs [aria-selected="true"] {{
-        background: linear-gradient(135deg, {COR_AZUL_PETROLEO}, {COR_AZUL_ESCURO}) !important;
-        color: white !important;
-        box-shadow: 0 4px 12px rgba(2, 138, 159, 0.25);
-    }}
-    
-    /* ===== SECTION TITLES ===== */
-    .section-title {{
-        color: {COR_AZUL_ESCURO};
-        font-size: 1.1rem;
-        font-weight: 700;
-        padding-left: 1.2rem;
-        border-left: 4px solid {COR_AZUL_PETROLEO};
-        margin-bottom: 1.5rem;
-        letter-spacing: -0.2px;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }}
-    
-    .section-title::after {{
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: linear-gradient(90deg, rgba(2, 138, 159, 0.2), transparent);
-        margin-left: 1rem;
-    }}
-    
-    /* ===== FILTROS E CONTROLES ===== */
-    .filter-section {{
-        background: white;
-        padding: 1.2rem;
-        border-radius: 12px;
-        border: 1px solid rgba(0,0,0,0.04);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-        margin-bottom: 1.5rem;
-    }}
-    
-    /* ===== BOTÕES MODERNOS ===== */
-    .stButton > button {{
-        background: linear-gradient(135deg, {COR_AZUL_PETROLEO}, {COR_AZUL_ESCURO});
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 0.6rem 1.4rem;
-        font-weight: 600;
-        font-size: 0.9rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 2px 8px rgba(2, 138, 159, 0.2);
-        letter-spacing: 0.3px;
-        width: 100%;
-    }}
-    
-    .stButton > button:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(2, 138, 159, 0.3);
-    }}
-    
-    .stButton > button:active {{
-        transform: translateY(0);
-    }}
-    
-    /* ===== EXPANDERS MODERNOS ===== */
-    .streamlit-expanderHeader {{
-        font-weight: 600;
-        color: {COR_AZUL_ESCURO};
-        background: white;
-        border-radius: 10px !important;
-        border: 1px solid rgba(0,0,0,0.04);
-        padding: 0.8rem 1.2rem !important;
-        transition: all 0.3s ease;
-        font-size: 0.9rem;
-    }}
-    
-    .streamlit-expanderHeader:hover {{
-        background: rgba(2, 138, 159, 0.04);
-        border-color: rgba(2, 138, 159, 0.1);
-    }}
-    
-    .streamlit-expanderContent {{
-        border: 1px solid rgba(0,0,0,0.04);
-        border-radius: 0 0 10px 10px;
-        padding: 1.2rem;
-        background: white;
-    }}
-    
-    /* ===== METRICAS DO STREAMLIT ===== */
-    [data-testid="metric-container"] {{
-        background: white;
-        padding: 1rem;
-        border-radius: 12px;
-        border: 1px solid rgba(0,0,0,0.04);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-        transition: all 0.3s ease;
-    }}
-    
-    [data-testid="metric-container"]:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-        border-color: rgba(2, 138, 159, 0.1);
-    }}
-    
-    /* ===== BADGES ===== */
-    .badge {{
-        display: inline-block;
-        padding: 0.2rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.3px;
-    }}
-    
-    .badge-success {{
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-    }}
-    
-    .badge-warning {{
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        color: white;
-    }}
-    
-    .badge-danger {{
-        background: linear-gradient(135deg, #ef4444, #dc2626);
-        color: white;
-    }}
-    
-    .badge-info {{
-        background: linear-gradient(135deg, {COR_AZUL_PETROLEO}, {COR_AZUL_ESCURO});
-        color: white;
-    }}
-    
-    /* ===== STATUS CARDS ===== */
-    .status-card {{
-        padding: 1rem 1.2rem;
-        border-radius: 12px;
-        border-left: 4px solid;
-        background: white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-        margin-bottom: 0.8rem;
-    }}
-    
-    .status-success {{
-        border-left-color: #10b981;
-        background: linear-gradient(135deg, #f0fdf4, white);
-    }}
-    
-    .status-warning {{
-        border-left-color: #f59e0b;
-        background: linear-gradient(135deg, #fffbeb, white);
-    }}
-    
-    .status-danger {{
-        border-left-color: #ef4444;
-        background: linear-gradient(135deg, #fef2f2, white);
-    }}
-    
-    .status-info {{
-        border-left-color: {COR_AZUL_PETROLEO};
-        background: linear-gradient(135deg, #ecfdf5, white);
-    }}
-    
-    /* ===== GRÁFICOS ===== */
-    .chart-container {{
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        border: 1px solid rgba(0,0,0,0.04);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-        margin-bottom: 1rem;
-    }}
-    
-    /* ===== FOOTER PROFISSIONAL ===== */
-    .footer {{
-        background: linear-gradient(135deg, {COR_AZUL_ESCURO}, {COR_AZUL_PETROLEO});
-        padding: 2rem;
-        border-radius: 16px 16px 0 0;
-        margin-top: 3rem;
-        color: white;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
-    }}
-    
-    .footer::before {{
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -20%;
-        width: 60%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
-        transform: rotate(-15deg);
-        pointer-events: none;
-    }}
-    
-    .footer p {{
-        margin: 0;
-        opacity: 0.9;
-        font-size: 0.85rem;
-        position: relative;
-        z-index: 1;
-    }}
-    
-    .footer .footer-divider {{
-        width: 60px;
-        height: 2px;
-        background: rgba(255,255,255,0.2);
-        margin: 0.8rem auto;
-        border-radius: 4px;
-    }}
-    
-    /* ===== ANIMAÇÕES ===== */
-    @keyframes fadeInUp {{
-        from {{
-            opacity: 0;
-            transform: translateY(20px);
-        }}
-        to {{
-            opacity: 1;
-            transform: translateY(0);
-        }}
-    }}
-    
-    .fade-in {{
-        animation: fadeInUp 0.6s ease-out;
-    }}
-    
-    /* ===== SELECTBOXES E INPUTS ===== */
-    .stSelectbox > div > div {{
-        border-radius: 8px;
-        border: 1px solid rgba(0,0,0,0.06);
-    }}
-    
-    .stSelectbox > div > div:hover {{
-        border-color: {COR_AZUL_PETROLEO};
-    }}
-    
-    .stTextInput > div > div > input {{
-        border-radius: 8px;
-        border: 1px solid rgba(0,0,0,0.06);
-    }}
-    
-    .stTextInput > div > div > input:focus {{
-        border-color: {COR_AZUL_PETROLEO};
-        box-shadow: 0 0 0 3px rgba(2, 138, 159, 0.1);
-    }}
-    
-    /* ===== DATA INFO ===== */
-    .info-base {{
-        background: white;
-        padding: 1.2rem;
-        border-radius: 12px;
-        border-left: 4px solid {COR_VERDE_ESCURO};
-        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-        margin-bottom: 1.5rem;
-    }}
-    
-    .info-base p {{
-        margin: 0;
-        color: {COR_PRETO_SUAVE};
-    }}
-    
-    .info-base .sub-info {{
-        color: {COR_CINZA_TEXTO};
-        font-size: 0.85rem;
-        margin-top: 0.3rem;
-    }}
-</style>
-""", unsafe_allow_html=True)
 
 # ============================================
 # MAPEAMENTO COMPLETO DAS EMPRESAS
@@ -621,11 +134,273 @@ CAMINHOS_ALTERNATIVOS = [
 # CONFIGURAÇÃO DA PÁGINA
 # ============================================
 st.set_page_config(
-    page_title="Esteira ADMS - Dashboard SRE",
+    page_title="Esteira ADMS - Dashboard",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ============================================
+# CSS PERSONALIZADO - NOVA PALETA
+# ============================================
+st.markdown(f"""
+<style>
+    /* Reset e estilos base */
+    .stApp {{
+        background-color: {COR_CINZA_FUNDO};
+    }}
+    
+    /* Main header - estilo Monitoring Center */
+    .main-header-monitoring {{
+        background: {COR_CINZA_FUNDO};
+        padding: 1.2rem 2rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 4px solid {COR_AZUL_ESCURO};
+        border-radius: 0;
+    }}
+    
+    /* Cards de métricas */
+    .metric-card {{
+        background: {COR_BRANCO};
+        padding: 1.2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border: 1px solid {COR_CINZA_BORDA};
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }}
+    
+    .metric-card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 89, 115, 0.1);
+        border-color: {COR_AZUL_PETROLEO};
+    }}
+    
+    .metric-value {{
+        font-size: 2rem;
+        font-weight: 700;
+        color: {COR_AZUL_ESCURO};
+        margin: 0;
+        line-height: 1.2;
+    }}
+    
+    .metric-label {{
+        font-size: 0.85rem;
+        color: {COR_CINZA_TEXTO};
+        margin: 0.5rem 0 0 0;
+        font-weight: 500;
+    }}
+    
+    /* Títulos de seção */
+    .section-title {{
+        color: {COR_AZUL_ESCURO};
+        border-left: 4px solid {COR_VERDE_ESCURO};
+        padding-left: 1rem;
+        margin-bottom: 1.5rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }}
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {{
+        background: {COR_BRANCO};
+        border-right: 1px solid {COR_CINZA_BORDA};
+    }}
+    
+    .sidebar-section {{
+        background: {COR_CINZA_FUNDO};
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border: 1px solid {COR_CINZA_BORDA};
+    }}
+    
+    /* Informações da base */
+    .info-base {{
+        background: {COR_CINZA_FUNDO};
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_VERDE_ESCURO};
+        margin-bottom: 1.5rem;
+    }}
+    
+    /* Rodapé */
+    .footer {{
+        text-align: center;
+        margin-top: 3rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid {COR_CINZA_BORDA};
+        color: {COR_CINZA_TEXTO};
+        font-size: 0.85rem;
+    }}
+    
+    /* Status cards */
+    .status-success {{
+        background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+        border-left: 4px solid {COR_VERDE_ESCURO};
+        padding: 0.75rem;
+        border-radius: 8px;
+    }}
+    
+    .status-warning {{
+        background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+        border-left: 4px solid {COR_LARANJA};
+        padding: 0.75rem;
+        border-radius: 8px;
+    }}
+    
+    .status-danger {{
+        background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
+        border-left: 4px solid {COR_VERMELHO};
+        padding: 0.75rem;
+        border-radius: 8px;
+    }}
+    
+    /* Cards de performance */
+    .performance-card {{
+        background: linear-gradient(135deg, {COR_BRANCO}, #F1F8E9);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_VERDE_ESCURO};
+        margin-bottom: 1rem;
+    }}
+    
+    .warning-card {{
+        background: linear-gradient(135deg, {COR_BRANCO}, #FFF3E0);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_LARANJA};
+        margin-bottom: 1rem;
+    }}
+    
+    .alert-card {{
+        background: linear-gradient(135deg, {COR_BRANCO}, #FFEBEE);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_VERMELHO};
+        margin-bottom: 1rem;
+    }}
+    
+    .info-card {{
+        background: linear-gradient(135deg, {COR_BRANCO}, #E0F7FA);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid {COR_AZUL_PETROLEO};
+        margin-bottom: 1rem;
+    }}
+    
+    /* Botões */
+    .stButton > button {{
+        background: {COR_AZUL_ESCURO};
+        color: {COR_BRANCO};
+        border: none;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }}
+    
+    .stButton > button:hover {{
+        background: {COR_AZUL_PETROLEO};
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 89, 115, 0.3);
+    }}
+    
+    /* Badges e tags */
+    .badge-success {{
+        background-color: {COR_VERDE_ESCURO};
+        color: {COR_BRANCO};
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }}
+    
+    .badge-warning {{
+        background-color: {COR_LARANJA};
+        color: {COR_BRANCO};
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }}
+    
+    .badge-danger {{
+        background-color: {COR_VERMELHO};
+        color: {COR_BRANCO};
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }}
+    
+    .badge-info {{
+        background-color: {COR_AZUL_PETROLEO};
+        color: {COR_BRANCO};
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }}
+    
+    /* Quadrantes da matriz */
+    .matrix-quadrant {{
+        padding: 10px;
+        border-radius: 8px;
+        margin: 5px;
+        font-weight: bold;
+        text-align: center;
+    }}
+    
+    .quadrant-stars {{
+        background-color: #E8F5E9;
+        color: {COR_VERDE_ESCURO};
+        border: 2px solid {COR_VERDE_ESCURO};
+    }}
+    
+    .quadrant-efficient {{
+        background-color: #FFF3E0;
+        color: {COR_LARANJA};
+        border: 2px solid {COR_LARANJA};
+    }}
+    
+    .quadrant-careful {{
+        background-color: #E0F7FA;
+        color: {COR_AZUL_PETROLEO};
+        border: 2px solid {COR_AZUL_PETROLEO};
+    }}
+    
+    .quadrant-needs-help {{
+        background-color: #FFEBEE;
+        color: {COR_VERMELHO};
+        border: 2px solid {COR_VERMELHO};
+    }}
+    
+    /* Tabelas */
+    .dataframe {{
+        border-collapse: collapse;
+        width: 100%;
+    }}
+    
+    .dataframe th {{
+        background-color: {COR_AZUL_ESCURO};
+        color: {COR_BRANCO};
+        padding: 10px;
+        text-align: left;
+    }}
+    
+    .dataframe td {{
+        padding: 8px;
+        border-bottom: 1px solid {COR_CINZA_BORDA};
+    }}
+    
+    .dataframe tr:hover {{
+        background-color: {COR_CINZA_FUNDO};
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================
 # FUNÇÕES AUXILIARES
@@ -662,7 +437,7 @@ def formatar_nome_responsavel(nome):
     
     return nome_str.title()
 
-def criar_card_indicador_simples(valor, label, icone="📊", cor_extra=""):
+def criar_card_indicador_simples(valor, label, icone="📊"):
     """Cria card de indicador SIMPLES - sem delta"""
     if isinstance(valor, (int, float)):
         valor_formatado = f"{valor:,}"
@@ -670,9 +445,9 @@ def criar_card_indicador_simples(valor, label, icone="📊", cor_extra=""):
         valor_formatado = str(valor)
     
     return f'''
-    <div class="metric-card" style="{cor_extra}">
-        <div style="display: flex; align-items: center; gap: 16px;">
-            <div class="metric-icon">{icone}</div>
+    <div class="metric-card">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 1.8rem;">{icone}</span>
             <div>
                 <div class="metric-value">{valor_formatado}</div>
                 <div class="metric-label">{label}</div>
@@ -686,7 +461,7 @@ def calcular_hash_arquivo(conteudo):
     return hashlib.md5(conteudo).hexdigest()
 
 # ============================================
-# FUNÇÃO PRINCIPAL DE CARREGAMENTO DE DADOS
+# FUNÇÃO PRINCIPAL DE CARREGAMENTO DE DADOS (ADAPTADA)
 # ============================================
 @st.cache_data(ttl=300)
 def carregar_dados(uploaded_file=None, caminho_arquivo=None):
@@ -704,9 +479,12 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         
         lines = conteudo.split('\n')
         
-        # Busca flexível pelo cabeçalho
+        # ============================================
+        # 🔧 BUSCA MAIS FLEXÍVEL PELO CABEÇALHO
+        # ============================================
         header_line = None
         for i, line in enumerate(lines):
+            # Remove caracteres invisíveis e procura por "Chamado"
             line_clean = line.strip().strip('\ufeff')
             if '"Chamado"' in line_clean and '"Tipo Chamado"' in line_clean:
                 header_line = i
@@ -722,10 +500,13 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         if header_line is None:
             return None, "Formato de arquivo inválido - cabeçalho não encontrado", None
         
+        # Usa a linha do cabeçalho encontrada
         data_str = '\n'.join(lines[header_line:])
         df = pd.read_csv(io.StringIO(data_str), quotechar='"')
         
-        # Mapeamento de colunas
+        # ============================================
+        # 🔧 MAPEAMENTO DE COLUNAS MAIS ROBUSTO
+        # ============================================
         col_mapping = {
             'Chamado': 'Chamado',
             'Tipo Chamado': 'Tipo_Chamado',
@@ -743,17 +524,22 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             'Retorno Cliente': 'Retorno_Cliente'
         }
         
+        # Renomeia apenas colunas que existem
         for old, new in col_mapping.items():
             if old in df.columns:
                 df = df.rename(columns={old: new})
         
-        # Processamento de datas
+        # ============================================
+        # 🔧 PROCESSAMENTO DE DATAS COM FLEXIBILIDADE
+        # ============================================
         date_columns = ['Criado', 'Modificado', 'Vencimento']
         for col in date_columns:
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
         
-        # Criação de colunas de data
+        # ============================================
+        # 🔧 CRIAÇÃO DE COLUNAS DE DATA
+        # ============================================
         if 'Criado' in df.columns:
             df['Ano'] = df['Criado'].dt.year
             df['Mês'] = df['Criado'].dt.month
@@ -773,19 +559,27 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             })
             df['Ano_Mês'] = df['Criado'].dt.strftime('%Y-%m')
         
-        # Processamento do responsável
+        # ============================================
+        # 🔧 PROCESSAMENTO DO RESPONSÁVEL
+        # ============================================
         if 'Responsável' in df.columns:
             df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
         
-        # Processamento de revisões
+        # ============================================
+        # 🔧 PROCESSAMENTO DE REVISÕES
+        # ============================================
         if 'Revisões' in df.columns:
             df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
         
-        # Processamento de empresa
+        # ============================================
+        # 🔧 PROCESSAMENTO DE EMPRESA (remove espaços extras)
+        # ============================================
         if 'Empresa' in df.columns:
             df['Empresa'] = df['Empresa'].astype(str).str.strip()
         
-        # Processamento de sincronização
+        # ============================================
+        # 🔧 PROCESSAMENTO DE SINCRONIZAÇÃO (remove espaços)
+        # ============================================
         if 'Sincronização' in df.columns:
             df['Sincronização'] = df['Sincronização'].astype(str).str.strip()
         
@@ -873,25 +667,288 @@ def get_horario_brasilia():
     except:
         return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
+def criar_popup_indicadores(df):
+    """Cria popup modal com indicadores principais"""
+    hoje = datetime.now()
+    mes_atual = hoje.month
+    ano_atual = hoje.year
+    nome_mes = hoje.strftime('%B').capitalize()
+    
+    meses_pt = {
+        'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
+        'April': 'Abril', 'May': 'Maio', 'June': 'Junho',
+        'July': 'Julho', 'August': 'Agosto', 'September': 'Setembro',
+        'October': 'Outubro', 'November': 'Novembro', 'December': 'Dezembro'
+    }
+    nome_mes_pt = meses_pt.get(nome_mes, nome_mes)
+    
+    df_mes = df[(df['Criado'].dt.month == mes_atual) & 
+                (df['Criado'].dt.year == ano_atual)].copy()
+    
+    total_cards_mes = len(df_mes)
+    cards_validados = len(df_mes[df_mes['Status'] == 'Sincronizado'])
+    cards_com_erro = len(df_mes[df_mes['Revisões'] > 0])
+    cards_sem_erro = cards_validados - cards_com_erro
+    
+    taxa_sucesso = (cards_validados / total_cards_mes * 100) if total_cards_mes > 0 else 0
+    taxa_erro = (cards_com_erro / cards_validados * 100) if cards_validados > 0 else 0
+    
+    mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
+    ano_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
+    
+    df_mes_anterior = df[(df['Criado'].dt.month == mes_anterior) & 
+                         (df['Criado'].dt.year == ano_anterior)].copy()
+    
+    cards_validados_anterior = len(df_mes_anterior[df_mes_anterior['Status'] == 'Sincronizado'])
+    
+    if cards_validados_anterior > 0:
+        variacao = ((cards_validados - cards_validados_anterior) / cards_validados_anterior * 100)
+    else:
+        variacao = 0
+    
+    if cards_com_erro == 0:
+        texto_principal = f"✅ **SRE VALIDOU {cards_validados} CARDS SEM RETORNO DE ERRO!**"
+        subtexto = f"Performance excepcional em {nome_mes_pt} - 100% de aprovação direta"
+        emoji_titulo = "🎯"
+        cor_destaque = COR_VERDE_ESCURO
+    elif taxa_erro <= 5:
+        texto_principal = f"⚡ **SRE VALIDOU {cards_validados} CARDS COM APENAS {cards_com_erro} AJUSTES**"
+        subtexto = f"Alta qualidade no mês de {nome_mes_pt} - Taxa de erro de apenas {taxa_erro:.1f}%"
+        emoji_titulo = "🚀"
+        cor_destaque = COR_AZUL_PETROLEO
+    else:
+        texto_principal = f"📊 **SRE VALIDOU {cards_validados} CARDS, {cards_com_erro} COM RETORNO**"
+        subtexto = f"Análise de {nome_mes_pt} - {taxa_sucesso:.1f}% de taxa de sucesso"
+        emoji_titulo = "📈"
+        cor_destaque = COR_LARANJA
+    
+    popup_html = f'''
+    <div id="popupOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0, 0, 0, 0.7); z-index: 10000; display: flex; 
+                justify-content: center; align-items: center; backdrop-filter: blur(3px);">
+        <div style="background: {COR_BRANCO}; width: 90%; max-width: 900px; max-height: 90vh;
+                    border-radius: 12px; padding: 0; overflow: hidden; 
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out;">
+            
+            <div style="background: linear-gradient(135deg, {COR_AZUL_ESCURO}, {COR_AZUL_PETROLEO}); 
+                        padding: 1.5rem 2rem; color: {COR_BRANCO};">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.6rem;">{emoji_titulo} MANCHETE DO MÊS</h2>
+                        <p style="margin: 0.3rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">
+                        {nome_mes_pt} {ano_atual} | Resumo Executivo
+                        </p>
+                    </div>
+                    <button onclick="document.getElementById('popupOverlay').style.display='none'" 
+                            style="background: rgba(255,255,255,0.2); color: {COR_BRANCO}; 
+                                   border: none; width: 36px; height: 36px; 
+                                   border-radius: 50%; font-size: 1.3rem; 
+                                   cursor: pointer;">×</button>
+                </div>
+            </div>
+            
+            <div style="padding: 2rem;">
+                <div style="background: {cor_destaque}10; padding: 1.5rem; border-radius: 8px; 
+                            border-left: 4px solid {cor_destaque}; margin-bottom: 2rem;">
+                    <h3 style="color: {COR_PRETO_SUAVE}; margin: 0 0 0.5rem 0; font-size: 1.1rem;">{texto_principal}</h3>
+                    <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.9rem;">{subtexto}</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem;">
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_ESCURO};">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
+                                        border-radius: 8px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.3rem;">📋</div>
+                            <div>
+                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_ESCURO};">
+                                    {total_cards_mes}
+                                </div>
+                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">TOTAL DE CARDS</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERDE_ESCURO};">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
+                                        border-radius: 8px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.3rem;">✅</div>
+                            <div>
+                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_VERDE_ESCURO};">
+                                    {cards_validados}
+                                </div>
+                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">VALIDADOS PELO SRE</div>
+                            </div>
+                        </div>
+                        <p style="color: {COR_CINZA_TEXTO}; margin: 0.5rem 0 0 0; font-size: 0.75rem;">
+                        {variacao:+.1f}% vs mês anterior
+                        </p>
+                    </div>
+                    
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_PETROLEO};">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: {COR_AZUL_PETROLEO}; color: {COR_BRANCO}; width: 45px; height: 45px; 
+                                        border-radius: 8px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.3rem;">🎯</div>
+                            <div>
+                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_PETROLEO};">
+                                    {cards_sem_erro}
+                                </div>
+                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">SEM RETORNO DE ERRO</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO};">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO}; 
+                                        color: {COR_BRANCO}; width: 45px; height: 45px; 
+                                        border-radius: 8px; display: flex; align-items: center; 
+                                        justify-content: center; font-size: 1.3rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
+                            <div>
+                                <div style="font-size: 1.8rem; font-weight: 700; 
+                                            color: {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO}">
+                                    {cards_com_erro}
+                                </div>
+                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">COM RETORNO DE ERRO</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                    <div style="background: {COR_CINZA_FUNDO}; padding: 1rem; border-radius: 8px;">
+                        <h4 style="color: {COR_PRETO_SUAVE}; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
+                        <div style="height: 180px; display: flex; align-items: end; gap: 20px;">
+                            <div style="text-align: center; flex: 1;">
+                                <div style="background: {COR_CINZA_TEXTO}; height: {max(10, min(100, cards_validados_anterior/5))}px; 
+                                            border-radius: 4px 4px 0 0;"></div>
+                                <div style="margin-top: 8px; font-size: 0.8rem; color: {COR_CINZA_TEXTO};">
+                                    {mes_anterior:02d}/{ano_anterior}
+                                </div>
+                                <div style="font-weight: bold; color: {COR_PRETO_SUAVE};">{cards_validados_anterior}</div>
+                            </div>
+                            <div style="text-align: center; flex: 1;">
+                                <div style="background: {COR_VERDE_ESCURO}; height: {max(10, min(100, cards_validados/5))}px; 
+                                            border-radius: 4px 4px 0 0;"></div>
+                                <div style="margin-top: 8px; font-size: 0.8rem; color: {COR_CINZA_TEXTO};">
+                                    {mes_atual:02d}/{ano_atual}
+                                </div>
+                                <div style="font-weight: bold; color: {COR_PRETO_SUAVE};">{cards_validados}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #FFF8E1; padding: 1rem; border-radius: 8px; border-left: 4px solid {COR_LARANJA};">
+                        <h4 style="color: {COR_LARANJA}; margin: 0 0 0.8rem 0;">💡 INSIGHTS</h4>
+                        <ul style="color: {COR_CINZA_TEXTO}; padding-left: 1.2rem; margin: 0; font-size: 0.85rem;">
+                            <li style="margin-bottom: 0.5rem;">
+                                {f"🎉 Recorde de validações!" if variacao > 20 else "📊 Performance consistente"}
+                            </li>
+                            <li style="margin-bottom: 0.5rem;">
+                                {f"✅ Qualidade excepcional" if cards_com_erro == 0 else f"🎯 {cards_sem_erro} cards perfeitos"}
+                            </li>
+                            <li>
+                                {f"🚀 Meta atingida: {taxa_sucesso:.0f}% de sucesso" if taxa_sucesso >= 90 else f"📈 Oportunidade: melhorar {100-taxa_sucesso:.0f}%"}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: {COR_CINZA_FUNDO}; padding: 1rem 2rem; border-top: 1px solid {COR_CINZA_BORDA};">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.8rem;">
+                    📅 Atualizado em {hoje.strftime('%d/%m/%Y %H:%M')}
+                    </p>
+                    <button onclick="document.getElementById('popupOverlay').style.display='none'"
+                            style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; border: none; 
+                                   padding: 0.5rem 1.2rem; border-radius: 6px; 
+                                   cursor: pointer; font-weight: 500;">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+    @keyframes slideIn {{
+        from {{ transform: translateY(-30px); opacity: 0; }}
+        to {{ transform: translateY(0); opacity: 1; }}
+    }}
+    </style>
+    '''
+    
+    return popup_html
+
+def calcular_taxa_retorno_sre(df, sre_nome):
+    """Calcula taxa de retorno específica para um SRE"""
+    df_sre = df[df['SRE'] == sre_nome].copy()
+    
+    if len(df_sre) == 0:
+        return 0, 0, 0
+    
+    total_cards = len(df_sre)
+    
+    if 'Revisões' in df_sre.columns:
+        cards_com_revisoes = len(df_sre[df_sre['Revisões'] > 0])
+        taxa_retorno = (cards_com_revisoes / total_cards * 100) if total_cards > 0 else 0
+    else:
+        taxa_retorno = 0
+        cards_com_revisoes = 0
+    
+    cards_sincronizados = len(df_sre[df_sre['Status'] == 'Sincronizado'])
+    
+    return taxa_retorno, cards_com_revisoes, cards_sincronizados
+
+def analisar_tendencia_mensal_sre(df, sre_nome):
+    """Analisa tendência mensal de sincronizações de um SRE"""
+    df_sre = df[df['SRE'] == sre_nome].copy()
+    
+    if len(df_sre) == 0 or 'Criado' not in df_sre.columns:
+        return None
+    
+    df_sre['Mes_Ano'] = df_sre['Criado'].dt.strftime('%Y-%m')
+    
+    sinc_mes = df_sre[df_sre['Status'] == 'Sincronizado'].groupby('Mes_Ano').size().reset_index()
+    sinc_mes.columns = ['Mes_Ano', 'Sincronizados']
+    
+    total_mes = df_sre.groupby('Mes_Ano').size().reset_index()
+    total_mes.columns = ['Mes_Ano', 'Total']
+    
+    dados_mes = pd.merge(total_mes, sinc_mes, on='Mes_Ano', how='left').fillna(0)
+    
+    dados_mes = dados_mes.sort_values('Mes_Ano')
+    
+    return dados_mes
+
 # ============================================
 # FUNÇÕES DO MAPA - PROCESSAMENTO DE DADOS
 # ============================================
 def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_filtro=None):
     """Processa os dados para gerar as métricas do mapa"""
+    
+    # Filtrar apenas sincronizados
     df_sinc = df[df['Status'] == 'Sincronizado'].copy()
     
+    # Aplicar filtros de data
     if ano_filtro and ano_filtro != 'Todos':
         df_sinc = df_sinc[df_sinc['Ano'] == int(ano_filtro)]
     
     if mes_filtro and mes_filtro != 'Todos':
         df_sinc = df_sinc[df_sinc['Mês'] == int(mes_filtro)]
     
+    # Filtrar empresas selecionadas
     if empresas_selecionadas and 'Todas' not in empresas_selecionadas:
         df_sinc = df_sinc[df_sinc['Empresa'].isin(empresas_selecionadas)]
     
+    # Contar sincronismos por empresa
     sinc_por_empresa = df_sinc['Empresa'].value_counts().reset_index()
     sinc_por_empresa.columns = ['Empresa', 'Sincronismos']
     
+    # Preparar dados para o mapa
     dados_mapa = []
     total_sinc = 0
     
@@ -921,15 +978,20 @@ def processar_dados_mapa(df, empresas_selecionadas=None, ano_filtro=None, mes_fi
 # FUNÇÕES DO MAPA FOLIUM
 # ============================================
 def cor_gradiente_folium(valor, min_val, max_val):
-    """Retorna cor em hex interpolando entre azul petróleo e vermelho"""
+    """
+    Retorna cor em hex interpolando entre azul petróleo e vermelho.
+    Valores mais ALTOS → mais VERMELHO
+    Valores mais BAIXOS → mais AZUL PETRÓLEO
+    """
     if max_val == min_val:
         return COR_AZUL_PETROLEO
 
-    t = (valor - min_val) / (max_val - min_val)
-    
-    cor_baixo = (0x02, 0x8a, 0x9f)
-    cor_medio = (0xF5, 0x7C, 0x00)
-    cor_alto = (0xC6, 0x28, 0x28)
+    t = (valor - min_val) / (max_val - min_val)  # normaliza 0..1
+
+    # Cores base
+    cor_baixo = (0x02, 0x8a, 0x9f)   # #028a9f  azul petróleo
+    cor_medio = (0xF5, 0x7C, 0x00)   # #F57C00  laranja
+    cor_alto  = (0xC6, 0x28, 0x28)   # #C62828  vermelho
 
     if t < 0.5:
         tt = t / 0.5
@@ -944,8 +1006,16 @@ def cor_gradiente_folium(valor, min_val, max_val):
 
     return f"#{r:02X}{g:02X}{b:02X}"
 
+
 def criar_mapa_folium(df_mapa):
-    """Cria mapa Folium interativo centrado no Brasil"""
+    """
+    Cria mapa Folium interativo centrado no Brasil com:
+    - Bolhas proporcionais ao volume
+    - Gradiente correto azul → laranja → vermelho
+    - Labels com sigla + número DENTRO da bolha
+    - Tooltip rico com todas as informações
+    - Legenda visual
+    """
     try:
         import folium
     except ImportError:
@@ -957,6 +1027,7 @@ def criar_mapa_folium(df_mapa):
 
     df_bolhas = df_mapa[df_mapa['sincronismos'] > 0].copy()
 
+    # Mapa base centrado no Brasil
     m = folium.Map(
         location=[-14.5, -51.5],
         zoom_start=4,
@@ -964,6 +1035,7 @@ def criar_mapa_folium(df_mapa):
         prefer_canvas=True
     )
 
+    # Tile elegante (CartoDB Positron)
     folium.TileLayer(
         tiles='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -979,6 +1051,7 @@ def criar_mapa_folium(df_mapa):
     min_sinc = df_bolhas['sincronismos'].min()
     total = df_bolhas['sincronismos'].sum()
 
+    # Escala de raio: mínimo 20px, máximo 70px
     R_MIN, R_MAX = 20, 70
 
     def raio(v):
@@ -986,6 +1059,7 @@ def criar_mapa_folium(df_mapa):
             return (R_MIN + R_MAX) / 2
         return R_MIN + (v - min_sinc) / (max_sinc - min_sinc) * (R_MAX - R_MIN)
 
+    # Ranking para badge
     df_bolhas_sorted = df_bolhas.sort_values('sincronismos', ascending=False).reset_index(drop=True)
     rank_map = {row['empresa']: i + 1 for i, row in df_bolhas_sorted.iterrows()}
 
@@ -996,6 +1070,7 @@ def criar_mapa_folium(df_mapa):
         pct = row['sincronismos'] / total * 100 if total > 0 else 0
         medal = {1: '🥇', 2: '🥈', 3: '🥉'}.get(rank, f'#{rank}')
 
+        # Tooltip rico
         tooltip_html = f"""
         <div style="
             font-family: 'Segoe UI', sans-serif;
@@ -1044,6 +1119,7 @@ def criar_mapa_folium(df_mapa):
         </div>
         """
 
+        # Círculo colorido (bolha)
         folium.CircleMarker(
             location=[row['latitude'], row['longitude']],
             radius=r,
@@ -1055,6 +1131,7 @@ def criar_mapa_folium(df_mapa):
             tooltip=folium.Tooltip(tooltip_html, sticky=True),
         ).add_to(m)
 
+        # Label DENTRO da bolha
         font_size_sigla = max(10, min(16, int(r * 0.4)))
         font_size_num = max(9, min(14, int(r * 0.32)))
         
@@ -1090,7 +1167,7 @@ def criar_mapa_folium(df_mapa):
             )
         ).add_to(m)
 
-    # Legenda
+    # Legenda de gradiente
     legenda_html = f"""
     <div style="
         position: fixed;
@@ -1128,7 +1205,60 @@ def criar_mapa_folium(df_mapa):
 
     m.get_root().html.add_child(folium.Element(legenda_html))
 
+    # Painel de top 3
+    if len(df_bolhas_sorted) >= 1:
+        top3_rows = df_bolhas_sorted.head(3)
+        top3_html_items = ""
+        medals = ['🥇', '🥈', '🥉']
+
+        for i, (_, row) in enumerate(top3_rows.iterrows()):
+            pct_t = row['sincronismos'] / total * 100 if total > 0 else 0
+            cor_top = cor_gradiente_folium(row['sincronismos'], min_sinc, max_sinc)
+            top3_html_items += f"""
+            <div style="
+                display:flex; align-items:center; gap:10px;
+                padding: 8px 0;
+                border-bottom: 1px solid {COR_CINZA_BORDA};
+            ">
+                <span style="font-size:18px;">{medals[i]}</span>
+                <div style="flex:1;">
+                    <div style="font-weight:700; font-size:12px; color:{COR_PRETO_SUAVE};">{row['empresa_nome'][:25]}</div>
+                    <div style="font-size:10px; color:{COR_CINZA_TEXTO};">{row['estado']}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-weight:800; font-size:14px; color:{cor_top};">{row['sincronismos']:,}</div>
+                    <div style="font-size:9px; color:{COR_CINZA_TEXTO};">{pct_t:.1f}%</div>
+                </div>
+            </div>
+            """
+
+        painel_html = f"""
+        <div style="
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 9999;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 14px 18px;
+            font-family: 'Segoe UI', sans-serif;
+            min-width: 240px;
+            border: 1px solid {COR_CINZA_BORDA};
+        ">
+            <div style="font-weight:800; font-size:13px; color:{COR_PRETO_SUAVE}; margin-bottom:10px; letter-spacing:0.5px;">
+                🏆 TOP EMPRESAS
+            </div>
+            {top3_html_items}
+            <div style="padding-top:10px; font-size:11px; color:{COR_CINZA_TEXTO}; text-align:center; border-top:1px solid {COR_CINZA_BORDA}; margin-top:5px;">
+                <strong style="color:{COR_AZUL_ESCURO};">Total: {total:,}</strong> sincronizações
+            </div>
+        </div>
+        """
+        m.get_root().html.add_child(folium.Element(painel_html))
+
     return m
+
 
 def criar_grafico_barras(df_mapa):
     """Cria gráfico de barras comparativo com barras de progresso coloridas"""
@@ -1140,6 +1270,7 @@ def criar_grafico_barras(df_mapa):
     
     fig = go.Figure()
     
+    # Cores baseadas no valor
     max_val = df_barras['sincronismos'].max()
     min_val = df_barras['sincronismos'].min()
     
@@ -1148,6 +1279,7 @@ def criar_grafico_barras(df_mapa):
             cor = COR_AZUL_PETROLEO
         else:
             normalized = (row['sincronismos'] - min_val) / (max_val - min_val)
+            # Gradiente: azul petróleo -> laranja -> vermelho
             if normalized < 0.5:
                 tt = normalized / 0.5
                 r = int(2 + tt * (245 - 2))
@@ -1162,6 +1294,7 @@ def criar_grafico_barras(df_mapa):
         
         percentual = (row['sincronismos'] / total * 100) if total > 0 else 0
         
+        # Adicionar barra
         fig.add_trace(go.Bar(
             x=[row['sincronismos']],
             y=[f"{row['empresa']} - {row['empresa_nome'][:20]}"],
@@ -1181,7 +1314,7 @@ def criar_grafico_barras(df_mapa):
     
     fig.update_layout(
         title=dict(
-            text="<b>🏆 RANKING DE SINCRONIZAÇÕES POR EMPRESA</b>",
+            text="<b>RANKING </b>",
             font=dict(size=16, color=COR_AZUL_ESCURO),
             x=0.5
         ),
@@ -1206,47 +1339,15 @@ def criar_grafico_barras(df_mapa):
     
     return fig
 
-# ============================================
-# FUNÇÕES DE ANÁLISE ESTATÍSTICA COM NUMPY
-# ============================================
-def calcular_percentis_numpy(df, coluna, percentis=[10, 25, 50, 75, 90]):
-    """Calcula múltiplos percentis de uma vez com NumPy"""
-    valores = df[coluna].values
-    return {f'P{p}': np.percentile(valores, p) for p in percentis}
-
-def media_movel_numpy(arr, window):
-    """Calcula média móvel com NumPy"""
-    arr_np = np.array(arr)
-    cumsum = np.cumsum(np.insert(arr_np, 0, 0))
-    return (cumsum[window:] - cumsum[:-window]) / window
-
-def processar_dados_numpy(df):
-    """Processa dados usando NumPy para melhor performance"""
-    status = df['Status'].values
-    revisoes = df['Revisões'].values if 'Revisões' in df.columns else np.array([])
-    sre = df['SRE'].values if 'SRE' in df.columns else np.array([])
-    
-    total = len(df)
-    sincronizados = np.sum(status == 'Sincronizado')
-    total_revisoes = np.sum(revisoes) if len(revisoes) > 0 else 0
-    media_revisoes = np.mean(revisoes) if len(revisoes) > 0 else 0
-    
-    return {
-        'total': total,
-        'sincronizados': sincronizados,
-        'total_revisoes': total_revisoes,
-        'media_revisoes': media_revisoes
-    }
 
 # ============================================
 # SIDEBAR - FILTROS E CONTROLES
 # ============================================
 with st.sidebar:
     st.markdown(f"""
-    <div style="text-align: center; padding: 0.5rem 0 1rem 0;">
-        <div style="font-size: 2.5rem; margin-bottom: 0.3rem;">🎯</div>
-        <h3 style="color: {COR_AZUL_ESCURO}; margin: 0; font-weight: 700;">Painel de Controle</h3>
-        <p style="color: {COR_CINZA_TEXTO}; margin: 0.2rem 0 0 0; font-size: 0.8rem;">Filtros e Configurações</p>
+    <div style="text-align: center; padding: 1rem 0;">
+        <h3 style="color: {COR_AZUL_ESCURO}; margin: 0;">⚙️ Painel de Controle</h3>
+        <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.85rem;">Filtros e Configurações</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1351,12 +1452,7 @@ with st.sidebar:
             
             st.session_state.df_filtrado = df
             
-            st.markdown(f"""
-            <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-top: 0.8rem;">
-                <span style="font-weight: 600; color: {COR_AZUL_ESCURO};">📈 Registros filtrados:</span>
-                <span style="font-weight: 700; color: {COR_AZUL_PETROLEO};">{len(df):,}</span>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
             st.markdown('</div>', unsafe_allow_html=True)
     
     with st.container():
@@ -1372,7 +1468,7 @@ with st.sidebar:
                 
                 st.markdown(f"""
                 <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.3rem 0; font-weight: 600; font-size: 0.85rem;">📄 Arquivo atual:</p>
+                    <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
                     <p style="margin: 0; font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{os.path.basename(arquivo_atual)}</p>
                     <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: {COR_CINZA_TEXTO};">
                     📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
@@ -1442,7 +1538,7 @@ with st.sidebar:
         if st.session_state.df_original is not None:
             ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
             st.markdown(f"""
-            <div class="status-card status-success">
+            <div class="status-success">
                 <strong>📊 Status atual:</strong><br>
                 <small>Registros: {len(st.session_state.df_original):,}</small><br>
                 <small>Atualizado: {ultima_atualizacao}</small>
@@ -1516,31 +1612,521 @@ with st.sidebar:
                     st.error(f"❌ {status}")
 
 # ============================================
-# HEADER - ESTILO GRADIENTE MODERNO
+# HEADER - ESTILO GRADIENTE AZUL PETRÓLEO
 # ============================================
 st.markdown(f"""
-<div class="main-header fade-in">
-    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; position: relative; z-index: 1;">
+<div style="
+    background: linear-gradient(135deg, {COR_AZUL_PETROLEO} 0%, {COR_AZUL_ESCURO} 100%);
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0;
+    box-shadow: 0 4px 15px rgba(2, 138, 159, 0.3);
+">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
         <div>
-            <h1>📊 ESTEIRA SRE</h1>
-            <p class="subtitle">Site Reliability Engineering · Performance Dashboard</p>
-            <div style="margin-top: 0.5rem;">
-                <span class="header-badge">🚀 v5.5</span>
-                <span class="header-badge" style="margin-left: 0.5rem;">⚡ Performance</span>
-                <span class="header-badge" style="margin-left: 0.5rem;">📈 SRE</span>
-            </div>
+            <h1 style="
+                color: {COR_BRANCO};
+                margin: 0;
+                font-size: 1.6rem;
+                font-weight: 600;
+                letter-spacing: -0.3px;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            ">
+                📊 ESTEIRA SRE (Site Reliability Engineering)
+            </h1>
+            <p style="
+                color: rgba(255,255,255,0.9);
+                margin: 0.3rem 0 0 0;
+                font-size: 0.85rem;
+                font-weight: 400;
+            ">
+                Acompanhamento das validações da EAC | EMR | EMS | EMT | EPB | ERO | ESE | ESS | ETO
+            </p>
         </div>
         <div style="text-align: right;">
-            <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 0.85rem; font-weight: 500;">
+            <p style="
+                color: rgba(255,255,255,0.9);
+                margin: 0;
+                font-size: 0.85rem;
+                font-weight: 500;
+            ">
                 Dashboard de Performance
             </p>
-            <p style="color: rgba(255,255,255,0.7); margin: 0.3rem 0 0 0; font-size: 0.7rem;">
+            <p style="
+                color: rgba(255,255,255,0.8);
+                margin: 0.2rem 0 0 0;
+                font-size: 0.75rem;
+            ">
+                v5.5 | Sistema de Performance SRE
+            </p>
+            <p style="
+                color: rgba(255,255,255,0.7);
+                margin: 0.3rem 0 0 0;
+                font-size: 0.7rem;
+                font-weight: 500;
+            ">
                 {datetime.now().strftime('%d/%m/%Y')}
             </p>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# ============================================
+# BOTÕES MANCHETE
+# ============================================
+if st.session_state.df_original is not None:
+    if 'show_popup' not in st.session_state:
+        st.session_state.show_popup = False
+    
+    col_btn_manchete, col_espaco = st.columns([2, 10])
+    
+    with col_btn_manchete:
+        if st.button("📰 **VER MANCHETE**", 
+                    help="Clique para ver os principais indicadores do mês",
+                    type="secondary",
+                    use_container_width=True,
+                    key="btn_manchete"):
+            st.session_state.show_popup = True
+
+if st.session_state.df_original is not None:
+    if verificar_e_atualizar_arquivo():
+        st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
+
+if st.session_state.df_original is not None and st.session_state.show_popup:
+    df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
+    
+    with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
+        
+        st.markdown("### 📰 MANCHETE - RELATÓRIO ")
+        st.markdown("---")
+        
+        st.markdown("#### 📅 SELECIONE O PERÍODO")
+        
+        col_periodo1, col_periodo2 = st.columns(2)
+        
+        with col_periodo1:
+            periodo_opcoes = [
+                "Mês Atual",
+                "Últimos 30 dias", 
+                "Últimos 90 dias",
+                "Este Ano",
+                "Ano Passado",
+                "Todo o Período"
+            ]
+            periodo_selecionado = st.selectbox(
+                "Período de análise:",
+                options=periodo_opcoes,
+                index=0,
+                key="popup_periodo"
+            )
+        
+        with col_periodo2:
+            if 'Ano' in df.columns:
+                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
+                if anos_disponiveis:
+                    ano_especifico = st.selectbox(
+                        "Ou selecione um ano:",
+                        options=['Selecionar ano...'] + list(anos_disponiveis),
+                        key="popup_ano"
+                    )
+                else:
+                    ano_especifico = 'Selecionar ano...'
+            else:
+                ano_especifico = 'Selecionar ano...'
+        
+        hoje = datetime.now()
+        df_filtrado_periodo = df.copy()
+        periodo_titulo = ""
+        
+        if periodo_selecionado == "Mês Atual":
+            mes_atual = hoje.month
+            ano_atual = hoje.year
+            df_filtrado_periodo = df[(df['Criado'].dt.month == mes_atual) & 
+                                    (df['Criado'].dt.year == ano_atual)].copy()
+            periodo_titulo = f"Mês Atual ({mes_atual:02d}/{ano_atual})"
+            
+        elif periodo_selecionado == "Últimos 30 dias":
+            data_limite = hoje - timedelta(days=30)
+            df_filtrado_periodo = df[df['Criado'] >= data_limite].copy()
+            periodo_titulo = "Últimos 30 dias"
+            
+        elif periodo_selecionado == "Últimos 90 dias":
+            data_limite = hoje - timedelta(days=90)
+            df_filtrado_periodo = df[df['Criado'] >= data_limite].copy()
+            periodo_titulo = "Últimos 90 dias"
+            
+        elif periodo_selecionado == "Este Ano":
+            ano_atual = hoje.year
+            df_filtrado_periodo = df[df['Criado'].dt.year == ano_atual].copy()
+            periodo_titulo = f"Este Ano ({ano_atual})"
+            
+        elif periodo_selecionado == "Ano Passado":
+            ano_passado = hoje.year - 1
+            df_filtrado_periodo = df[df['Criado'].dt.year == ano_passado].copy()
+            periodo_titulo = f"Ano Passado ({ano_passado})"
+            
+        elif periodo_selecionado == "Todo o Período":
+            periodo_titulo = "Todo o Período Disponíve"
+            
+        elif ano_especifico != 'Selecionar ano...':
+            df_filtrado_periodo = df[df['Criado'].dt.year == int(ano_especifico)].copy()
+            periodo_titulo = f"Ano {ano_especifico}"
+        
+        total_cards = len(df_filtrado_periodo)
+        validados = len(df_filtrado_periodo[df_filtrado_periodo['Status'] == 'Sincronizado'])
+        com_erro = len(df_filtrado_periodo[df_filtrado_periodo['Revisões'] > 0])
+        sem_erro = validados - com_erro
+        
+        taxa_sucesso = (validados / total_cards * 100) if total_cards > 0 else 0
+        taxa_erro = (com_erro / validados * 100) if validados > 0 else 0
+        
+        df_anterior = pd.DataFrame()
+        periodo_anterior_titulo = ""
+        
+        try:
+            if periodo_selecionado == "Mês Atual":
+                mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
+                ano_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
+                df_anterior = df[(df['Criado'].dt.month == mes_anterior) & 
+                                (df['Criado'].dt.year == ano_anterior)].copy()
+                periodo_anterior_titulo = f"{mes_anterior:02d}/{ano_anterior}"
+                
+            elif periodo_selecionado == "Últimos 30 dias":
+                data_inicio_anterior = hoje - timedelta(days=60)
+                data_fim_anterior = hoje - timedelta(days=30)
+                df_anterior = df[(df['Criado'] >= data_inicio_anterior) & 
+                                (df['Criado'] < data_fim_anterior)].copy()
+                periodo_anterior_titulo = "30 dias anteriores"
+                
+            elif periodo_selecionado == "Últimos 90 dias":
+                data_inicio_anterior = hoje - timedelta(days=180)
+                data_fim_anterior = hoje - timedelta(days=90)
+                df_anterior = df[(df['Criado'] >= data_inicio_anterior) & 
+                                (df['Criado'] < data_fim_anterior)].copy()
+                periodo_anterior_titulo = "90 dias anteriores"
+                
+            elif periodo_selecionado == "Este Ano":
+                ano_anterior = ano_atual - 1
+                df_anterior = df[df['Criado'].dt.year == ano_anterior].copy()
+                periodo_anterior_titulo = f"Ano {ano_anterior}"
+                
+            elif periodo_selecionado == "Ano Passado":
+                ano_anterior_2 = ano_passado - 1
+                df_anterior = df[df['Criado'].dt.year == ano_anterior_2].copy()
+                periodo_anterior_titulo = f"Ano {ano_anterior_2}"
+                
+        except Exception as e:
+            df_anterior = pd.DataFrame()
+        
+        if not df_anterior.empty:
+            total_cards_anterior = len(df_anterior)
+            validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
+            com_erro_anterior = len(df_anterior[df_anterior['Revisões'] > 0])
+            taxa_sucesso_anterior = (validados_anterior / total_cards_anterior * 100) if total_cards_anterior > 0 else 0
+        else:
+            total_cards_anterior = 0
+            validados_anterior = 0
+            com_erro_anterior = 0
+            taxa_sucesso_anterior = 0
+        
+        st.markdown(f"#### 🎯 DESTAQUE DO PERÍODO: {periodo_titulo}")
+        
+        if total_cards == 0:
+            st.error(f"⚠️ **NENHUM DADO DISPONÍVEL** para {periodo_titulo.lower()}")
+        elif com_erro == 0 and validados > 0:
+            st.success(f"**✅ SRE VALIDOU {validados} CARDS SEM RETORNO DE ERRO!**")
+            st.info(f"Performance excepcional - 100% de aprovação direta")
+        elif taxa_erro <= 5:
+            st.warning(f"**⚡ SRE VALIDOU {validados} CARDS COM APENAS {com_erro} AJUSTES**")
+            st.info(f"Alta qualidade - Taxa de erro: {taxa_erro:.1f}%")
+        else:
+            st.warning(f"**📊 SRE VALIDOU {validados} CARDS, {com_erro} COM RETORNO**")
+            st.info(f"Taxa de sucesso: {taxa_sucesso:.1f}% | {sem_erro} cards perfeitos")
+        
+        st.markdown("---")
+        
+        if not df_anterior.empty and total_cards_anterior > 0:
+            st.markdown("#### 📈 COMPARAÇÃO COM PERÍODO ANTERIOR")
+            
+            periodos = [periodo_anterior_titulo, periodo_titulo]
+            cards_totais = [total_cards_anterior, total_cards]
+            cards_validados = [validados_anterior, validados]
+            taxa_sucesso_vals = [taxa_sucesso_anterior, taxa_sucesso]
+            
+            fig_comparativo = go.Figure()
+            
+            fig_comparativo.add_trace(go.Bar(
+                x=periodos,
+                y=cards_totais,
+                name='Total Cards',
+                marker_color=COR_AZUL_ESCURO,
+                text=cards_totais,
+                textposition='outside',
+                textfont=dict(size=10),
+                width=0.35
+            ))
+            
+            fig_comparativo.add_trace(go.Bar(
+                x=periodos,
+                y=cards_validados,
+                name='Validados',
+                marker_color=COR_VERDE_ESCURO,
+                text=cards_validados,
+                textposition='outside',
+                textfont=dict(size=10),
+                width=0.35
+            ))
+            
+            fig_comparativo.add_trace(go.Scatter(
+                x=periodos,
+                y=taxa_sucesso_vals,
+                name='Taxa Sucesso',
+                yaxis='y2',
+                mode='lines+markers+text',
+                line=dict(color=COR_LARANJA, width=2),
+                marker=dict(size=8, color=COR_LARANJA),
+                text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
+                textposition='top center',
+                textfont=dict(size=9)
+            ))
+            
+            fig_comparativo.update_layout(
+                title=dict(
+                    text='Comparativo: Período Atual vs Anterior',
+                    font=dict(size=14)
+                ),
+                barmode='group',
+                yaxis=dict(
+                    title=dict(text='Quantidade', font=dict(size=11)),
+                    gridcolor='rgba(0,0,0,0.05)',
+                    rangemode='tozero'
+                ),
+                yaxis2=dict(
+                    title=dict(text='Taxa Sucesso (%)', font=dict(size=11)),
+                    overlaying='y',
+                    side='right',
+                    range=[0, max(100, max(taxa_sucesso_vals) * 1.1)],
+                    gridcolor='rgba(0,0,0,0.02)'
+                ),
+                height=300,
+                showlegend=True,
+                plot_bgcolor=COR_BRANCO,
+                margin=dict(l=50, r=50, t=50, b=50),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="center",
+                    x=0.5,
+                    font=dict(size=10)
+                ),
+                xaxis=dict(tickfont=dict(size=10))
+            )
+            
+            fig_comparativo.update_traces(
+                marker_line_width=0.5,
+                selector=dict(type='bar')
+            )
+            
+            st.plotly_chart(fig_comparativo, use_container_width=True, config={'displayModeBar': False})
+            
+            if total_cards_anterior > 0:
+                variacao_total = ((total_cards - total_cards_anterior) / total_cards_anterior * 100)
+                variacao_validados = ((validados - validados_anterior) / validados_anterior * 100) if validados_anterior > 0 else 0
+                variacao_taxa = taxa_sucesso - taxa_sucesso_anterior
+            else:
+                variacao_total = 100
+                variacao_validados = 100 if validados > 0 else 0
+                variacao_taxa = taxa_sucesso
+            
+            st.markdown("##### 📊 VARIAÇÃO PERCENTUAL")
+            
+            col_var1, col_var2, col_var3 = st.columns(3)
+            
+            with col_var1:
+                st.metric(
+                    label="Total Cards",
+                    value=f"{total_cards:,}",
+                    delta=f"{variacao_total:+.1f}%",
+                    delta_color="normal" if variacao_total >= 0 else "inverse",
+                    help=f"Anterior: {total_cards_anterior:,}"
+                )
+            
+            with col_var2:
+                st.metric(
+                    label="Validados",
+                    value=f"{validados:,}",
+                    delta=f"{variacao_validados:+.1f}%",
+                    delta_color="normal" if variacao_validados >= 0 else "inverse",
+                    help=f"Anterior: {validados_anterior:,}"
+                )
+            
+            with col_var3:
+                st.metric(
+                    label="Taxa Sucesso",
+                    value=f"{taxa_sucesso:.1f}%",
+                    delta=f"{variacao_taxa:+.1f}pp",
+                    delta_color="normal" if variacao_taxa >= 0 else "inverse",
+                    help=f"Anterior: {taxa_sucesso_anterior:.1f}%"
+                )
+            
+            st.markdown("---")
+        
+        st.markdown("#### 📊 INDICADORES PRINCIPAIS")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                "📋 Total Cards", 
+                total_cards,
+                delta=None,
+                help="Total de cards no período"
+            )
+        
+        with col2:
+            st.metric(
+                "✅ Validados", 
+                validados,
+                f"{taxa_sucesso:.1f}%",
+                delta_color="normal" if taxa_sucesso >= 90 else "off",
+                help="Cards sincronizados (aprovados)"
+            )
+        
+        with col3:
+            st.metric(
+                "🎯 Sem Erro", 
+                sem_erro,
+                f"{(sem_erro/validados*100) if validados>0 else 0:.1f}%" if validados > 0 else "0%",
+                help="Aprovação direta na primeira validação"
+            )
+        
+        with col4:
+            st.metric(
+                "⚠️ Com Erro", 
+                com_erro,
+                f"{taxa_erro:.1f}%" if validados > 0 else "0%",
+                delta_color="inverse",
+                help="Cards que retornaram para ajuste"
+            )
+        
+        st.markdown("---")
+        st.markdown("#### 📈 ANÁLISE DETALHADA")
+        
+        if total_cards > 0:
+            if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
+                dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
+                media_diaria = total_cards / dias_unicos if dias_unicos > 0 else 0
+                
+                col_analise1, col_analise2, col_analise3 = st.columns(3)
+                
+                with col_analise1:
+                    st.metric("📅 Dias com atividade", dias_unicos)
+                
+                with col_analise2:
+                    st.metric("📊 Média diária", f"{media_diaria:.1f}")
+                
+                with col_analise3:
+                    if 'Revisões' in df_filtrado_periodo.columns:
+                        media_revisoes = df_filtrado_periodo['Revisões'].mean()
+                        st.metric("📝 Média revisões/card", f"{media_revisoes:.1f}")
+                    else:
+                        st.metric("📝 Revisões", "N/A")
+            
+            st.markdown("##### 🏆 CLASSIFICAÇÃO DE PERFORMANCE")
+            
+            if taxa_sucesso >= 95:
+                st.success("""
+                **⭐ EXCELENTE**
+                - Meta de qualidade superada (>95%)
+                - Processos altamente eficientes
+                - Recomendação: Manter padrões atuais
+                """)
+            elif taxa_sucesso >= 85:
+                st.info("""
+                **👍 BOM DESEMPENHO**
+                - Dentro dos padrões esperados (85-94%)
+                - Processos consistentes
+                - Recomendação: Pequenos ajustes pontuais
+                """)
+            elif taxa_sucesso >= 70:
+                st.warning("""
+                **⚠️ OPORTUNIDADE DE MELHORIA**
+                - Abaixo do ideal (70-84%)
+                - Processos precisam de revisão
+                - Recomendação: Identificar causas principais
+                """)
+            else:
+                st.error("""
+                **🚨 ATENÇÃO NECESSÁRIA**
+                - Performance crítica (<70%)
+                - Processos ineficientes
+                - Recomendação: Revisão urgente dos fluxos
+                """)
+        else:
+            st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
+        
+        st.markdown("---")
+        
+        st.markdown(f"""
+        <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border: 1px solid {COR_CINZA_BORDA};">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 600;">Ações disponíveis</p>
+                    <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.85rem;">
+                    Exporte o relatório completo ou feche a manchete
+                    </p>
+                </div>
+                <div style="display: flex; gap: 0.8rem;">
+                    <button onclick="document.getElementById('exportBtn').click()" 
+                            style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; border: none; padding: 0.6rem 1.2rem; 
+                                   border-radius: 6px; cursor: pointer; font-weight: 500;">
+                        📥 Exportar PDF
+                    </button>
+                    <button onclick="document.getElementById('closeBtn').click()" 
+                            style="background: {COR_CINZA_TEXTO}; color: {COR_BRANCO}; border: none; 
+                                   padding: 0.6rem 1.2rem; border-radius: 6px; 
+                                   cursor: pointer; font-weight: 500;">
+                        ✕ Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col_exportar, col_fechar = st.columns(2)
+        
+        with col_exportar:
+            if st.button("📥 **EXPORTAR PDF**", 
+                        type="primary", 
+                        use_container_width=True,
+                        help="Gerar relatório completo em formato PDF",
+                        key="btn_exportar_pdf_final"):
+                st.info("""
+                📄 **Funcionalidade de PDF em desenvolvimento...**
+                
+                Para uma implementação completa, você pode usar:
+                - `fpdf` ou `reportlab` para gerar PDFs
+                - `weasyprint` para converter HTML para PDF
+                - `pdfkit` (requer wkhtmltopdf)
+                """)
+        
+        with col_fechar:
+            if st.button("✕ **FECHAR**", 
+                        type="secondary",
+                        use_container_width=True,
+                        key="btn_fechar_final"):
+                st.session_state.show_popup = False
+                st.rerun()
+        
+        st.markdown(f"""
+        <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 6px; margin-top: 1rem;">
+            <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
+            <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
+            <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
@@ -1551,7 +2137,7 @@ if st.session_state.df_original is not None:
     # ============================================
     # CRIAR TABS PRINCIPAIS
     # ============================================
-    tab_principal, tab_mapa, tab_ipe, tab_estatistica = st.tabs(["📊 Principal", "🗺️ Mapa", "📈 KPI IPE", "📈 Análise Estatística"])
+    tab_principal, tab_mapa, tab_ipe, tab_estatistica = st.tabs(["📊 Principal", "🗺️ Mapa", "📈 KPI", "📈 Análise Estatística"])
     
     with tab_principal:
         st.markdown("## 📊 Base de Dados")
@@ -1562,8 +2148,8 @@ if st.session_state.df_original is not None:
             
             st.markdown(f"""
             <div class="info-base">
-                <p style="margin: 0; font-weight: 600; color: {COR_AZUL_ESCURO};">📅 Base atualizada em: {get_horario_brasilia()}</p>
-                <p class="sub-info">
+                <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
+                <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO};">
                 Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} | 
                 Total de registros: {len(df):,}
                 </p>
@@ -1574,29 +2160,31 @@ if st.session_state.df_original is not None:
         
         col1, col2, col3 = st.columns(3)
         
-        # Usando NumPy para métricas rápidas
-        metrics = processar_dados_numpy(df)
-        
         with col1:
+            total_atual = len(df)
             st.markdown(criar_card_indicador_simples(
-                metrics['total'], 
+                total_atual, 
                 "Total de Demandas", 
                 "📋"
             ), unsafe_allow_html=True)
         
         with col2:
-            st.markdown(criar_card_indicador_simples(
-                metrics['sincronizados'],
-                "Sincronizados",
-                "✅"
-            ), unsafe_allow_html=True)
+            if 'Status' in df.columns:
+                sincronizados = len(df[df['Status'] == 'Sincronizado'])
+                st.markdown(criar_card_indicador_simples(
+                    sincronizados,
+                    "Sincronizados",
+                    "✅"
+                ), unsafe_allow_html=True)
         
         with col3:
-            st.markdown(criar_card_indicador_simples(
-                int(metrics['total_revisoes']),
-                "Total de Revisões",
-                "📝"
-            ), unsafe_allow_html=True)
+            if 'Revisões' in df.columns:
+                total_revisoes = int(df['Revisões'].sum())
+                st.markdown(criar_card_indicador_simples(
+                    total_revisoes,
+                    "Total de Revisões",
+                    "📝"
+                ), unsafe_allow_html=True)
         
         st.markdown("---")
         
@@ -1608,9 +2196,10 @@ if st.session_state.df_original is not None:
         ])
         
         with tab1:
-            st.markdown(f'<div class="section-title">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
-            
             col_titulo, col_seletor = st.columns([3, 1])
+            
+            with col_titulo:
+                st.markdown(f'<div class="section-title">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
             
             with col_seletor:
                 if 'Ano' in df.columns:
@@ -3088,6 +3677,7 @@ if st.session_state.df_original is not None:
     with tab_mapa:
         st.markdown("## 🗺️ Mapa de Sincronizações por Empresa")
         
+        # Filtros para o mapa
         col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
         
         with col_mapa_filtro1:
@@ -3128,6 +3718,7 @@ if st.session_state.df_original is not None:
             else:
                 mes_filtro_mapa = 'Todos'
         
+        # Processar dados para o mapa
         df_mapa, total_sinc_filtrado = processar_dados_mapa(
             df,
             empresas_selecionadas=empresas_selecionadas_mapa,
@@ -3135,57 +3726,65 @@ if st.session_state.df_original is not None:
             mes_filtro=mes_filtro_mapa
         )
         
+        # Métricas do mapa
         col_metrica1, col_metrica2, col_metrica3, col_metrica4 = st.columns(4)
         
         with col_metrica1:
-            st.markdown(criar_card_indicador_simples(
-                total_sinc_filtrado,
-                "Total Sincronizações",
-                "📊"
-            ), unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{total_sinc_filtrado:,}</div>
+                <div class="metric-label">Total Sincronizações</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col_metrica2:
             empresas_ativas = len(df_mapa[df_mapa['sincronismos'] > 0])
-            st.markdown(criar_card_indicador_simples(
-                empresas_ativas,
-                "Empresas com Sinc.",
-                "🏢"
-            ), unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{empresas_ativas}</div>
+                <div class="metric-label">Empresas com Sinc.</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col_metrica3:
             if not df_mapa.empty:
                 media_sinc = df_mapa['sincronismos'].mean()
-                st.markdown(criar_card_indicador_simples(
-                    f"{media_sinc:.1f}",
-                    "Média por Empresa",
-                    "📈"
-                ), unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{media_sinc:.1f}</div>
+                    <div class="metric-label">Média por Empresa</div>
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                st.markdown(criar_card_indicador_simples(
-                    "0",
-                    "Média por Empresa",
-                    "📈"
-                ), unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">0</div>
+                    <div class="metric-label">Média por Empresa</div>
+                </div>
+                """, unsafe_allow_html=True)
         
         with col_metrica4:
             if not df_mapa.empty and df_mapa['sincronismos'].max() > 0:
                 max_sinc = df_mapa['sincronismos'].max()
                 empresa_max = df_mapa[df_mapa['sincronismos'] == max_sinc]['empresa_nome'].values[0]
-                st.markdown(criar_card_indicador_simples(
-                    f"{max_sinc:,}",
-                    f"🏆 Maior: {empresa_max[:20]}",
-                    "🏆"
-                ), unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{max_sinc:,}</div>
+                    <div class="metric-label">🏆 Maior: {empresa_max[:20]}</div>
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                st.markdown(criar_card_indicador_simples(
-                    "0",
-                    "Maior Sincronização",
-                    "🏆"
-                ), unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">0</div>
+                    <div class="metric-label">Maior Sincronização</div>
+                </div>
+                """, unsafe_allow_html=True)
         
         st.markdown("---")
         
-        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS - DISTRIBUIÇÃO GEOGRÁFICA</div>', unsafe_allow_html=True)
+        # Mapa Folium
+        st.markdown('<div class="section-title">📍 MAPA DE BOLHAS </div>', unsafe_allow_html=True)
         
         m = criar_mapa_folium(df_mapa)
         if m:
@@ -3193,12 +3792,11 @@ if st.session_state.df_original is not None:
             
             wrapper = f"""
             <div style="
-                border-radius: 16px;
+                border-radius: 12px;
                 overflow: hidden;
-                box-shadow: 0 4px 24px rgba(2,138,159,0.08);
+                box-shadow: 0 4px 20px rgba(0,89,115,0.12);
                 border: 1px solid {COR_CINZA_BORDA};
                 margin-bottom: 20px;
-                background: white;
             ">
                 {mapa_html}
             </div>
@@ -3207,12 +3805,14 @@ if st.session_state.df_original is not None:
         else:
             st.info("ℹ️ Nenhuma empresa com sincronizações para exibir no mapa.")
         
+        # Ranking de barras ESTILIZADO
         st.markdown('<div class="section-title">🏆 RANKING DE SINCRONIZAÇÕES POR EMPRESA</div>', unsafe_allow_html=True)
         
         fig_barras = criar_grafico_barras(df_mapa)
         if fig_barras:
             st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
         
+        # Tabela detalhada com barras de progresso
         with st.expander("📋 Ver Detalhes por Empresa", expanded=False):
             if not df_mapa.empty:
                 tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'estado', 'regiao', 'sincronismos']].copy()
@@ -3266,6 +3866,7 @@ if st.session_state.df_original is not None:
                     use_container_width=True
                 )
         
+        # Legenda
         with st.expander("🌊 Sobre as Cores do Mapa e Ranking", expanded=False):
             st.markdown(f"""
             ### 🎨 Escala de Cores
@@ -3306,7 +3907,7 @@ if st.session_state.df_original is not None:
             """, unsafe_allow_html=True)
     
     # ============================================
-    # ABA KPI IPE - ACUMULADO POR MÊS
+    # NOVA ABA: KPI IPE - ACUMULADO POR MÊS
     # ============================================
     with tab_ipe:
         st.markdown(f'<div class="section-title">🎯 KPI IPE - ÍNDICE DE PERFORMANCE DO ESPECIALISTA</div>', unsafe_allow_html=True)
@@ -3314,6 +3915,7 @@ if st.session_state.df_original is not None:
         if 'SRE' in df.columns and 'Status' in df.columns and 'Retorno_Cliente' in df.columns:
             
             def is_retorno_sim(valor):
+                """Verifica se o valor indica retorno do cliente (Sim)"""
                 if pd.isna(valor):
                     return False
                 valor_str = str(valor).strip().upper()
@@ -3347,6 +3949,7 @@ if st.session_state.df_original is not None:
                 else:
                     return sre_nome
             
+            # FILTROS
             st.markdown("### 📅 Filtros de Período")
             col_filtro_ipe1, col_filtro_ipe2 = st.columns(2)
             
@@ -3369,12 +3972,14 @@ if st.session_state.df_original is not None:
                 else:
                     meses_selecionados_numeros = []
             
+            # APLICA FILTROS
             df_ipe = df.copy()
             if ano_ipe != 'Todos':
                 df_ipe = df_ipe[df_ipe['Ano'] == int(ano_ipe)]
             if meses_selecionados_numeros:
                 df_ipe = df_ipe[df_ipe['Mês'].isin(meses_selecionados_numeros)]
             
+            # PERFORMANCE DETALHADA
             st.markdown("### 📊 Performance Detalhada - Período Selecionado")
             cards_total_periodo = len(df_ipe)
             total_sres_periodo = df_ipe['SRE'].nunique()
@@ -3410,6 +4015,7 @@ if st.session_state.df_original is not None:
             
             st.markdown("---")
             
+            # IPE ACUMULADO POR MÊS - GRÁFICO DE LINHA
             st.markdown("### 📈 IPE Acumulado por Mês")
             st.caption("_Evolução do IPE acumulado mês a mês considerando TODO o período_")
             
@@ -3444,6 +4050,7 @@ if st.session_state.df_original is not None:
                 if acumulados:
                     df_acum = pd.DataFrame(acumulados)
                     
+                    # GRÁFICO DE LINHA
                     fig_linha = go.Figure()
                     fig_linha.add_trace(go.Scatter(
                         x=df_acum['Mês'], 
@@ -3463,6 +4070,7 @@ if st.session_state.df_original is not None:
                     fig_linha.update_layout(title='📈 Evolução do IPE Acumulado por Mês', xaxis_title='Mês', yaxis_title='IPE Acumulado (%)', yaxis=dict(range=[0, 105]), height=500, plot_bgcolor=COR_BRANCO)
                     st.plotly_chart(fig_linha, use_container_width=True)
                     
+                    # CARDS RESUMO
                     ultimo = df_acum.iloc[-1]
                     primeiro = df_acum.iloc[0]
                     st.markdown("### 🎯 Resumo do Período Acumulado")
@@ -3472,11 +4080,13 @@ if st.session_state.df_original is not None:
                     with col_r3: st.metric("🎯 IPE Acumulado", f"{ultimo['IPE Acumulado (%)']:.2f}%", delta=f"{ultimo['IPE Acumulado (%)'] - 95:+.2f} pp", delta_color="normal" if ultimo['IPE Acumulado (%)'] >= 95 else "inverse")
                     with col_r4: st.metric("👥 SREs Ativos", f"{ultimo['NA_Acum']}")
                     
+                    # TABELA (EXPANDER)
                     with st.expander("📋 Ver Tabela de Acumulados Mensais", expanded=False):
                         st.dataframe(df_acum, use_container_width=True, column_config={"IPE Acumulado (%)": st.column_config.ProgressColumn("IPE %", format="%.2f%%", min_value=0, max_value=100)})
                         csv_acum = df_acum.to_csv(index=False).encode('utf-8-sig')
                         st.download_button("📥 Exportar para CSV", data=csv_acum, file_name=f"ipe_acumulado_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", mime="text/csv", use_container_width=True)
             
+            # EXPLICAÇÃO
             with st.expander("📖 Entenda o Cálculo do IPE"):
                 st.markdown("""
                 **Fórmula:** `IPE = (CA - CR) / (CD + |((CT/CD)/NA) - 1|)`
@@ -3495,12 +4105,15 @@ if st.session_state.df_original is not None:
             st.warning("⚠️ Colunas necessárias ('SRE', 'Status', 'Retorno_Cliente') não encontradas.")
     
     # ============================================
-    # ABA ANÁLISE ESTATÍSTICA
+    # NOVA ABA: ANÁLISE ESTATÍSTICA
     # ============================================
     with tab_estatistica:
         st.markdown("## 📈 ANÁLISE ESTATÍSTICA")
         st.markdown("_Análise de distribuição, percentis e tendência de sincronizações_")
         
+        # ============================================
+        # FILTROS DA ANÁLISE ESTATÍSTICA
+        # ============================================
         col_filtro_est1, col_filtro_est2, col_filtro_est3 = st.columns(3)
         
         with col_filtro_est1:
@@ -3536,6 +4149,7 @@ if st.session_state.df_original is not None:
                 mes_est = 'Todos os Meses'
         
         with col_filtro_est3:
+            # Parâmetro para percentis (padrão 75)
             percentil_param = st.number_input(
                 "🎯 Percentil de Referência (%)",
                 min_value=50,
@@ -3546,39 +4160,48 @@ if st.session_state.df_original is not None:
                 help="Percentil utilizado para análise de tendência"
             )
         
+        # Aplicar filtros
         df_est = df.copy()
         if ano_est != 'Todos os Anos':
             df_est = df_est[df_est['Ano'] == int(ano_est)]
         if mes_est != 'Todos os Meses':
             df_est = df_est[df_est['Mês'] == int(mes_est)]
         
+        # Filtrar apenas sincronizados para algumas análises
         df_sinc_est = df_est[df_est['Status'] == 'Sincronizado'].copy()
         
         if df_sinc_est.empty:
             st.warning("⚠️ Nenhum dado sincronizado encontrado com os filtros selecionados.")
         else:
+            
+            # ============================================
+            # MEDIDAS SEPARATRIZES (Mediana, Quartis, Percentis) - EM FORMATO DE GRÁFICO
+            # ============================================
             st.markdown("---")
             st.markdown("### 📊 DISTRIBUIÇÃO E PERCENTIS")
             st.markdown(f"_Mediana, Quartis e Percentis - Percentil de Referência: {percentil_param}%_")
             
+            # Calcular métricas para sincronizados por dia
             if 'Criado' in df_sinc_est.columns:
                 df_sinc_est['Data'] = df_sinc_est['Criado'].dt.date
                 sinc_por_dia_est = df_sinc_est.groupby('Data').size().reset_index()
                 sinc_por_dia_est.columns = ['Data', 'Quantidade']
                 
                 if not sinc_por_dia_est.empty:
-                    # Usando NumPy para cálculos de percentis
-                    valores = sinc_por_dia_est['Quantidade'].values
+                    valores = sinc_por_dia_est['Quantidade']
                     
-                    mediana = np.median(valores)
-                    q1 = np.percentile(valores, 25)
-                    q3 = np.percentile(valores, 75)
-                    p10 = np.percentile(valores, 10)
-                    p90 = np.percentile(valores, 90)
-                    p_selecionado = np.percentile(valores, percentil_param)
+                    # Calcular medidas
+                    mediana = valores.median()
+                    q1 = valores.quantile(0.25)
+                    q3 = valores.quantile(0.75)
+                    p10 = valores.quantile(0.10)
+                    p90 = valores.quantile(0.90)
+                    p_selecionado = valores.quantile(percentil_param/100)
                     
+                    # Gráfico principal - Curva de Distribuição com Percentis
                     fig_sep = go.Figure()
                     
+                    # Histograma
                     fig_sep.add_trace(go.Histogram(
                         x=valores,
                         nbinsx=20,
@@ -3589,6 +4212,7 @@ if st.session_state.df_original is not None:
                         hovertemplate='Intervalo: %{x}<br>Frequência: %{y}<extra></extra>'
                     ))
                     
+                    # Linhas dos percentis
                     fig_sep.add_vline(x=mediana, line_dash="dash", line_color=COR_VERDE_ESCURO, 
                                       annotation_text=f"P50 (Mediana): {mediana:.0f}", annotation_position="top")
                     fig_sep.add_vline(x=q1, line_dash="dot", line_color=COR_AZUL_PETROLEO,
@@ -3614,6 +4238,7 @@ if st.session_state.df_original is not None:
                     
                     st.plotly_chart(fig_sep, use_container_width=True)
                     
+                    # Cards com os valores
                     col_sep1, col_sep2, col_sep3, col_sep4, col_sep5 = st.columns(5)
                     
                     with col_sep1:
@@ -3627,14 +4252,19 @@ if st.session_state.df_original is not None:
                     with col_sep5:
                         st.metric(f"🎯 P{percentil_param}", f"{p_selecionado:.0f}")
             
+            # ============================================
+            # ANÁLISE DE PERCENTIL PARA TENDÊNCIA
+            # ============================================
             st.markdown("---")
             st.markdown("### 📈 ANÁLISE DE PERCENTIL PARA TENDÊNCIA")
             st.markdown(f"_Evolução dos percentis ao longo do tempo - Percentil de Referência: {percentil_param}%_")
             
             if 'Criado' in df_sinc_est.columns:
+                # Criar colunas de período
                 df_sinc_est['Mes_Ano'] = df_sinc_est['Criado'].dt.strftime('%Y-%m')
                 df_sinc_est['Nome_Mes_Ano'] = df_sinc_est['Criado'].dt.strftime('%b/%Y')
                 
+                # Calcular percentis por mês
                 meses_unicos = sorted(df_sinc_est['Mes_Ano'].unique())
                 
                 dados_tendencia = []
@@ -3646,21 +4276,23 @@ if st.session_state.df_original is not None:
                             dados_tendencia.append({
                                 'Mês': mes,
                                 'Mês_Label': df_mes['Nome_Mes_Ano'].iloc[0],
-                                'P25': np.percentile(valores_mes, 25),
-                                'P50': np.percentile(valores_mes, 50),
-                                f'P{percentil_param}': np.percentile(valores_mes, percentil_param),
-                                'P90': np.percentile(valores_mes, 90),
-                                'Média': np.mean(valores_mes),
+                                'P25': valores_mes.quantile(0.25),
+                                'P50': valores_mes.quantile(0.50),
+                                f'P{percentil_param}': valores_mes.quantile(percentil_param/100),
+                                'P90': valores_mes.quantile(0.90),
+                                'Média': valores_mes.mean(),
                                 'Total': len(df_mes)
                             })
                 
                 if dados_tendencia:
                     df_tendencia = pd.DataFrame(dados_tendencia)
                     
+                    # Gráfico de tendência dos percentis
                     st.markdown("#### 📈 Evolução dos Percentis")
                     
                     fig_tendencia = go.Figure()
                     
+                    # Adicionar faixa entre P25 e P90
                     fig_tendencia.add_trace(go.Scatter(
                         x=df_tendencia['Mês_Label'],
                         y=df_tendencia[f'P{percentil_param}'],
@@ -3688,6 +4320,7 @@ if st.session_state.df_original is not None:
                         marker=dict(size=8, color=COR_VERDE_ESCURO)
                     ))
                     
+                    # Adicionar área entre P25 e P90
                     fig_tendencia.add_trace(go.Scatter(
                         x=df_tendencia['Mês_Label'],
                         y=df_tendencia['P90'],
@@ -3725,6 +4358,7 @@ if st.session_state.df_original is not None:
                     
                     st.plotly_chart(fig_tendencia, use_container_width=True)
                     
+                    # Análise da tendência
                     st.markdown("#### 📊 Análise da Tendência")
                     
                     if len(df_tendencia) > 1:
@@ -3760,6 +4394,7 @@ if st.session_state.df_original is not None:
                                 delta_color="normal" if variacao_media >= 0 else "inverse"
                             )
                         
+                        # Resumo da tendência
                         st.markdown("#### 💡 Resumo da Tendência")
                         
                         if variacao_p50 > 10:
@@ -3771,6 +4406,7 @@ if st.session_state.df_original is not None:
                         else:
                             st.error(f"📉 **Tendência NEGATIVA** - A mediana caiu {abs(variacao_p50):.1f}% no período")
                     
+                    # Tabela de tendência
                     with st.expander("📋 Ver Tabela de Tendência Completa", expanded=False):
                         st.dataframe(
                             df_tendencia,
@@ -3786,12 +4422,16 @@ if st.session_state.df_original is not None:
                             }
                         )
             
+            # ============================================
+            # EXPORTAÇÃO DE DADOS
+            # ============================================
             st.markdown("---")
             st.markdown("### 📥 Exportar Dados")
             
             col_export1, col_export2 = st.columns(2)
             
             with col_export1:
+                # Exportar dados de tendência
                 if 'df_tendencia' in locals() and not df_tendencia.empty:
                     csv_tendencia = df_tendencia.to_csv(index=False).encode('utf-8-sig')
                     st.download_button(
@@ -3803,6 +4443,7 @@ if st.session_state.df_original is not None:
                     )
             
             with col_export2:
+                # Exportar dados de sincronização
                 if 'sinc_por_dia_est' in locals() and not sinc_por_dia_est.empty:
                     csv_sinc = sinc_por_dia_est.to_csv(index=False).encode('utf-8-sig')
                     st.download_button(
@@ -3815,56 +4456,41 @@ if st.session_state.df_original is not None:
 
 else:
     st.markdown(f"""
-    <div style="text-align: center; padding: 4rem; background: {COR_CINZA_FUNDO}; border-radius: 16px; border: 2px dashed {COR_CINZA_BORDA};">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
-        <h3 style="color: {COR_PRETO_SUAVE};">Esteira ADMS Dashboard</h3>
-        <p style="color: {COR_CINZA_TEXTO}; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+    <div style="text-align: center; padding: 4rem; background: {COR_CINZA_FUNDO}; border-radius: 12px; border: 2px dashed {COR_CINZA_BORDA};">
+        <h3 style="color: {COR_PRETO_SUAVE};">📊 Esteira ADMS Dashboard</h3>
+        <p style="color: {COR_CINZA_TEXTO}; margin-bottom: 2rem;">
             Sistema de análise e monitoramento de chamados - Setor SRE
         </p>
-        <div style="background: white; padding: 2rem; border-radius: 12px; display: inline-block; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+        <div style="margin-top: 2rem; padding: 2rem; background: {COR_BRANCO}; border-radius: 8px; display: inline-block;">
             <h4 style="color: {COR_AZUL_ESCURO};">📋 Para começar:</h4>
-            <div style="text-align: left; margin-top: 1rem;">
-                <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
-                <p>2. <strong>Use a seção "Importar Dados"</strong> no final da barra lateral</p>
-                <p>3. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
-            </div>
+            <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
+            <p>2. <strong>Use a seção "Importar Dados"</strong> no final da barra lateral</p>
+            <p>3. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# ============================================
-# FOOTER PROFISSIONAL
-# ============================================
 st.markdown("---")
 
 ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
 
 st.markdown(f"""
 <div class="footer">
-    <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; position: relative; z-index: 1;">
-        <div>
-            <p style="font-weight: 600;">Desenvolvido por:</p>
-            <p style="opacity: 0.8;">Kewin Marcel Ramirez Ferreira | GEAT</p>
-        </div>
-        <div>
-            <p style="font-weight: 600;">Contato:</p>
-            <p style="opacity: 0.8;">
-                <a href="mailto:kewin.ferreira@energisa.com.br" style="color: white; text-decoration: none;">
-                    📧 kewin.ferreira@energisa.com.br
-                </a>
-            </p>
-        </div>
-        <div>
-            <p style="font-weight: 600;">Versão:</p>
-            <p style="opacity: 0.8;">v5.5 · Performance SRE</p>
-        </div>
+    <div style="margin-bottom: 0.8rem;">
+        <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 500;">
+        Desenvolvido por: <span style="color: {COR_AZUL_ESCURO};">Kewin Marcel Ramirez Ferreira | GEAT</span>
+        </p>
+        <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">
+        📧 Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: {COR_AZUL_ESCURO}; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
+        </p>
     </div>
-    <div class="footer-divider"></div>
-    <p style="opacity: 0.7; font-size: 0.75rem;">
+    <div>
+        <p style="margin: 0; color: {COR_CINZA_TEXTO}; font-size: 0.75rem;">
         © 2024 Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
-    </p>
-    <p style="opacity: 0.5; font-size: 0.7rem; margin-top: 0.3rem;">
-        Última atualização: {ultima_atualizacao} (Brasília)
-    </p>
+        </p>
+        <p style="margin: 0.2rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.7rem;">
+        Versão 5.5 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
+        </p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
