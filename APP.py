@@ -216,12 +216,12 @@ def calcular_hash_arquivo(conteudo):
     return hashlib.md5(conteudo).hexdigest()
 
 # ============================================
-# FUNÇÃO PRINCIPAL DE CARREGAMENTO DE DADOS (ATUALIZADA)
+# FUNÇÃO PRINCIPAL DE CARREGAMENTO DE DADOS
 # ============================================
 @st.cache_data(ttl=300)
 def carregar_dados(uploaded_file=None, caminho_arquivo=None):
     """Carrega e processa os dados - Adaptado para o formato do arquivo ADMS.
-    Suporta tanto 'Revisões' quanto 'Qtd. Revisões' / 'Qtd. Revisoes'."""
+    Suporta 'Revisões', 'Qtd. Revisões' e variações, criando Revisões_Total (soma das duas)."""
     try:
         if uploaded_file:
             conteudo_bytes = uploaded_file.getvalue()
@@ -235,36 +235,31 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
 
         lines = conteudo.split('\n')
 
-        # ============================================
         # BUSCA FLEXÍVEL PELO CABEÇALHO
-        # ============================================
         header_line = None
         for i, line in enumerate(lines):
             line_clean = line.strip().strip('\ufeff')
             if '"Chamado"' in line_clean and '"Tipo Chamado"' in line_clean:
                 header_line = i
                 break
-
         if header_line is None:
             for i, line in enumerate(lines):
                 line_clean = line.strip().strip('\ufeff')
                 if '"Chamado"' in line_clean:
                     header_line = i
                     break
-
         if header_line is None:
             return None, "Formato de arquivo inválido - cabeçalho não encontrado", None
 
         data_str = '\n'.join(lines[header_line:])
         df = pd.read_csv(io.StringIO(data_str), quotechar='"')
 
-        # ============================================
-        # MAPEAMENTO DE COLUNAS ROBUSTO
-        # ============================================
         # Remove espaços extras dos nomes das colunas
         df.columns = [str(c).strip() for c in df.columns]
 
-        # Mapeamento padrão
+        # ============================================
+        # MAPEAMENTO DE COLUNAS
+        # ============================================
         col_mapping = {
             'Chamado': 'Chamado',
             'Tipo Chamado': 'Tipo_Chamado',
@@ -280,49 +275,48 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             'Motivo Revisão': 'Motivo_Revisao',
             'Motivo Revisao': 'Motivo_Revisao',
             'Retorno Cliente': 'Retorno_Cliente',
-            'Retorno Cliente ': 'Retorno_Cliente',
             'Vencimento': 'Vencimento',
             'ChangeSet': 'ChangeSet',
             'ID': 'ID',
-            'Qtd. Revisoes': 'Revisões',
-            'Qtd. Revisões': 'Revisões',
-            'Qtd.Revisoes': 'Revisões',
-            'Qtd.Revisões': 'Revisões',
-            'Qtd Revisoes': 'Revisões',
-            'Qtd Revisões': 'Revisões',
-            'Revisões': 'Revisões',
-            'Revisao': 'Revisões',
-            'Revisão': 'Revisões',
         }
 
-        # Renomeia apenas colunas que existem (evita conflito se 'Revisões' já existir)
         rename_dict = {}
         for old, new in col_mapping.items():
             if old in df.columns and new not in df.columns:
                 rename_dict[old] = new
-
-        # Caso especial: se já existe 'Revisões' E também 'Qtd. Revisoes', não sobrescreve
-        if 'Revisões' in df.columns and 'Qtd. Revisoes' in df.columns:
-            # Mantém 'Revisões' como prioritária (já era o padrão do código)
-            pass
-
         if rename_dict:
             df = df.rename(columns=rename_dict)
 
         # ============================================
-        # GARANTIA FINAL: se 'Revisões' não existir, cria a partir de variações
+        # TRATAMENTO DAS COLUNAS DE REVISÕES
         # ============================================
-        if 'Revisões' not in df.columns:
-            for variacao in ['Qtd. Revisoes', 'Qtd. Revisões', 'Qtd.Revisoes',
-                             'Qtd.Revisões', 'Qtd Revisoes', 'Qtd Revisões',
-                             'Revisao', 'Revisão']:
-                if variacao in df.columns:
-                    df['Revisões'] = df[variacao]
-                    break
+        # Padroniza os nomes das colunas de revisões (mantém as duas originais)
+        variacoes_revisoes = ['Revisões', 'Revisoes', 'Revisão', 'Revisao']
+        variacoes_qtd = ['Qtd. Revisões', 'Qtd. Revisoes', 'Qtd.Revisões', 'Qtd.Revisoes',
+                         'Qtd Revisões', 'Qtd Revisoes']
 
-        # Se ainda não existir, cria como 0
+        # Renomeia variações de "Revisões" para o padrão 'Revisões'
+        for v in variacoes_revisoes:
+            if v in df.columns and v != 'Revisões' and 'Revisões' not in df.columns:
+                df = df.rename(columns={v: 'Revisões'})
+
+        # Renomeia variações de "Qtd. Revisões" para o padrão 'Qtd. Revisões'
+        for v in variacoes_qtd:
+            if v in df.columns and v != 'Qtd. Revisões' and 'Qtd. Revisões' not in df.columns:
+                df = df.rename(columns={v: 'Qtd. Revisões'})
+
+        # Garante que ambas existam
         if 'Revisões' not in df.columns:
             df['Revisões'] = 0
+        if 'Qtd. Revisões' not in df.columns:
+            df['Qtd. Revisões'] = 0
+
+        # Converte para numérico
+        df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
+        df['Qtd. Revisões'] = pd.to_numeric(df['Qtd. Revisões'], errors='coerce').fillna(0).astype(int)
+
+        # CRIA COLUNA CONSOLIDADA
+        df['Revisões_Total'] = df['Revisões'] + df['Qtd. Revisões']
 
         # ============================================
         # PROCESSAMENTO DE DATAS
@@ -332,9 +326,7 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
 
-        # ============================================
         # CRIAÇÃO DE COLUNAS DE DATA
-        # ============================================
         if 'Criado' in df.columns:
             df['Ano'] = df['Criado'].dt.year
             df['Mês'] = df['Criado'].dt.month
@@ -354,27 +346,15 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             })
             df['Ano_Mês'] = df['Criado'].dt.strftime('%Y-%m')
 
-        # ============================================
         # PROCESSAMENTO DO RESPONSÁVEL
-        # ============================================
         if 'Responsável' in df.columns:
             df['Responsável_Formatado'] = df['Responsável'].apply(formatar_nome_responsavel)
 
-        # ============================================
-        # PROCESSAMENTO DE REVISÕES (numérico)
-        # ============================================
-        if 'Revisões' in df.columns:
-            df['Revisões'] = pd.to_numeric(df['Revisões'], errors='coerce').fillna(0).astype(int)
-
-        # ============================================
         # PROCESSAMENTO DE EMPRESA
-        # ============================================
         if 'Empresa' in df.columns:
             df['Empresa'] = df['Empresa'].astype(str).str.strip()
 
-        # ============================================
         # PROCESSAMENTO DE SINCRONIZAÇÃO
-        # ============================================
         if 'Sincronização' in df.columns:
             df['Sincronização'] = df['Sincronização'].astype(str).str.strip()
 
@@ -457,7 +437,7 @@ def criar_popup_indicadores(df):
                 (df['Criado'].dt.year == ano_atual)].copy()
     total_cards_mes = len(df_mes)
     cards_validados = len(df_mes[df_mes['Status'] == 'Sincronizado'])
-    cards_com_erro = len(df_mes[df_mes['Revisões'] > 0])
+    cards_com_erro = len(df_mes[df_mes['Revisões_Total'] > 0])
     cards_sem_erro = cards_validados - cards_com_erro
     taxa_sucesso = (cards_validados / total_cards_mes * 100) if total_cards_mes > 0 else 0
     taxa_erro = (cards_com_erro / cards_validados * 100) if cards_validados > 0 else 0
@@ -640,8 +620,8 @@ def calcular_taxa_retorno_sre(df, sre_nome):
     if len(df_sre) == 0:
         return 0, 0, 0
     total_cards = len(df_sre)
-    if 'Revisões' in df_sre.columns:
-        cards_com_revisoes = len(df_sre[df_sre['Revisões'] > 0])
+    if 'Revisões_Total' in df_sre.columns:
+        cards_com_revisoes = len(df_sre[df_sre['Revisões_Total'] > 0])
         taxa_retorno = (cards_com_revisoes / total_cards * 100) if total_cards > 0 else 0
     else:
         taxa_retorno = 0
@@ -1175,7 +1155,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
             periodo_titulo = f"Ano {ano_especifico}"
         total_cards = len(df_filtrado_periodo)
         validados = len(df_filtrado_periodo[df_filtrado_periodo['Status'] == 'Sincronizado'])
-        com_erro = len(df_filtrado_periodo[df_filtrado_periodo['Revisões'] > 0])
+        com_erro = len(df_filtrado_periodo[df_filtrado_periodo['Revisões_Total'] > 0])
         sem_erro = validados - com_erro
         taxa_sucesso = (validados / total_cards * 100) if total_cards > 0 else 0
         taxa_erro = (com_erro / validados * 100) if validados > 0 else 0
@@ -1213,7 +1193,7 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
         if not df_anterior.empty:
             total_cards_anterior = len(df_anterior)
             validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
-            com_erro_anterior = len(df_anterior[df_anterior['Revisões'] > 0])
+            com_erro_anterior = len(df_anterior[df_anterior['Revisões_Total'] > 0])
             taxa_sucesso_anterior = (validados_anterior / total_cards_anterior * 100) if total_cards_anterior > 0 else 0
         else:
             total_cards_anterior = 0
@@ -1318,8 +1298,8 @@ if st.session_state.df_original is not None and st.session_state.show_popup:
                 with col_analise2:
                     st.metric("📊 Média diária", f"{media_diaria:.1f}")
                 with col_analise3:
-                    if 'Revisões' in df_filtrado_periodo.columns:
-                        media_revisoes = df_filtrado_periodo['Revisões'].mean()
+                    if 'Revisões_Total' in df_filtrado_periodo.columns:
+                        media_revisoes = df_filtrado_periodo['Revisões_Total'].mean()
                         st.metric("📝 Média revisões/card", f"{media_revisoes:.1f}")
                     else:
                         st.metric("📝 Revisões", "N/A")
@@ -1433,8 +1413,8 @@ if st.session_state.df_original is not None:
                 sincronizados = len(df[df['Status'] == 'Sincronizado'])
                 st.markdown(criar_card_indicador_simples(sincronizados, "Sincronizados", "✅"), unsafe_allow_html=True)
         with col3:
-            if 'Revisões' in df.columns:
-                total_revisoes = int(df['Revisões'].sum())
+            if 'Revisões_Total' in df.columns:
+                total_revisoes = int(df['Revisões_Total'].sum())
                 st.markdown(criar_card_indicador_simples(total_revisoes, "Total de Revisões", "📝"), unsafe_allow_html=True)
         st.markdown("---")
         tab1, tab2, tab3, tab4 = st.tabs([
@@ -1518,11 +1498,11 @@ if st.session_state.df_original is not None:
                 df_rev = df_rev[df_rev['Ano'] == int(ano_rev)]
             if mes_rev != 'Todos os Meses':
                 df_rev = df_rev[df_rev['Mês'] == int(mes_rev)]
-            if 'Revisões' in df_rev.columns and 'Responsável_Formatado' in df_rev.columns:
-                df_com_revisoes = df_rev[df_rev['Revisões'] > 0].copy()
+            if 'Revisões_Total' in df_rev.columns and 'Responsável_Formatado' in df_rev.columns:
+                df_com_revisoes = df_rev[df_rev['Revisões_Total'] > 0].copy()
                 if not df_com_revisoes.empty:
                     revisoes_por_responsavel = df_com_revisoes.groupby('Responsável_Formatado').agg({
-                        'Revisões': 'sum', 'Chamado': 'count'
+                        'Revisões_Total': 'sum', 'Chamado': 'count'
                     }).reset_index()
                     revisoes_por_responsavel.columns = ['Responsável', 'Total_Revisões', 'Chamados_Com_Revisão']
                     revisoes_por_responsavel = revisoes_por_responsavel.sort_values('Total_Revisões', ascending=False)
@@ -1802,7 +1782,7 @@ if st.session_state.df_original is not None:
                 st.info("ℹ️ Selecione filtros para visualizar os dados de sincronização por dia.")
         with tab4:
             st.markdown(f'<div class="section-title">🏆 PERFORMANCE DOS SREs</div>', unsafe_allow_html=True)
-            if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões' in df.columns:
+            if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões_Total' in df.columns:
                 col_filtro1, col_filtro2 = st.columns(2)
                 with col_filtro1:
                     if 'Ano' in df.columns:
@@ -1905,8 +1885,8 @@ if st.session_state.df_original is not None:
                         if len(df_sre_data) > 0:
                             total_cards = len(df_sre_data)
                             sincronizados = len(df_sre_data[df_sre_data['Status'] == 'Sincronizado'])
-                            if 'Revisões' in df_sre_data.columns:
-                                cards_retorno = len(df_sre_data[df_sre_data['Revisões'] > 0])
+                            if 'Revisões_Total' in df_sre_data.columns:
+                                cards_retorno = len(df_sre_data[df_sre_data['Revisões_Total'] > 0])
                             else:
                                 cards_retorno = 0
                             nome_sre_display = substituir_nome_sre(sre)
@@ -2247,7 +2227,8 @@ if st.session_state.df_original is not None:
                     with col_filtro3:
                         mostrar_colunas = st.multiselect("Colunas a mostrar:",
                                                          options=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status',
-                                                                  'Prioridade', 'Revisões', 'Empresa', 'SRE', 'Data',
+                                                                  'Prioridade', 'Revisões', 'Revisões_Total',
+                                                                  'Qtd. Revisões', 'Empresa', 'SRE', 'Data',
                                                                   'Responsável_Formatado'],
                                                          default=['Chamado', 'Tipo_Chamado', 'Responsável_Formatado',
                                                                   'Status', 'Data'],
@@ -2266,9 +2247,9 @@ if st.session_state.df_original is not None:
                     elif ordenar_por == 'Data (Mais Antiga)':
                         ultimas_demandas = ultimas_demandas.sort_values('Criado', ascending=True)
                     elif ordenar_por == 'Revisões (Maior)':
-                        ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=False)
+                        ultimas_demandas = ultimas_demandas.sort_values('Revisões_Total', ascending=False)
                     elif ordenar_por == 'Revisões (Menor)':
-                        ultimas_demandas = ultimas_demandas.sort_values('Revisões', ascending=True)
+                        ultimas_demandas = ultimas_demandas.sort_values('Revisões_Total', ascending=True)
                     if filtro_chamado_tabela:
                         ultimas_demandas = ultimas_demandas[
                             ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_tabela, na=False)
@@ -2289,6 +2270,10 @@ if st.session_state.df_original is not None:
                         display_data['Prioridade'] = ultimas_demandas['Prioridade']
                     if 'Revisões' in mostrar_colunas and 'Revisões' in ultimas_demandas.columns:
                         display_data['Revisões'] = ultimas_demandas['Revisões']
+                    if 'Qtd. Revisões' in mostrar_colunas and 'Qtd. Revisões' in ultimas_demandas.columns:
+                        display_data['Qtd. Revisões'] = ultimas_demandas['Qtd. Revisões']
+                    if 'Revisões_Total' in mostrar_colunas and 'Revisões_Total' in ultimas_demandas.columns:
+                        display_data['Revisões_Total'] = ultimas_demandas['Revisões_Total']
                     if 'Empresa' in mostrar_colunas and 'Empresa' in ultimas_demandas.columns:
                         display_data['Empresa'] = ultimas_demandas['Empresa']
                     if 'SRE' in mostrar_colunas and 'SRE' in ultimas_demandas.columns:
