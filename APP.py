@@ -390,19 +390,60 @@ def criar_card_indicador_simples(valor, label, icone_nome="grafico", subtitulo=N
     simbolo = icone(icone_nome, 24, cor) if icone_nome in ICONES else icone_nome
     sub = (f'<div style="font-size:0.75rem; color:{COR_CINZA_TEXTO}; margin-top:0.2rem;">{subtitulo}</div>'
            if subtitulo else '')
-    return f'''
-    <div class="metric-card" style="border-left: 4px solid {cor};">
-        <div style="display: flex; align-items: center; gap: 14px;">
-            <div style="background: {cor}14; width: 48px; height: 48px; border-radius: 12px;
-                        display: flex; align-items: center; justify-content: center;">{simbolo}</div>
-            <div>
-                <div class="metric-value" style="color:{cor};">{valor_formatado}</div>
-                <div class="metric-label">{label}</div>
-                {sub}
-            </div>
-        </div>
-    </div>
-    '''
+    # HTML numa linha só: linhas em branco/indentadas fazem o Markdown do Streamlit
+    # transformar o resto do card em bloco de código (o "</div>" que aparecia na tela)
+    return (f'<div class="metric-card" style="border-left: 4px solid {cor};">'
+            f'<div style="display: flex; align-items: center; gap: 14px;">'
+            f'<div style="background: {cor}14; width: 48px; height: 48px; border-radius: 12px; '
+            f'display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{simbolo}</div>'
+            f'<div>'
+            f'<div class="metric-value" style="color:{cor};">{valor_formatado}</div>'
+            f'<div class="metric-label">{label}</div>'
+            f'{sub}'
+            f'</div></div></div>')
+
+def quebrar_rotulo(texto, largura=18):
+    """Quebra rótulos longos em linhas (<br>) para caber no eixo dos gráficos."""
+    palavras, linhas, atual = str(texto).split(), [], ""
+    for p in palavras:
+        if atual and len(atual) + 1 + len(p) > largura:
+            linhas.append(atual)
+            atual = p
+        else:
+            atual = f"{atual} {p}".strip()
+    if atual:
+        linhas.append(atual)
+    return "<br>".join(linhas[:3]) + ("…" if len(linhas) > 3 else "")
+
+
+def motivo_preenchido(serie):
+    """True onde há motivo informado. Funciona no pandas 2 (vazio vira 'nan' como texto)
+    e no pandas 3 (vazio continua NaN mesmo depois de .astype(str))."""
+    texto = serie.astype(str).str.strip()
+    return serie.notna() & ~texto.isin(['', 'nan', 'NaN', 'None', '<NA>', 'NaT'])
+
+
+def explodir_motivos(df_base):
+    """Uma linha por (card, motivo). Aceita vários motivos no mesmo card separados por ';'
+    (inclusive o formato ';#' das listas do SharePoint) e padroniza maiúsculas/espaços."""
+    if 'Motivo_Revisao' not in df_base.columns or df_base.empty:
+        return df_base.iloc[0:0].assign(Motivo=pd.Series(dtype=str))
+    texto = df_base['Motivo_Revisao'].astype(str).str.strip()
+    preenchido = motivo_preenchido(df_base['Motivo_Revisao'])
+    ex = df_base.loc[preenchido].copy()
+    if ex.empty:
+        return ex.assign(Motivo=pd.Series(dtype=str))
+    ex['Motivo'] = texto[preenchido].str.replace(';#', ';', regex=False).str.split(';')
+    # reset_index: o explode repete o índice, o que desalinha agrupamentos em algumas versões do pandas
+    ex = ex.explode('Motivo').reset_index(drop=True)
+    ex['Motivo'] = ex['Motivo'].astype(str).str.strip(' #').str.replace(r'\s+', ' ', regex=True)
+    ex = ex[ex['Motivo'].notna() & ~ex['Motivo'].isin(['', 'nan', 'None'])].reset_index(drop=True)
+    # "Fase errada" e "fase  errada" viram o mesmo motivo (mostra a grafia mais usada)
+    ex['_chave_motivo'] = ex['Motivo'].str.lower()
+    grafia = ex.groupby('_chave_motivo')['Motivo'].agg(lambda s: s.value_counts().index[0])
+    ex['Motivo'] = ex['_chave_motivo'].map(grafia)
+    return ex.drop(columns='_chave_motivo')
+
 
 def titulo_secao(texto, icone_nome):
     """Título de seção (barra verde) com ícone SVG no lugar do emoji."""
@@ -1430,11 +1471,12 @@ if st.session_state.df_original is not None:
                                                          subtitulo=f"em {fmt_milhar(cards_com_rev)} cards", cor=COR_LARANJA),
                             unsafe_allow_html=True)
         st.markdown("---")
-        tab1, tab2, tab3, tab4 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             ":material/calendar_month: Evolução de Demandas",
             ":material/rate_review: Análise de Revisões",
             ":material/show_chart: Sincronização Diária",
-            ":material/emoji_events: Análise Avançada SRE"
+            ":material/emoji_events: Análise Avançada SRE",
+            ":material/fact_check: Motivos de Revisão"
         ])
         with tab1:
             col_titulo, col_seletor = st.columns([3, 1])
@@ -2422,6 +2464,234 @@ if st.session_state.df_original is not None:
                                            mime="text/csv", use_container_width=True, key="btn_exportar")
                     else:
                         st.info("Nenhum resultado encontrado com os filtros aplicados.", icon=":material/search_off:")
+        with tab5:
+            st.markdown(titulo_secao("MOTIVOS DE REVISÃO", "revisao"), unsafe_allow_html=True)
+            if 'Motivo_Revisao' not in df.columns:
+                st.info("A coluna 'Motivo Revisão' não foi encontrada no arquivo carregado.", icon=":material/info:")
+            else:
+                col_mf1, col_mf2, col_mf3, col_mf4 = st.columns(4)
+                ano_mot, mes_mot, sre_mot, emp_mot = 'Todos os Anos', 'Todos os Meses', 'Todos os SREs', 'Todas Empresas'
+                with col_mf1:
+                    if 'Ano' in df.columns:
+                        ano_mot = st.selectbox(":material/calendar_month: Ano:", key="filtro_ano_motivo",
+                                               options=['Todos os Anos'] + sorted(df['Ano'].dropna().unique().astype(int)))
+                with col_mf2:
+                    if 'Mês' in df.columns:
+                        ano_ref = df if ano_mot == 'Todos os Anos' else df[df['Ano'] == int(ano_mot)]
+                        mes_mot = st.selectbox(":material/date_range: Mês:", key="filtro_mes_motivo",
+                                               options=['Todos os Meses'] + [str(m) for m in sorted(ano_ref['Mês'].dropna().unique().astype(int))],
+                                               format_func=lambda m: m if m == 'Todos os Meses' else MESES_NOMES[int(m)])
+                with col_mf3:
+                    if 'SRE_Nome' in df.columns:
+                        sre_mot = st.selectbox(":material/engineering: SRE:", key="filtro_sre_motivo",
+                                               options=['Todos os SREs'] + sorted(df['SRE_Nome'].dropna().unique()))
+                with col_mf4:
+                    if 'Empresa' in df.columns:
+                        emp_mot = st.selectbox(":material/apartment: Empresa:", key="filtro_empresa_motivo",
+                                               options=['Todas Empresas'] + sorted(df['Empresa'].dropna().unique()))
+                df_mot = df.copy()
+                if ano_mot != 'Todos os Anos':
+                    df_mot = df_mot[df_mot['Ano'] == int(ano_mot)]
+                if mes_mot != 'Todos os Meses':
+                    df_mot = df_mot[df_mot['Mês'] == int(mes_mot)]
+                if sre_mot != 'Todos os SREs':
+                    df_mot = df_mot[df_mot['SRE_Nome'] == sre_mot]
+                if emp_mot != 'Todas Empresas':
+                    df_mot = df_mot[df_mot['Empresa'] == emp_mot]
+
+                motivos_ex = explodir_motivos(df_mot)
+                tem_motivo = motivo_preenchido(df_mot['Motivo_Revisao'])
+                cards_revisao = df_mot[df_mot['Com_Revisao'] | tem_motivo]
+                sem_motivo = int((df_mot['Com_Revisao'] & ~tem_motivo).sum())
+
+                # ---- Indicadores
+                col_mk1, col_mk2, col_mk3, col_mk4 = st.columns(4)
+                with col_mk1:
+                    st.markdown(criar_card_indicador_simples(
+                        len(cards_revisao), "Cards com revisão", "revisao", cor=COR_LARANJA,
+                        subtitulo=f"{fmt_milhar(int(tem_motivo.sum()))} com motivo informado"), unsafe_allow_html=True)
+                with col_mk2:
+                    st.markdown(criar_card_indicador_simples(
+                        motivos_ex['Motivo'].nunique(), "Motivos distintos", "lista",
+                        subtitulo="no período filtrado"), unsafe_allow_html=True)
+                with col_mk3:
+                    if not motivos_ex.empty:
+                        top_mot = motivos_ex.groupby('Motivo')['Chamado'].nunique().sort_values(ascending=False)
+                        pct_top = f"{top_mot.iloc[0] / motivos_ex['Chamado'].nunique() * 100:.1f}".replace('.', ',')
+                        st.markdown(criar_card_indicador_simples(
+                            int(top_mot.iloc[0]), "Principal motivo", "alvo", cor=COR_VERMELHO,
+                            subtitulo=f"{top_mot.index[0][:38]} · {pct_top}% dos cards"), unsafe_allow_html=True)
+                    else:
+                        st.markdown(criar_card_indicador_simples("—", "Principal motivo", "alvo"), unsafe_allow_html=True)
+                with col_mk4:
+                    pct_sem = f"{(sem_motivo / max(int(df_mot['Com_Revisao'].sum()), 1)) * 100:.1f}".replace('.', ',')
+                    st.markdown(criar_card_indicador_simples(
+                        sem_motivo, "Revisões sem motivo", "alerta", cor=COR_CINZA_TEXTO,
+                        subtitulo=f"{pct_sem}% dos cards com revisão"), unsafe_allow_html=True)
+
+                if motivos_ex.empty:
+                    st.info("Nenhum motivo de revisão registrado com os filtros selecionados.", icon=":material/info:")
+                else:
+                    medida = st.radio(":material/straighten: Medir por:",
+                                      ["Cards", "Revisões (Revisões + Qtd. Revisões)"],
+                                      horizontal=True, key="medida_motivo",
+                                      help="Cards = quantos chamados citam o motivo. Revisões = soma de Revisões + Qtd. Revisões desses chamados.")
+                    por_cards = medida == "Cards"
+                    resumo_mot = (motivos_ex.groupby('Motivo')
+                                  .agg(Cards=('Chamado', 'nunique'), Revisoes=('Revisões_Total', 'sum'),
+                                       SREs=('SRE_Nome', 'nunique'), Empresas=('Empresa', 'nunique'),
+                                       Ultimo=('Criado', 'max'))
+                                  .reset_index())
+                    col_valor = 'Cards' if por_cards else 'Revisoes'
+                    resumo_mot = resumo_mot.sort_values([col_valor, 'Cards'], ascending=False).reset_index(drop=True)
+                    total_valor = max(resumo_mot[col_valor].sum(), 1)
+                    resumo_mot['Pct'] = (resumo_mot[col_valor] / total_valor * 100).round(1)
+                    resumo_mot['Acumulado'] = resumo_mot['Pct'].cumsum().clip(upper=100).round(1)
+
+                    # ---- Pareto (o que concentra 80% das revisões)
+                    st.markdown("### :material/stacked_line_chart: Pareto dos Motivos")
+                    limite_pareto = 12
+                    pareto = resumo_mot.head(limite_pareto).copy()
+                    if len(resumo_mot) > limite_pareto:
+                        resto = resumo_mot.iloc[limite_pareto:]
+                        pareto = pd.concat([pareto, pd.DataFrame([{
+                            'Motivo': f'Demais ({len(resto)})', col_valor: resto[col_valor].sum(),
+                            'Pct': resto['Pct'].sum().round(1), 'Acumulado': 100.0}])], ignore_index=True)
+                    vitais = int((resumo_mot['Acumulado'] < 80).sum()) + 1
+                    vitais = min(vitais, len(resumo_mot))
+                    fig_pareto = go.Figure()
+                    fig_pareto.add_trace(go.Bar(
+                        x=[quebrar_rotulo(m) for m in pareto['Motivo']], y=pareto[col_valor],
+                        name='Cards' if por_cards else 'Revisões',
+                        marker_color=[COR_LARANJA if i < vitais else '#FFCC80' for i in range(len(pareto))],
+                        text=[f"{fmt_milhar(v)}" for v in pareto[col_valor]], textposition='outside', cliponaxis=False,
+                        customdata=pareto[['Motivo', 'Pct']].values,
+                        hovertemplate='<b>%{customdata[0]}</b><br>%{y} · %{customdata[1]:.1f}% do total<extra></extra>'))
+                    fig_pareto.add_trace(go.Scatter(
+                        x=[quebrar_rotulo(m) for m in pareto['Motivo']], y=pareto['Acumulado'], yaxis='y2',
+                        name='% acumulado', mode='lines+markers', line=dict(color=COR_AZUL_ESCURO, width=2.5),
+                        marker=dict(size=8, line=dict(color=COR_BRANCO, width=2)),
+                        hovertemplate='Acumulado: %{y:.1f}%<extra></extra>'))
+                    fig_pareto.add_hline(y=80, yref='y2', line_dash='dash', line_color=COR_CINZA_TEXTO,
+                                         annotation_text='80%', annotation_position='top right')
+                    fig_pareto.update_layout(
+                        title=f'{vitais} motivo(s) concentram ~80% das {"ocorrências" if por_cards else "revisões"}',
+                        yaxis=dict(title='Cards' if por_cards else 'Revisões', rangemode='tozero',
+                                   range=[0, pareto[col_valor].max() * 1.2]),
+                        yaxis2=dict(title='% acumulado', overlaying='y', side='right', range=[0, 105],
+                                    ticksuffix='%', showgrid=False),
+                        xaxis=dict(showgrid=False, tickangle=0), height=460, bargap=0.3,
+                        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+                        margin=dict(t=70, b=90), hovermode='x unified')
+                    st.plotly_chart(fig_pareto, use_container_width=True)
+                    st.caption("Barras em laranja forte = motivos que, somados, chegam a ~80% do total "
+                               "(onde atacar primeiro). Um card com mais de um motivo conta em cada um deles.")
+
+                    # ---- Motivo × SRE e Motivo × Empresa
+                    top_motivos = resumo_mot['Motivo'].head(10).tolist()
+                    base_cruz = motivos_ex[motivos_ex['Motivo'].isin(top_motivos)]
+
+                    def mapa_cruzado(coluna, titulo):
+                        if por_cards:
+                            piv = base_cruz.pivot_table(index='Motivo', columns=coluna, values='Chamado',
+                                                        aggfunc='nunique', fill_value=0)
+                        else:
+                            piv = base_cruz.pivot_table(index='Motivo', columns=coluna, values='Revisões_Total',
+                                                        aggfunc='sum', fill_value=0)
+                        piv = piv.reindex(top_motivos).fillna(0)
+                        piv = piv[piv.sum().sort_values(ascending=False).index]
+                        fig = go.Figure(go.Heatmap(
+                            z=piv.values, x=list(piv.columns), y=[quebrar_rotulo(m, 28) for m in piv.index],
+                            colorscale=[[0, '#FFF8F0'], [0.4, '#FFCC80'], [0.75, COR_LARANJA], [1, '#B35900']],
+                            xgap=2, ygap=2, text=piv.values.astype(int), texttemplate='%{text}',
+                            textfont=dict(size=11), showscale=False,
+                            customdata=[[m] * piv.shape[1] for m in piv.index],
+                            hovertemplate='<b>%{customdata}</b><br>%{x}: %{z}<extra></extra>'))
+                        fig.update_layout(title=titulo, height=max(320, 42 * len(piv) + 110),
+                                          margin=dict(t=50, b=40, l=10, r=10))
+                        fig.update_yaxes(autorange='reversed', showgrid=False)
+                        fig.update_xaxes(showgrid=False, side='top')
+                        return fig
+
+                    st.markdown("### :material/grid_on: Onde cada motivo aparece")
+                    col_cz1, col_cz2 = st.columns(2)
+                    with col_cz1:
+                        if 'SRE_Nome' in motivos_ex.columns:
+                            st.plotly_chart(mapa_cruzado('SRE_Nome', 'Motivo × SRE (top 10 motivos)'),
+                                            use_container_width=True)
+                    with col_cz2:
+                        if 'Empresa' in motivos_ex.columns:
+                            st.plotly_chart(mapa_cruzado('Empresa', 'Motivo × Empresa (top 10 motivos)'),
+                                            use_container_width=True)
+
+                    # ---- Evolução mensal dos principais motivos
+                    st.markdown("### :material/calendar_month: Evolução Mensal dos Motivos")
+                    top5_mot = resumo_mot['Motivo'].head(5).tolist()
+                    evo = motivos_ex.assign(Grupo=motivos_ex['Motivo'].where(motivos_ex['Motivo'].isin(top5_mot), 'Demais'))
+                    if por_cards:
+                        evo = evo.groupby(['Ano_Mês', 'Mês_Label', 'Grupo'])['Chamado'].nunique().reset_index(name='Valor')
+                    else:
+                        evo = evo.groupby(['Ano_Mês', 'Mês_Label', 'Grupo'])['Revisões_Total'].sum().reset_index(name='Valor')
+                    evo = evo.sort_values('Ano_Mês')
+                    ordem_meses_evo = evo.drop_duplicates('Ano_Mês')['Mês_Label'].tolist()
+                    cores_mot = [COR_LARANJA, COR_AZUL_ESCURO, COR_VERDE_ESCURO, COR_AZUL_PETROLEO, '#7E57C2']
+                    fig_evo = go.Figure()
+                    for idx_g, grupo in enumerate(top5_mot + ['Demais']):
+                        dados_g = evo[evo['Grupo'] == grupo]
+                        if dados_g.empty:
+                            continue
+                        fig_evo.add_trace(go.Bar(
+                            x=dados_g['Mês_Label'], y=dados_g['Valor'], name=grupo[:40],
+                            marker_color=cores_mot[idx_g] if idx_g < len(top5_mot) else '#CED4DA',
+                            hovertemplate='%{x}<br>' + grupo.replace('%', '%%')[:60] + ': <b>%{y}</b><extra></extra>'))
+                    fig_evo.update_layout(
+                        barmode='stack', height=420, bargap=0.25, hovermode='x unified',
+                        title='Top 5 motivos por mês (demais agrupados)',
+                        yaxis=dict(title='Cards' if por_cards else 'Revisões', rangemode='tozero'),
+                        xaxis=dict(type='category', categoryorder='array', categoryarray=ordem_meses_evo, showgrid=False),
+                        legend=dict(orientation='h', yanchor='top', y=-0.12, x=0), margin=dict(t=60, b=90))
+                    st.plotly_chart(fig_evo, use_container_width=True)
+
+                    # ---- Tabela completa + exportação
+                    st.markdown("### :material/table_chart: Ranking Completo dos Motivos")
+                    tabela_mot = resumo_mot.copy()
+                    tabela_mot.insert(0, 'Posição', [f"{i + 1}º" for i in range(len(tabela_mot))])
+                    tabela_mot['Ultimo'] = tabela_mot['Ultimo'].dt.strftime('%d/%m/%Y')
+                    st.dataframe(
+                        tabela_mot[['Posição', 'Motivo', 'Cards', 'Revisoes', 'Pct', 'Acumulado', 'SREs', 'Empresas', 'Ultimo']],
+                        use_container_width=True, hide_index=True, height=min(420, 38 * len(tabela_mot) + 40),
+                        column_config={
+                            "Posição": st.column_config.TextColumn("Posição", width="small"),
+                            "Motivo": st.column_config.TextColumn("Motivo", width="large"),
+                            "Cards": st.column_config.NumberColumn("Cards", format="%d"),
+                            "Revisoes": st.column_config.NumberColumn("Revisões", format="%d",
+                                                                      help="Soma de Revisões + Qtd. Revisões"),
+                            "Pct": st.column_config.ProgressColumn("% do total", format="%.1f%%", min_value=0, max_value=100),
+                            "Acumulado": st.column_config.NumberColumn("% acumulado", format="%.1f%%"),
+                            "SREs": st.column_config.NumberColumn("SREs", format="%d"),
+                            "Empresas": st.column_config.NumberColumn("Empresas", format="%d"),
+                            "Ultimo": st.column_config.TextColumn("Última ocorrência"),
+                        })
+                    st.download_button("Exportar motivos (CSV)", icon=":material/download:",
+                                       data=tabela_mot.drop(columns='Posição').to_csv(index=False).encode('utf-8-sig'),
+                                       file_name=f"motivos_revisao_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                       mime="text/csv", use_container_width=True)
+
+                    # ---- Chamados de um motivo
+                    with st.expander("Ver chamados de um motivo", icon=":material/search:"):
+                        motivo_escolhido = st.selectbox("Motivo:", resumo_mot['Motivo'].tolist(), key="motivo_detalhe")
+                        det = motivos_ex[motivos_ex['Motivo'] == motivo_escolhido].drop_duplicates('Chamado')
+                        det = det.sort_values('Criado', ascending=False)
+                        colunas_det = {'Chamado': 'Chamado', 'Criado': 'Criado', 'SRE_Nome': 'SRE', 'Empresa': 'Empresa',
+                                       'Responsável_Formatado': 'Responsável', 'Status': 'Status',
+                                       'Revisões': 'Revisões', 'Qtd. Revisões': 'Qtd. Revisões',
+                                       'Motivo_Revisao': 'Motivo (original)'}
+                        colunas_det = {k: v for k, v in colunas_det.items() if k in det.columns}
+                        det_exibir = det[list(colunas_det)].rename(columns=colunas_det)
+                        if 'Criado' in det_exibir.columns:
+                            det_exibir['Criado'] = det_exibir['Criado'].dt.strftime('%d/%m/%Y %H:%M')
+                        st.caption(f"{fmt_milhar(len(det_exibir))} chamado(s) com este motivo")
+                        st.dataframe(det_exibir, use_container_width=True, hide_index=True, height=360)
     with tab_mapa:
         st.markdown("## :material/map: Mapa de Sincronizações por Empresa")
         col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
