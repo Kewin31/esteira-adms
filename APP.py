@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from datetime import datetime, timedelta
 import io
+import math
 import os
 import time
 import hashlib
@@ -110,6 +111,38 @@ def selo_posicao(pos, tamanho=26):
     return (f'<span style="display:inline-flex; align-items:center; justify-content:center; '
             f'width:{tamanho}px; height:{tamanho}px; border-radius:50%; background:{cor}; '
             f'color:#fff; font-weight:700; font-size:{int(tamanho * 0.46)}px; flex-shrink:0;">{pos}º</span>')
+
+
+# ============================================
+# SEVERIDADE DOS MOTIVOS DE REVISÃO (mesma régua da apresentação "Panorama - SRE")
+# Ajuste as listas abaixo se a classificação mudar. Motivos não listados = "Qualidade / processo".
+# Comparação ignora maiúsculas/minúsculas e espaços extras.
+# ============================================
+SEV_CRITICO = "Potencial de dano físico"
+SEV_RISCO = "Risco operacional"
+SEV_QUALIDADE = "Qualidade / processo"
+SEVERIDADE_MOTIVOS = {
+    SEV_CRITICO: [
+        "Comando com endereço errado",
+        "IP/Porta com duplicidade na base",
+    ],
+    SEV_RISCO: [
+        "Erro de configuração de RTU / Unidade Remota",
+        "Erro de endereçamento (IP / porta / coordenada)",
+        "Equipamento sem By-pass",
+        "Erro no modelador elétrico / associações",
+        "Erro de TAG / nomenclatura / descrição de equipamento",
+        "ChangeSet divergente do chamado / solicitado",
+        "Comando associado ao equipamento errado",
+    ],
+}
+NIVEL_SEVERIDADE = {SEV_QUALIDADE: 1, SEV_RISCO: 2, SEV_CRITICO: 3}
+CORES_SEVERIDADE = {SEV_CRITICO: COR_VERMELHO, SEV_RISCO: COR_LARANJA, SEV_QUALIDADE: "#78909C"}
+_MAPA_SEVERIDADE = {" ".join(m.lower().split()): sev for sev, lista in SEVERIDADE_MOTIVOS.items() for m in lista}
+
+
+def classificar_motivo(motivo):
+    return _MAPA_SEVERIDADE.get(" ".join(str(motivo).lower().split()), SEV_QUALIDADE)
 
 
 MESES_NOMES = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho',
@@ -431,6 +464,7 @@ def explodir_motivos(df_base):
     texto = df_base['Motivo_Revisao'].astype(str).str.strip()
     preenchido = motivo_preenchido(df_base['Motivo_Revisao'])
     ex = df_base.loc[preenchido].copy()
+    ex['_entrada'] = ex.index  # identifica a linha original (um chamado pode aparecer em mais de uma linha)
     if ex.empty:
         return ex.assign(Motivo=pd.Series(dtype=str))
     ex['Motivo'] = texto[preenchido].str.replace(';#', ';', regex=False).str.split(';')
@@ -499,6 +533,8 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None, conteudo_bytes=None
 
         # Remove espaços extras dos nomes das colunas
         df.columns = [str(c).strip() for c in df.columns]
+        if 'Chamado' in df.columns:
+            df['Chamado'] = df['Chamado'].astype(str).str.strip()
 
         # ============================================
         # MAPEAMENTO DE COLUNAS
@@ -1115,317 +1151,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ============================================
-# BOTÕES MANCHETE
-# ============================================
-if st.session_state.df_original is not None:
-    if 'show_popup' not in st.session_state:
-        st.session_state.show_popup = False
-    col_btn_manchete, col_espaco = st.columns([2, 10])
-    with col_btn_manchete:
-        if st.button("**VER MANCHETE**", icon=":material/newspaper:", help="Clique para ver os principais indicadores do mês",
-                    type="secondary", use_container_width=True, key="btn_manchete"):
-            st.session_state.show_popup = True
-
 if st.session_state.df_original is not None:
     if verificar_e_atualizar_arquivo():
         st.info("O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.",
                 icon=":material/notifications_active:")
-
-def indicadores_periodo(dfp):
-    """Indicadores da Manchete. 'Com erro' agora conta só cards SINCRONIZADOS com revisão
-    (antes contava todos, e 'Sem erro = validados - com erro' podia dar negativo)."""
-    total = len(dfp)
-    if total == 0:
-        return dict(total=0, validados=0, com_erro=0, sem_erro=0, taxa_sucesso=0.0, taxa_erro=0.0)
-    validados = int(dfp['Sinc'].sum())
-    com_erro = int((dfp['Sinc'] & dfp['Com_Revisao']).sum())
-    return dict(total=total, validados=validados, com_erro=com_erro, sem_erro=validados - com_erro,
-                taxa_sucesso=validados / total * 100,
-                taxa_erro=(com_erro / validados * 100) if validados > 0 else 0.0)
-
-
-def grafico_gauge(valor, titulo="Taxa de sucesso"):
-    """Medidor da taxa de sucesso com as faixas da classificação de performance."""
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number", value=valor,
-        number=dict(suffix="%", valueformat=".1f", font=dict(size=34, color=COR_AZUL_ESCURO)),
-        gauge=dict(
-            axis=dict(range=[0, 100], ticksuffix="%", tickfont=dict(size=10)),
-            bar=dict(color=COR_AZUL_ESCURO, thickness=0.3),
-            bgcolor=COR_BRANCO, borderwidth=0,
-            steps=[dict(range=[0, 70], color="#FDECEA"), dict(range=[70, 85], color="#FFF3E0"),
-                   dict(range=[85, 95], color="#E0F2F5"), dict(range=[95, 100], color="#E8F5E9")],
-            threshold=dict(line=dict(color=COR_VERDE_ESCURO, width=3), thickness=0.85, value=95),
-        ),
-        title=dict(text=f"{titulo} · meta 95%", font=dict(size=13, color=COR_CINZA_TEXTO)),
-    ))
-    fig.update_layout(height=250, margin=dict(t=50, b=15, l=35, r=35))
-    return fig
-
-
-if st.session_state.df_original is not None and st.session_state.show_popup:
-    df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
-    with st.expander("**MANCHETE - INDICADORES PRINCIPAIS**", expanded=True, icon=":material/newspaper:"):
-        st.markdown("### :material/newspaper: MANCHETE - RELATÓRIO")
-        st.markdown("---")
-        st.markdown("#### :material/calendar_month: SELECIONE O PERÍODO")
-        col_periodo1, col_periodo2 = st.columns(2)
-        with col_periodo1:
-            periodo_opcoes = ["Mês Atual", "Últimos 30 dias", "Últimos 90 dias",
-                              "Este Ano", "Ano Passado", "Todo o Período"]
-            periodo_selecionado = st.selectbox("Período de análise:", options=periodo_opcoes,
-                                               index=0, key="popup_periodo")
-        with col_periodo2:
-            if 'Ano' in df.columns:
-                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
-                if anos_disponiveis:
-                    ano_especifico = st.selectbox("Ou selecione um ano:",
-                                                  options=['Selecionar ano...'] + list(anos_disponiveis),
-                                                  key="popup_ano",
-                                                  help="Quando um ano é escolhido aqui, ele tem prioridade sobre o período ao lado")
-                else:
-                    ano_especifico = 'Selecionar ano...'
-            else:
-                ano_especifico = 'Selecionar ano...'
-        hoje = agora()
-        hoje_d = pd.Timestamp(hoje).normalize()
-        amanha = hoje_d + timedelta(days=1)
-        df_filtrado_periodo = df.copy()
-        df_anterior = df.iloc[0:0]
-        periodo_titulo = ""
-        periodo_anterior_titulo = ""
-
-        def entre(ini, fim):
-            return df[(df['Criado'] >= ini) & (df['Criado'] < fim)].copy()
-
-        # Corrigido: antes o "ano específico" nunca era aplicado (ficava num elif inalcançável)
-        if ano_especifico != 'Selecionar ano...':
-            ano_esc = int(ano_especifico)
-            df_filtrado_periodo = df[df['Criado'].dt.year == ano_esc].copy()
-            df_anterior = df[df['Criado'].dt.year == ano_esc - 1].copy()
-            periodo_titulo = f"Ano {ano_esc}"
-            periodo_anterior_titulo = f"Ano {ano_esc - 1}"
-        elif periodo_selecionado == "Mês Atual":
-            ini_mes = hoje_d.replace(day=1)
-            ini_ant = (ini_mes - timedelta(days=1)).replace(day=1)
-            fim_ant = min(ini_ant + timedelta(days=hoje_d.day), ini_mes)
-            df_filtrado_periodo = entre(ini_mes, amanha)
-            # Compara com o MESMO trecho do mês anterior (dia 1 até o mesmo dia),
-            # para o mês em andamento não parecer sempre pior que o anterior completo
-            df_anterior = entre(ini_ant, fim_ant)
-            periodo_titulo = f"Mês Atual ({hoje.month:02d}/{hoje.year})"
-            periodo_anterior_titulo = f"{ini_ant.month:02d}/{ini_ant.year} até dia {hoje_d.day}"
-        elif periodo_selecionado in ("Últimos 30 dias", "Últimos 90 dias"):
-            n = 30 if "30" in periodo_selecionado else 90
-            ini = amanha - timedelta(days=n)
-            df_filtrado_periodo = entre(ini, amanha)
-            df_anterior = entre(ini - timedelta(days=n), ini)
-            periodo_titulo = periodo_selecionado
-            periodo_anterior_titulo = f"{n} dias anteriores"
-        elif periodo_selecionado == "Este Ano":
-            ano_atual = hoje.year
-            df_filtrado_periodo = df[df['Criado'].dt.year == ano_atual].copy()
-            ini_ant = pd.Timestamp(ano_atual - 1, 1, 1)
-            df_anterior = entre(ini_ant, ini_ant + (hoje_d - pd.Timestamp(ano_atual, 1, 1)) + timedelta(days=1))
-            periodo_titulo = f"Este Ano ({ano_atual})"
-            periodo_anterior_titulo = f"{ano_atual - 1} (mesmo trecho)"
-        elif periodo_selecionado == "Ano Passado":
-            ano_passado = hoje.year - 1
-            df_filtrado_periodo = df[df['Criado'].dt.year == ano_passado].copy()
-            df_anterior = df[df['Criado'].dt.year == ano_passado - 1].copy()
-            periodo_titulo = f"Ano Passado ({ano_passado})"
-            periodo_anterior_titulo = f"Ano {ano_passado - 1}"
-        elif periodo_selecionado == "Todo o Período":
-            periodo_titulo = "Todo o Período Disponível"
-
-        atual_ind = indicadores_periodo(df_filtrado_periodo)
-        ant_ind = indicadores_periodo(df_anterior)
-        total_cards = atual_ind['total']
-        validados = atual_ind['validados']
-        com_erro = atual_ind['com_erro']
-        sem_erro = atual_ind['sem_erro']
-        taxa_sucesso = atual_ind['taxa_sucesso']
-        taxa_erro = atual_ind['taxa_erro']
-        total_cards_anterior = ant_ind['total']
-        validados_anterior = ant_ind['validados']
-        com_erro_anterior = ant_ind['com_erro']
-        taxa_sucesso_anterior = ant_ind['taxa_sucesso']
-
-        st.markdown(f"#### :material/target: DESTAQUE DO PERÍODO: {periodo_titulo}")
-        if total_cards == 0:
-            st.error(f"**NENHUM DADO DISPONÍVEL** para {periodo_titulo.lower()}", icon=":material/error:")
-        elif com_erro == 0 and validados > 0:
-            st.success(f"**SRE VALIDOU {validados} CARDS SEM RETORNO DE ERRO!**", icon=":material/verified:")
-            st.info(f"Performance excepcional - 100% de aprovação direta", icon=":material/workspace_premium:")
-        elif taxa_erro <= 5:
-            st.warning(f"**SRE VALIDOU {validados} CARDS COM APENAS {com_erro} AJUSTES**", icon=":material/bolt:")
-            st.info(f"Alta qualidade - Taxa de erro: {taxa_erro:.1f}%".replace('.', ','), icon=":material/insights:")
-        else:
-            st.warning(f"**SRE VALIDOU {validados} CARDS, {com_erro} COM RETORNO**", icon=":material/assignment_return:")
-            st.info(f"Taxa de sucesso: {taxa_sucesso:.1f}% | {sem_erro} cards perfeitos".replace('.', ','),
-                    icon=":material/insights:")
-        st.markdown("---")
-        if total_cards_anterior > 0:
-            st.markdown("#### :material/compare_arrows: COMPARAÇÃO COM PERÍODO ANTERIOR")
-            periodos = [periodo_anterior_titulo, periodo_titulo]
-            cards_totais = [total_cards_anterior, total_cards]
-            cards_validados = [validados_anterior, validados]
-            cards_retorno = [com_erro_anterior, com_erro]
-            taxa_sucesso_vals = [taxa_sucesso_anterior, taxa_sucesso]
-            fig_comparativo = go.Figure()
-            fig_comparativo.add_trace(go.Bar(x=periodos, y=cards_totais, name='Total Cards',
-                                             marker_color="#B9DDE3", text=cards_totais,
-                                             textposition='outside', cliponaxis=False))
-            fig_comparativo.add_trace(go.Bar(x=periodos, y=cards_validados, name='Validados',
-                                             marker_color=COR_AZUL_ESCURO, text=cards_validados,
-                                             textposition='outside', cliponaxis=False))
-            fig_comparativo.add_trace(go.Bar(x=periodos, y=cards_retorno, name='Com retorno',
-                                             marker_color=COR_LARANJA, text=cards_retorno,
-                                             textposition='outside', cliponaxis=False))
-            fig_comparativo.add_trace(go.Scatter(x=periodos, y=taxa_sucesso_vals, name='Taxa Sucesso',
-                                                 yaxis='y2', mode='lines+markers+text',
-                                                 line=dict(color=COR_VERDE_ESCURO, width=2.5, dash='dot'),
-                                                 marker=dict(size=10, color=COR_VERDE_ESCURO,
-                                                             line=dict(color=COR_BRANCO, width=2)),
-                                                 text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
-                                                 textposition='top center', textfont=dict(size=11, color=COR_VERDE_ESCURO)))
-            fig_comparativo.update_layout(
-                title=dict(text='Comparativo: Período Atual vs Anterior'),
-                barmode='group', bargap=0.3, bargroupgap=0.08,
-                yaxis=dict(title=dict(text='Quantidade', font=dict(size=11)), rangemode='tozero'),
-                yaxis2=dict(title=dict(text='Taxa Sucesso (%)', font=dict(size=11)),
-                            overlaying='y', side='right', showgrid=False,
-                            range=[0, max(115, max(taxa_sucesso_vals) * 1.15)], ticksuffix='%'),
-                height=340, showlegend=True,
-                margin=dict(l=50, r=50, t=50, b=80),
-                legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, font=dict(size=11)),
-                hovermode='x unified'
-            )
-            st.plotly_chart(fig_comparativo, use_container_width=True, config={'displayModeBar': False})
-            variacao_total = ((total_cards - total_cards_anterior) / total_cards_anterior * 100)
-            variacao_validados = ((validados - validados_anterior) / validados_anterior * 100) if validados_anterior > 0 else 0
-            variacao_taxa = taxa_sucesso - taxa_sucesso_anterior
-            st.markdown("##### :material/percent: VARIAÇÃO PERCENTUAL")
-            col_var1, col_var2, col_var3 = st.columns(3)
-            # Corrigido: delta_color "inverse" em valores negativos deixava a QUEDA verde.
-            # "normal" já colore sozinho: subida verde, queda vermelha.
-            with col_var1:
-                st.metric(label=":material/assignment: Total Cards", value=fmt_milhar(total_cards),
-                          delta=f"{variacao_total:+.1f}%", delta_color="normal",
-                          help=f"Anterior ({periodo_anterior_titulo}): {fmt_milhar(total_cards_anterior)}")
-            with col_var2:
-                st.metric(label=":material/task_alt: Validados", value=fmt_milhar(validados),
-                          delta=f"{variacao_validados:+.1f}%", delta_color="normal",
-                          help=f"Anterior ({periodo_anterior_titulo}): {fmt_milhar(validados_anterior)}")
-            with col_var3:
-                st.metric(label=":material/speed: Taxa Sucesso", value=f"{taxa_sucesso:.1f}%",
-                          delta=f"{variacao_taxa:+.1f}pp", delta_color="normal",
-                          help=f"Anterior ({periodo_anterior_titulo}): {taxa_sucesso_anterior:.1f}%")
-            st.markdown("---")
-        st.markdown("#### :material/monitoring: INDICADORES PRINCIPAIS")
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric(":material/assignment: Total Cards", fmt_milhar(total_cards), delta=None,
-                      help="Total de cards no período")
-        with col2:
-            st.metric(":material/task_alt: Validados", fmt_milhar(validados), f"{taxa_sucesso:.1f}% do total",
-                      delta_color="off", **DELTA_SEM_SETA,
-                      help="Cards sincronizados (aprovados)")
-        with col3:
-            st.metric(":material/verified: Sem Erro", fmt_milhar(sem_erro),
-                      f"{(sem_erro / validados * 100) if validados > 0 else 0:.1f}% dos validados",
-                      delta_color="off", **DELTA_SEM_SETA,
-                      help="Sincronizados aprovados na primeira validação")
-        with col4:
-            st.metric(":material/report: Com Erro", fmt_milhar(com_erro),
-                      f"{taxa_erro:.1f}% dos validados", delta_color="off", **DELTA_SEM_SETA,
-                      help="Sincronizados que retornaram para ajuste")
-        st.markdown("---")
-        st.markdown("#### :material/analytics: ANÁLISE DETALHADA")
-        if total_cards > 0:
-            if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
-                dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
-                media_diaria = total_cards / dias_unicos if dias_unicos > 0 else 0
-                col_analise1, col_analise2, col_analise3 = st.columns(3)
-                with col_analise1:
-                    st.metric(":material/event_available: Dias com atividade", dias_unicos)
-                with col_analise2:
-                    st.metric(":material/bar_chart: Média diária", f"{media_diaria:.1f}".replace('.', ','))
-                with col_analise3:
-                    if 'Revisões_Total' in df_filtrado_periodo.columns:
-                        media_revisoes = df_filtrado_periodo['Revisões_Total'].mean()
-                        st.metric(":material/edit_note: Média revisões/card", f"{media_revisoes:.2f}".replace('.', ','))
-                    else:
-                        st.metric(":material/edit_note: Revisões", "N/A")
-            st.markdown("##### :material/emoji_events: CLASSIFICAÇÃO DE PERFORMANCE")
-            col_gauge, col_class = st.columns([1, 1.3])
-            with col_gauge:
-                st.plotly_chart(grafico_gauge(taxa_sucesso), use_container_width=True, config={'displayModeBar': False})
-            with col_class:
-                if taxa_sucesso >= 95:
-                    st.success("""
-                    **EXCELENTE**
-                    - Meta de qualidade superada (>95%)
-                    - Processos altamente eficientes
-                    - Recomendação: Manter padrões atuais
-                    """, icon=":material/star:")
-                elif taxa_sucesso >= 85:
-                    st.info("""
-                    **BOM DESEMPENHO**
-                    - Dentro dos padrões esperados (85-94%)
-                    - Processos consistentes
-                    - Recomendação: Pequenos ajustes pontuais
-                    """, icon=":material/thumb_up:")
-                elif taxa_sucesso >= 70:
-                    st.warning("""
-                    **OPORTUNIDADE DE MELHORIA**
-                    - Abaixo do ideal (70-84%)
-                    - Processos precisam de revisão
-                    - Recomendação: Identificar causas principais
-                    """, icon=":material/trending_up:")
-                else:
-                    st.error("""
-                    **ATENÇÃO NECESSÁRIA**
-                    - Performance crítica (<70%)
-                    - Processos ineficientes
-                    - Recomendação: Revisão urgente dos fluxos
-                    """, icon=":material/priority_high:")
-        else:
-            st.info(f"Nenhum dado disponível para análise no período: {periodo_titulo}", icon=":material/info:")
-        st.markdown("---")
-        st.markdown(f"""
-        <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border: 1px solid {COR_CINZA_BORDA};">
-            <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 600;">Ações disponíveis</p>
-            <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.85rem;">
-            Exporte o relatório completo ou feche a manchete
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        col_exportar, col_fechar = st.columns(2)
-        with col_exportar:
-            if st.button("**EXPORTAR PDF**", icon=":material/picture_as_pdf:", type="primary", use_container_width=True,
-                        help="Gerar relatório completo em formato PDF", key="btn_exportar_pdf_final"):
-                st.info("""
-                **Funcionalidade de PDF em desenvolvimento...**
-                Para uma implementação completa, você pode usar:
-                - `fpdf` ou `reportlab` para gerar PDFs
-                - `weasyprint` para converter HTML para PDF
-                - `pdfkit` (requer wkhtmltopdf)
-                """, icon=":material/construction:")
-        with col_fechar:
-            if st.button("**FECHAR**", icon=":material/close:", type="secondary", use_container_width=True,
-                         key="btn_fechar_final"):
-                st.session_state.show_popup = False
-                st.rerun()
-        st.markdown(f"""
-        <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 6px; margin-top: 1rem;
-                    display:flex; flex-direction:column; gap:4px; font-size:0.85rem;">
-            <span style="display:flex; align-items:center; gap:6px;">{icone('calendario', 14, COR_CINZA_TEXTO)} <strong>Período analisado:</strong> {periodo_titulo}</span>
-            <span style="display:flex; align-items:center; gap:6px;">{icone('relogio', 14, COR_CINZA_TEXTO)} <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</span>
-            <span style="display:flex; align-items:center; gap:6px;">{icone('base', 14, COR_CINZA_TEXTO)} <strong>Base de dados:</strong> {fmt_milhar(len(df))} registros totais</span>
-        </div>
-        """, unsafe_allow_html=True)
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
@@ -1436,20 +1165,6 @@ if st.session_state.df_original is not None:
         ":material/dashboard: Principal", ":material/map: Mapa",
         ":material/target: KPI", ":material/query_stats: Análise Estatística"])
     with tab_principal:
-        st.markdown("## :material/database: Base de Dados")
-        if 'Criado' in df.columns and not df.empty:
-            data_min = df['Criado'].min()
-            data_max = df['Criado'].max()
-            st.markdown(f"""
-            <div class="info-base">
-                <p style="margin: 0; font-weight: 600; display:flex; align-items:center; gap:8px;">
-                    {icone('calendario', 18, COR_VERDE_ESCURO)} Base atualizada em: {get_horario_brasilia()}</p>
-                <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO};">
-                Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} |
-                Total de registros: {fmt_milhar(len(df))}
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
         st.markdown("## :material/monitoring: INDICADORES PRINCIPAIS")
         col1, col2, col3 = st.columns(3)
         total_atual = len(df)
@@ -2498,13 +2213,221 @@ if st.session_state.df_original is not None:
                     df_mot = df_mot[df_mot['SRE_Nome'] == sre_mot]
                 if emp_mot != 'Todas Empresas':
                     df_mot = df_mot[df_mot['Empresa'] == emp_mot]
+                # Plataforma: Elipse (coluna ChangeSet) x ADMS (Telemetry / Manual), como na apresentação
+                if 'ChangeSet' in df_mot.columns:
+                    df_mot['Plataforma'] = df_mot['ChangeSet'].astype(str).str.strip().str.lower().map(
+                        lambda v: 'Elipse' if v == 'elipse' else 'ADMS')
+                else:
+                    df_mot['Plataforma'] = 'ADMS'
 
                 motivos_ex = explodir_motivos(df_mot)
+                if not motivos_ex.empty:
+                    motivos_ex['Severidade'] = motivos_ex['Motivo'].map(classificar_motivo)
+                    motivos_ex['Nivel'] = motivos_ex['Severidade'].map(NIVEL_SEVERIDADE)
                 tem_motivo = motivo_preenchido(df_mot['Motivo_Revisao'])
                 cards_revisao = df_mot[df_mot['Com_Revisao'] | tem_motivo]
                 sem_motivo = int((df_mot['Com_Revisao'] & ~tem_motivo).sum())
 
-                # ---- Indicadores
+                # ============ ESTEIRA DE VALIDAÇÃO (funil da apresentação) ============
+                # Regra da apresentação: entrada "devolvida ao desenvolvedor" = motivo de revisão preenchido.
+                # Um card com vários motivos vale pela severidade mais alta.
+                total_entradas = len(df_mot)
+                n_devolvidas = int(tem_motivo.sum())
+                n_aprovadas = total_entradas - n_devolvidas
+                if not motivos_ex.empty:
+                    nivel_card = motivos_ex.groupby('_entrada')['Nivel'].max()
+                    n_risco = int((nivel_card >= 2).sum())
+                    n_critico = int((nivel_card >= 3).sum())
+                else:
+                    nivel_card = pd.Series(dtype=int)
+                    n_risco = n_critico = 0
+
+                def pct_txt(parte, todo, casas=1):
+                    return (f"{(parte / todo * 100) if todo else 0:.{casas}f}%").replace('.', ',')
+
+                st.markdown("### :material/filter_alt: Esteira de Validação")
+                col_es1, col_es2, col_es3, col_es4 = st.columns(4)
+                with col_es1:
+                    st.markdown(criar_card_indicador_simples(total_entradas, "Entradas validadas", "lista",
+                                                             subtitulo="no período filtrado"), unsafe_allow_html=True)
+                with col_es2:
+                    st.markdown(criar_card_indicador_simples(pct_txt(n_aprovadas, total_entradas), "Aprovadas sem devolução",
+                                                             "check", cor=COR_VERDE_ESCURO,
+                                                             subtitulo=f"{fmt_milhar(n_aprovadas)} entradas"), unsafe_allow_html=True)
+                with col_es3:
+                    st.markdown(criar_card_indicador_simples(n_devolvidas, "Devolvidas ao desenvolvedor", "revisao",
+                                                             cor=COR_LARANJA,
+                                                             subtitulo=f"{pct_txt(n_devolvidas, total_entradas)} do volume"),
+                                unsafe_allow_html=True)
+                with col_es4:
+                    st.markdown(criar_card_indicador_simples(n_critico, "Potencial de dano físico", "alerta",
+                                                             cor=COR_VERMELHO,
+                                                             subtitulo=f"{pct_txt(n_critico, total_entradas, 2)} do volume"),
+                                unsafe_allow_html=True)
+
+                col_funil, col_leitura = st.columns([1.5, 1])
+                with col_funil:
+                    etapas = ["Entradas validadas", "Aprovadas sem devolução", "Devolvidas ao desenvolvedor",
+                              "Com risco operacional relevante", "Com potencial de dano físico"]
+                    valores_funil = [total_entradas, n_aprovadas, n_devolvidas, n_risco, n_critico]
+                    cores_funil = [COR_AZUL_ESCURO, COR_VERDE_ESCURO, COR_LARANJA, '#D84315', COR_VERMELHO]
+                    # Escala log: com ~95% aprovadas direto, as etapas finais sumiriam numa escala linear
+                    fig_funil = go.Figure(go.Bar(
+                        y=etapas, x=[max(v, 0.9) for v in valores_funil], orientation='h',
+                        marker_color=cores_funil, marker_line_width=0,
+                        text=[f"<b>{fmt_milhar(v)}</b>  ·  {pct_txt(v, total_entradas, 2 if v < total_entradas * 0.01 else 1)}"
+                              for v in valores_funil],
+                        textposition='outside', cliponaxis=False, textfont=dict(size=13),
+                        customdata=valores_funil,
+                        hovertemplate='<b>%{y}</b><br>%{customdata}<extra></extra>'))
+                    fig_funil.update_layout(title='Funil de retenção da esteira (escala logarítmica)', height=380,
+                                            margin=dict(t=50, b=20, l=10, r=40), bargap=0.35,
+                                            xaxis=dict(type='log', showticklabels=False, showgrid=False,
+                                                       range=[-0.1, math.log10(max(total_entradas, 10)) + 0.75]))
+                    fig_funil.update_yaxes(showgrid=False, autorange='reversed')
+                    st.plotly_chart(fig_funil, use_container_width=True, config={'displayModeBar': False})
+                with col_leitura:
+                    if total_entradas > 0:
+                        ini_txt = df_mot['Criado'].min().strftime('%d/%m/%Y')
+                        fim_txt = df_mot['Criado'].max().strftime('%d/%m/%Y')
+                        criticos_motivos = []
+                        if n_critico and not motivos_ex.empty:
+                            criticos_motivos = (motivos_ex[motivos_ex['Nivel'] == 3]['Motivo']
+                                                .value_counts().index.str.lower().tolist())
+                        frase_critico = (f" Destas, <b>{fmt_milhar(n_critico)}</b> tinham potencial de dano físico "
+                                         f"({pct_txt(n_critico, total_entradas, 2)} do volume): {' e '.join(criticos_motivos)}."
+                                         if n_critico else " Nenhuma devolução com potencial de dano físico no período.")
+                        st.markdown(
+                            f'<div class="info-card" style="font-size:0.92rem; line-height:1.55;">'
+                            f'<div style="display:flex; align-items:center; gap:8px; font-weight:700; color:{COR_AZUL_ESCURO}; margin-bottom:6px;">'
+                            f'{icone("info", 18, COR_AZUL_ESCURO)} Estágio atual</div>'
+                            f'De {ini_txt} a {fim_txt} a esteira validou <b>{fmt_milhar(total_entradas)}</b> entradas, '
+                            f'devolvendo <b>{fmt_milhar(n_devolvidas)}</b> ({pct_txt(n_devolvidas, total_entradas)}) '
+                            f'ao desenvolvedor antes da sincronização.{frase_critico}</div>',
+                            unsafe_allow_html=True)
+                        st.markdown(
+                            f'<div class="warning-card" style="font-size:0.85rem; line-height:1.5;">'
+                            f'<b>Como ler:</b> defeito retido significa entrega reprovada antes da sincronização com '
+                            f'produção — não equivale a incidente confirmado; a condição de risco foi removida antes '
+                            f'de existir em campo.</div>', unsafe_allow_html=True)
+
+                # ============ VOLUME E DEVOLUÇÃO MÊS A MÊS ============
+                st.markdown("### :material/bar_chart: Volume e Devolução Mês a Mês")
+                mensal_dev = (df_mot.assign(Devolvida=tem_motivo.values)
+                              .groupby(['Ano_Mês', 'Mês_Label'])
+                              .agg(Total=('Devolvida', 'size'), Devolvidas=('Devolvida', 'sum'))
+                              .reset_index().sort_values('Ano_Mês'))
+                if not mensal_dev.empty:
+                    mensal_dev['Aprovadas'] = mensal_dev['Total'] - mensal_dev['Devolvidas']
+                    mensal_dev['Taxa'] = (mensal_dev['Devolvidas'] / mensal_dev['Total'] * 100).round(1)
+                    if not motivos_ex.empty:
+                        crit_mes = (motivos_ex[motivos_ex['Nivel'] == 3].drop_duplicates('_entrada')
+                                    .groupby('Ano_Mês').size())
+                    else:
+                        crit_mes = pd.Series(dtype=int)
+                    mensal_dev['Criticos'] = mensal_dev['Ano_Mês'].map(crit_mes).fillna(0).astype(int)
+                    fig_mm = go.Figure()
+                    fig_mm.add_trace(go.Bar(x=mensal_dev['Mês_Label'], y=mensal_dev['Aprovadas'], name='Aprovadas',
+                                            marker_color=COR_AZUL_ESCURO,
+                                            hovertemplate='%{x}<br>Aprovadas: <b>%{y}</b><extra></extra>'))
+                    fig_mm.add_trace(go.Bar(x=mensal_dev['Mês_Label'], y=mensal_dev['Devolvidas'], name='Devolvidas',
+                                            marker_color=COR_LARANJA,
+                                            text=mensal_dev['Devolvidas'].where(mensal_dev['Devolvidas'] > 0, None),
+                                            textposition='outside', cliponaxis=False,
+                                            hovertemplate='%{x}<br>Devolvidas: <b>%{y}</b><extra></extra>'))
+                    fig_mm.add_trace(go.Scatter(x=mensal_dev['Mês_Label'], y=mensal_dev['Taxa'], name='Taxa de devolução',
+                                                yaxis='y2', mode='lines+markers+text',
+                                                text=[f"{v:.1f}%".replace('.', ',') for v in mensal_dev['Taxa']],
+                                                textposition='top center', textfont=dict(size=10, color='#B35900'),
+                                                line=dict(color='#B35900', width=2, dash='dot'),
+                                                marker=dict(size=7, color='#B35900'),
+                                                hovertemplate='%{x}<br>Taxa: <b>%{y:.1f}%</b><extra></extra>'))
+                    meses_crit = mensal_dev[mensal_dev['Criticos'] > 0]
+                    if not meses_crit.empty:
+                        fig_mm.add_trace(go.Scatter(
+                            x=meses_crit['Mês_Label'], y=[0.5] * len(meses_crit), yaxis='y2', name='Críticos (dano físico)',
+                            mode='markers+text', marker=dict(symbol='diamond', size=16, color=COR_VERMELHO,
+                                                             line=dict(color=COR_BRANCO, width=1.5)),
+                            text=meses_crit['Criticos'], textposition='middle center',
+                            textfont=dict(color=COR_BRANCO, size=9),
+                            hovertemplate='%{x}<br>Críticos: <b>%{text}</b><extra></extra>'))
+                    fig_mm.update_layout(
+                        barmode='stack', bargap=0.25, height=440, hovermode='x unified',
+                        title='Barra = total do mês · laranja = parte devolvida · losango vermelho = críticos',
+                        yaxis=dict(title='Entradas', rangemode='tozero', range=[0, mensal_dev['Total'].max() * 1.15]),
+                        yaxis2=dict(title='Taxa de devolução', overlaying='y', side='right', showgrid=False,
+                                    range=[0, max(10, mensal_dev['Taxa'].max() * 1.6)], ticksuffix='%'),
+                        xaxis=dict(type='category', showgrid=False),
+                        legend=dict(orientation='h', yanchor='top', y=-0.12, x=0), margin=dict(t=60, b=80))
+                    st.plotly_chart(fig_mm, use_container_width=True)
+                    if len(mensal_dev) >= 4:
+                        ult3 = mensal_dev.tail(3)
+                        ant = mensal_dev.iloc[:-3]
+                        fator_vol = ult3['Total'].mean() / max(ant['Total'].mean(), 1)
+                        st.caption(
+                            f"Últimos 3 meses ({', '.join(ult3['Mês_Label'])}): taxa de devolução de "
+                            f"{', '.join(f'{v:.1f}%'.replace('.', ',') for v in ult3['Taxa'])}, com volume médio "
+                            f"{fator_vol:.1f}x".replace('.', ',') + " o dos meses anteriores. "
+                            + ("O mês corrente é parcial." if mensal_dev['Ano_Mês'].iloc[-1] == agora().strftime('%Y-%m') else ""))
+
+                # ============ DISTRIBUIDORA E PLATAFORMA ============
+                st.markdown("### :material/apartment: Taxa de Devolução por Distribuidora")
+                por_emp = (df_mot.assign(Devolvida=tem_motivo.values).groupby('Empresa')
+                           .agg(Validadas=('Devolvida', 'size'), Devolvidas=('Devolvida', 'sum')).reset_index())
+                por_emp = por_emp[por_emp['Validadas'] > 0]
+                if not por_emp.empty:
+                    por_emp['Taxa'] = (por_emp['Devolvidas'] / por_emp['Validadas'] * 100).round(1)
+                    taxa_geral = n_devolvidas / max(total_entradas, 1) * 100
+                    col_de1, col_de2 = st.columns([1.15, 1])
+                    with col_de1:
+                        ordem_emp = por_emp.sort_values('Taxa')
+                        fig_emp = go.Figure(go.Bar(
+                            x=ordem_emp['Taxa'], y=ordem_emp['Empresa'], orientation='h',
+                            marker_color=[COR_LARANJA if t > taxa_geral else '#FFCC80' for t in ordem_emp['Taxa']],
+                            text=[f"{t:.1f}%".replace('.', ',') + f"  ·  {fmt_milhar(dv)} de {fmt_milhar(v)}"
+                                  for t, dv, v in zip(ordem_emp['Taxa'], ordem_emp['Devolvidas'], ordem_emp['Validadas'])],
+                            textposition='outside', cliponaxis=False,
+                            hovertemplate='<b>%{y}</b><br>Taxa: %{x:.1f}%<extra></extra>'))
+                        fig_emp.add_vline(x=taxa_geral, line_dash='dash', line_color=COR_CINZA_TEXTO,
+                                          annotation_text=f"média {taxa_geral:.1f}%".replace('.', ','),
+                                          annotation_position='top')
+                        fig_emp.update_layout(title='Taxa de devolução (texto: devolvidas de validadas)',
+                                              height=max(320, 36 * len(ordem_emp) + 110),
+                                              xaxis=dict(ticksuffix='%', range=[0, ordem_emp['Taxa'].max() * 1.6 + 0.5]),
+                                              yaxis=dict(showgrid=False), margin=dict(t=60, l=10, r=20), bargap=0.3)
+                        st.plotly_chart(fig_emp, use_container_width=True)
+                    with col_de2:
+                        fig_vol = go.Figure(go.Scatter(
+                            x=por_emp['Validadas'], y=por_emp['Taxa'], mode='markers+text', text=por_emp['Empresa'],
+                            textposition='top center',
+                            marker=dict(size=[max(12, min(46, 10 + dv * 1.2)) for dv in por_emp['Devolvidas']],
+                                        color=COR_LARANJA, opacity=0.75, line=dict(color=COR_BRANCO, width=1.5)),
+                            customdata=por_emp['Devolvidas'],
+                            hovertemplate='<b>%{text}</b><br>Validadas: %{x}<br>Taxa: %{y:.1f}%<br>'
+                                          'Devolvidas: %{customdata}<extra></extra>'))
+                        fig_vol.add_hline(y=taxa_geral, line_dash='dash', line_color=COR_CINZA_TEXTO)
+                        fig_vol.update_layout(title='Taxa × volume validado (bolha = nº de devolvidas)', height=380,
+                                              xaxis_title='Entradas validadas', yaxis_title='Taxa de devolução',
+                                              yaxis=dict(ticksuffix='%', rangemode='tozero'), margin=dict(t=60))
+                        st.plotly_chart(fig_vol, use_container_width=True)
+                    st.caption("A taxa isolada não classifica desempenho: distribuidoras com pouco volume validado "
+                               "mudam vários pontos percentuais com poucos casos. Compare em número absoluto antes de "
+                               "cobrar meta percentual.")
+
+                    por_plat = (df_mot.assign(Devolvida=tem_motivo.values).groupby('Plataforma')
+                                .agg(Validadas=('Devolvida', 'size'), Devolvidas=('Devolvida', 'sum')).reset_index())
+                    if len(por_plat) > 1:
+                        col_pl = st.columns(len(por_plat))
+                        for col_p, (_, lp) in zip(col_pl, por_plat.sort_values('Validadas', ascending=False).iterrows()):
+                            with col_p:
+                                st.markdown(criar_card_indicador_simples(
+                                    pct_txt(lp['Devolvidas'], lp['Validadas']), f"Taxa de devolução · {lp['Plataforma']}",
+                                    "base", cor=COR_AZUL_PETROLEO if lp['Plataforma'] == 'ADMS' else '#7E57C2',
+                                    subtitulo=f"{fmt_milhar(lp['Devolvidas'])} devolvidas de {fmt_milhar(lp['Validadas'])} validadas"),
+                                    unsafe_allow_html=True)
+
+                # ============ DETALHE DOS MOTIVOS ============
+                st.markdown("### :material/fact_check: Detalhe dos Motivos")
                 col_mk1, col_mk2, col_mk3, col_mk4 = st.columns(4)
                 with col_mk1:
                     st.markdown(criar_card_indicador_simples(
@@ -2512,7 +2435,7 @@ if st.session_state.df_original is not None:
                         subtitulo=f"{fmt_milhar(int(tem_motivo.sum()))} com motivo informado"), unsafe_allow_html=True)
                 with col_mk2:
                     st.markdown(criar_card_indicador_simples(
-                        motivos_ex['Motivo'].nunique(), "Motivos distintos", "lista",
+                        motivos_ex['Motivo'].nunique() if not motivos_ex.empty else 0, "Motivos distintos", "lista",
                         subtitulo="no período filtrado"), unsafe_allow_html=True)
                 with col_mk3:
                     if not motivos_ex.empty:
@@ -2529,6 +2452,46 @@ if st.session_state.df_original is not None:
                         sem_motivo, "Revisões sem motivo", "alerta", cor=COR_CINZA_TEXTO,
                         subtitulo=f"{pct_sem}% dos cards com revisão"), unsafe_allow_html=True)
 
+                colunas_lista = {'Chamado': 'Chamado', 'Criado': 'Criado', 'SRE_Nome': 'SRE', 'Empresa': 'Empresa',
+                                 'Plataforma': 'Plataforma', 'Responsável_Formatado': 'Responsável',
+                                 'Tipo_Chamado': 'Tipo', 'Status': 'Status', 'Revisões': 'Revisões',
+                                 'Qtd. Revisões': 'Qtd. Revisões', 'Motivo_Revisao': 'Motivo'}
+
+                def tabela_chamados(base, colunas=None):
+                    colunas = {k: v for k, v in (colunas or colunas_lista).items() if k in base.columns}
+                    saida = base.sort_values('Criado', ascending=False)[list(colunas)].rename(columns=colunas)
+                    if 'Criado' in saida.columns:
+                        saida['Criado'] = saida['Criado'].dt.strftime('%d/%m/%Y %H:%M')
+                    return saida
+
+                # Lista dos chamados com revisão mas sem motivo preenchido (para cobrar o preenchimento)
+                if sem_motivo > 0:
+                    with st.expander(f"Ver as {fmt_milhar(sem_motivo)} revisão(ões) sem motivo informado",
+                                     icon=":material/warning:"):
+                        sem_mot_exibir = tabela_chamados(df_mot[df_mot['Com_Revisao'] & ~tem_motivo],
+                                                         {k: v for k, v in colunas_lista.items() if k != 'Motivo_Revisao'})
+                        st.caption("Chamados com Revisões + Qtd. Revisões > 0 e a coluna 'Motivo Revisão' vazia.")
+                        st.dataframe(sem_mot_exibir, use_container_width=True, hide_index=True,
+                                     height=min(400, 38 * len(sem_mot_exibir) + 40))
+                        st.download_button("Exportar lista (CSV)", icon=":material/download:",
+                                           data=sem_mot_exibir.to_csv(index=False).encode('utf-8-sig'),
+                                           file_name=f"revisoes_sem_motivo_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                           mime="text/csv", key="btn_export_sem_motivo")
+                # NOVO: o inverso — motivo preenchido, mas contagem de revisões zerada (apontado na apresentação)
+                motivo_sem_contagem = df_mot[tem_motivo & ~df_mot['Com_Revisao']]
+                if len(motivo_sem_contagem) > 0:
+                    with st.expander(f"Ver os {fmt_milhar(len(motivo_sem_contagem))} chamado(s) com motivo mas "
+                                     f"contagem de revisões zerada", icon=":material/rule:"):
+                        lista_zerada = tabela_chamados(motivo_sem_contagem)
+                        st.caption("Motivo de revisão preenchido, porém Revisões + Qtd. Revisões = 0. "
+                                   "Provável contador não atualizado.")
+                        st.dataframe(lista_zerada, use_container_width=True, hide_index=True,
+                                     height=min(400, 38 * len(lista_zerada) + 40))
+                        st.download_button("Exportar lista (CSV)", icon=":material/download:",
+                                           data=lista_zerada.to_csv(index=False).encode('utf-8-sig'),
+                                           file_name=f"motivo_sem_contagem_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                           mime="text/csv", key="btn_export_motivo_zerado")
+
                 if motivos_ex.empty:
                     st.info("Nenhum motivo de revisão registrado com os filtros selecionados.", icon=":material/info:")
                 else:
@@ -2542,11 +2505,57 @@ if st.session_state.df_original is not None:
                                        SREs=('SRE_Nome', 'nunique'), Empresas=('Empresa', 'nunique'),
                                        Ultimo=('Criado', 'max'))
                                   .reset_index())
+                    resumo_mot['Severidade'] = resumo_mot['Motivo'].map(classificar_motivo)
                     col_valor = 'Cards' if por_cards else 'Revisoes'
                     resumo_mot = resumo_mot.sort_values([col_valor, 'Cards'], ascending=False).reset_index(drop=True)
                     total_valor = max(resumo_mot[col_valor].sum(), 1)
                     resumo_mot['Pct'] = (resumo_mot[col_valor] / total_valor * 100).round(1)
                     resumo_mot['Acumulado'] = resumo_mot['Pct'].cumsum().clip(upper=100).round(1)
+
+                    # ---- Severidade
+                    st.markdown("### :material/emergency: Severidade das Devoluções")
+                    col_sv1, col_sv2 = st.columns([1, 1.6])
+                    with col_sv1:
+                        sev_cards = (motivos_ex.sort_values('Nivel', ascending=False).drop_duplicates('_entrada')
+                                     ['Severidade'].value_counts().reindex([SEV_CRITICO, SEV_RISCO, SEV_QUALIDADE]).fillna(0))
+                        fig_sev = go.Figure(go.Pie(
+                            labels=sev_cards.index, values=sev_cards.values, hole=0.6, sort=False,
+                            marker=dict(colors=[CORES_SEVERIDADE[k] for k in sev_cards.index],
+                                        line=dict(color=COR_BRANCO, width=2)),
+                            textinfo='value', hovertemplate='<b>%{label}</b><br>%{value} entradas · %{percent}<extra></extra>'))
+                        fig_sev.update_layout(title='Entradas devolvidas por severidade', height=330,
+                                              legend=dict(orientation='h', yanchor='top', y=-0.05, x=0),
+                                              margin=dict(t=50, b=10),
+                                              annotations=[dict(text=f"<b>{fmt_milhar(int(sev_cards.sum()))}</b><br>devolvidas",
+                                                                x=0.5, y=0.5, showarrow=False, font=dict(size=15))])
+                        st.plotly_chart(fig_sev, use_container_width=True, config={'displayModeBar': False})
+                    with col_sv2:
+                        sev_mes = (motivos_ex.sort_values('Nivel', ascending=False).drop_duplicates('_entrada')
+                                   .groupby(['Ano_Mês', 'Mês_Label', 'Severidade']).size().reset_index(name='Cards')
+                                   .sort_values('Ano_Mês'))
+                        fig_svm = go.Figure()
+                        for sev in [SEV_QUALIDADE, SEV_RISCO, SEV_CRITICO]:
+                            dados_s = sev_mes[sev_mes['Severidade'] == sev]
+                            if not dados_s.empty:
+                                fig_svm.add_trace(go.Bar(x=dados_s['Mês_Label'], y=dados_s['Cards'], name=sev,
+                                                         marker_color=CORES_SEVERIDADE[sev],
+                                                         hovertemplate='%{x}<br>' + sev + ': <b>%{y}</b><extra></extra>'))
+                        fig_svm.update_layout(barmode='stack', title='Severidade mês a mês', height=330, bargap=0.25,
+                                              xaxis=dict(type='category', showgrid=False,
+                                                         categoryorder='array',
+                                                         categoryarray=sev_mes.drop_duplicates('Ano_Mês')['Mês_Label'].tolist()),
+                                              yaxis=dict(title='Entradas devolvidas'), hovermode='x unified',
+                                              legend=dict(orientation='h', yanchor='top', y=-0.12, x=0),
+                                              margin=dict(t=50, b=70))
+                        st.plotly_chart(fig_svm, use_container_width=True)
+                    with st.expander("Como os motivos foram classificados", icon=":material/rule_settings:"):
+                        st.markdown(
+                            f"**{SEV_CRITICO}** (vermelho): " + "; ".join(SEVERIDADE_MOTIVOS[SEV_CRITICO]) + ".\n\n"
+                            f"**{SEV_RISCO}** (laranja): " + "; ".join(SEVERIDADE_MOTIVOS[SEV_RISCO]) + ".\n\n"
+                            f"**{SEV_QUALIDADE}** (cinza): todos os demais motivos.\n\n"
+                            "No funil, *risco operacional relevante* inclui também os casos de potencial de dano físico. "
+                            "Um card com vários motivos conta pela severidade mais alta. "
+                            "Para mudar a classificação, edite `SEVERIDADE_MOTIVOS` no início do código.")
 
                     # ---- Pareto (o que concentra 80% das revisões)
                     st.markdown("### :material/stacked_line_chart: Pareto dos Motivos")
@@ -2556,36 +2565,31 @@ if st.session_state.df_original is not None:
                         resto = resumo_mot.iloc[limite_pareto:]
                         pareto = pd.concat([pareto, pd.DataFrame([{
                             'Motivo': f'Demais ({len(resto)})', col_valor: resto[col_valor].sum(),
-                            'Pct': resto['Pct'].sum().round(1), 'Acumulado': 100.0}])], ignore_index=True)
+                            'Pct': resto['Pct'].sum().round(1), 'Acumulado': 100.0,
+                            'Severidade': SEV_QUALIDADE}])], ignore_index=True)
                     vitais = int((resumo_mot['Acumulado'] < 80).sum()) + 1
                     vitais = min(vitais, len(resumo_mot))
-                    fig_pareto = go.Figure()
-                    fig_pareto.add_trace(go.Bar(
-                        x=[quebrar_rotulo(m) for m in pareto['Motivo']], y=pareto[col_valor],
+                    pareto_h = pareto.iloc[::-1]  # maior no topo
+                    fig_pareto = go.Figure(go.Bar(
+                        y=[quebrar_rotulo(m, 46) for m in pareto_h['Motivo']], x=pareto_h[col_valor], orientation='h',
                         name='Cards' if por_cards else 'Revisões',
-                        marker_color=[COR_LARANJA if i < vitais else '#FFCC80' for i in range(len(pareto))],
-                        text=[f"{fmt_milhar(v)}" for v in pareto[col_valor]], textposition='outside', cliponaxis=False,
-                        customdata=pareto[['Motivo', 'Pct']].values,
-                        hovertemplate='<b>%{customdata[0]}</b><br>%{y} · %{customdata[1]:.1f}% do total<extra></extra>'))
-                    fig_pareto.add_trace(go.Scatter(
-                        x=[quebrar_rotulo(m) for m in pareto['Motivo']], y=pareto['Acumulado'], yaxis='y2',
-                        name='% acumulado', mode='lines+markers', line=dict(color=COR_AZUL_ESCURO, width=2.5),
-                        marker=dict(size=8, line=dict(color=COR_BRANCO, width=2)),
-                        hovertemplate='Acumulado: %{y:.1f}%<extra></extra>'))
-                    fig_pareto.add_hline(y=80, yref='y2', line_dash='dash', line_color=COR_CINZA_TEXTO,
-                                         annotation_text='80%', annotation_position='top right')
+                        # Cor = severidade; tom cheio = motivos que somam ~80% (onde atacar primeiro)
+                        marker_color=[CORES_SEVERIDADE.get(sv, CORES_SEVERIDADE[SEV_QUALIDADE]) for sv in pareto_h['Severidade']],
+                        marker_opacity=[1 if i < vitais else 0.45 for i in range(len(pareto))][::-1],
+                        text=[f"<b>{fmt_milhar(v)}</b>  ·  {p:.1f}%  ·  acum. {a:.0f}%".replace('.', ',')
+                              for v, p, a in zip(pareto_h[col_valor], pareto_h['Pct'], pareto_h['Acumulado'])],
+                        textposition='outside', cliponaxis=False,
+                        customdata=pareto_h[['Motivo', 'Severidade']].values,
+                        hovertemplate='<b>%{customdata[0]}</b><br>%{x}<br>%{customdata[1]}<extra></extra>'))
                     fig_pareto.update_layout(
                         title=f'{vitais} motivo(s) concentram ~80% das {"ocorrências" if por_cards else "revisões"}',
-                        yaxis=dict(title='Cards' if por_cards else 'Revisões', rangemode='tozero',
-                                   range=[0, pareto[col_valor].max() * 1.2]),
-                        yaxis2=dict(title='% acumulado', overlaying='y', side='right', range=[0, 105],
-                                    ticksuffix='%', showgrid=False),
-                        xaxis=dict(showgrid=False, tickangle=0), height=460, bargap=0.3,
-                        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
-                        margin=dict(t=70, b=90), hovermode='x unified')
+                        xaxis=dict(title='Cards' if por_cards else 'Revisões', range=[0, pareto[col_valor].max() * 1.45]),
+                        yaxis=dict(showgrid=False), height=max(380, 44 * len(pareto) + 100), bargap=0.3,
+                        showlegend=False, margin=dict(t=60, b=40, l=10, r=20))
                     st.plotly_chart(fig_pareto, use_container_width=True)
-                    st.caption("Barras em laranja forte = motivos que, somados, chegam a ~80% do total "
-                               "(onde atacar primeiro). Um card com mais de um motivo conta em cada um deles.")
+                    st.caption("Cor da barra = severidade (vermelho: potencial de dano físico · laranja: risco operacional · "
+                               "cinza: qualidade/processo). Tom cheio = motivos que, somados, chegam a ~80% do total. "
+                               "Um card com mais de um motivo conta em cada um deles.")
 
                     # ---- Motivo × SRE e Motivo × Empresa
                     top_motivos = resumo_mot['Motivo'].head(10).tolist()
@@ -2610,7 +2614,7 @@ if st.session_state.df_original is not None:
                         fig.update_layout(title=titulo, height=max(320, 42 * len(piv) + 110),
                                           margin=dict(t=50, b=40, l=10, r=10))
                         fig.update_yaxes(autorange='reversed', showgrid=False)
-                        fig.update_xaxes(showgrid=False, side='top')
+                        fig.update_xaxes(showgrid=False, tickangle=-30)
                         return fig
 
                     st.markdown("### :material/grid_on: Onde cada motivo aparece")
@@ -2652,17 +2656,118 @@ if st.session_state.df_original is not None:
                         legend=dict(orientation='h', yanchor='top', y=-0.12, x=0), margin=dict(t=60, b=90))
                     st.plotly_chart(fig_evo, use_container_width=True)
 
+                    # ============ CASOS CRÍTICOS, REINCIDÊNCIA E CONSIDERAÇÕES ============
+                    st.markdown("### :material/crisis_alert: Casos Críticos e Reincidência")
+                    escopo_crit = st.radio(":material/tune: Analisar:",
+                                           [SEV_CRITICO, f"{SEV_RISCO} + {SEV_CRITICO}"], horizontal=True,
+                                           key="escopo_criticos")
+                    nivel_min = 3 if escopo_crit == SEV_CRITICO else 2
+                    casos = motivos_ex[motivos_ex['Nivel'] >= nivel_min].copy()
+                    if casos.empty:
+                        st.success("Nenhum caso nessa severidade no período filtrado.", icon=":material/verified:")
+                    else:
+                        casos_card = casos.sort_values('Nivel', ascending=False).drop_duplicates('_entrada')
+                        tabela_casos = casos_card.assign(Motivo_Revisao=casos_card['Motivo'])
+                        cols_casos = {'Chamado': 'Chamado', 'Criado': 'Criado', 'Severidade': 'Severidade',
+                                      'Motivo_Revisao': 'Motivo', 'Responsável_Formatado': 'Desenvolvedor',
+                                      'Empresa': 'Empresa', 'Plataforma': 'Plataforma', 'SRE_Nome': 'SRE',
+                                      'Tipo_Chamado': 'Tipo'}
+                        st.dataframe(tabela_chamados(tabela_casos, cols_casos), use_container_width=True,
+                                     hide_index=True, height=min(420, 38 * len(tabela_casos) + 40))
+
+                        # Reincidência: mesmo desenvolvedor + distribuidora + plataforma + motivo, 2+ vezes
+                        reinc = (casos.groupby(['Motivo', 'Responsável_Formatado', 'Empresa', 'Plataforma'])
+                                 .agg(Casos=('Chamado', 'nunique'),
+                                      Meses=('Mês_Label', lambda m: ', '.join(pd.unique(m))),
+                                      Chamados=('Chamado', lambda c: ', '.join(sorted(set(c)))))
+                                 .reset_index().query('Casos >= 2').sort_values('Casos', ascending=False))
+                        st.markdown("**:material/repeat: Reincidências** — mesmo desenvolvedor, distribuidora, "
+                                    "plataforma e motivo em 2 ou mais chamados")
+                        if reinc.empty:
+                            st.caption("Nenhuma reincidência nesse recorte.")
+                        else:
+                            st.dataframe(reinc.rename(columns={'Responsável_Formatado': 'Desenvolvedor'}),
+                                         use_container_width=True, hide_index=True,
+                                         column_config={"Casos": st.column_config.NumberColumn("Casos", format="%d")})
+
+                    # Considerações automáticas (mesma estrutura do slide "Considerações Finais")
+                    st.markdown("#### :material/lightbulb: Considerações do Período")
+                    criticos_df = motivos_ex[motivos_ex['Nivel'] == 3]
+                    consideracoes = []
+                    # 1. Reincidência entre os críticos
+                    reinc_crit = (criticos_df.groupby(['Motivo', 'Responsável_Formatado', 'Empresa', 'Plataforma'])
+                                  .agg(Casos=('Chamado', 'nunique'),
+                                       Meses=('Mês_Label', lambda m: list(pd.unique(m))))
+                                  .reset_index().sort_values('Casos', ascending=False))
+                    reinc_crit = reinc_crit[reinc_crit['Casos'] >= 2]
+                    if not reinc_crit.empty:
+                        r = reinc_crit.iloc[0]
+                        total_motivo = criticos_df[criticos_df['Motivo'] == r['Motivo']]['Chamado'].nunique()
+                        consideracoes.append((
+                            "Reincidência identificada",
+                            f"{r['Casos']} dos {total_motivo} casos de <i>{r['Motivo'].lower()}</i> vêm do mesmo "
+                            f"desenvolvedor ({r['Responsável_Formatado']}), distribuidora ({r['Empresa']}) e "
+                            f"plataforma ({r['Plataforma']}), em {', '.join(r['Meses'])}. Um controle preventivo "
+                            f"nessa origem elimina a classe inteira."))
+                    else:
+                        consideracoes.append(("Sem reincidência crítica",
+                                              "Nenhum caso com potencial de dano físico se repetiu no mesmo desenvolvedor, "
+                                              "distribuidora e plataforma no período."))
+                    # 2. Origem concentrada (desenvolvedor com mais devoluções de risco)
+                    risco_df = motivos_ex[motivos_ex['Nivel'] >= 2].drop_duplicates('_entrada')
+                    if not risco_df.empty:
+                        origem = risco_df['Responsável_Formatado'].value_counts()
+                        consideracoes.append((
+                            "Origem concentrada" if origem.iloc[0] >= 2 else "Origem dispersa",
+                            f"{origem.iloc[0]} das {len(risco_df)} devoluções com risco operacional vêm de "
+                            f"{origem.index[0]} ({pct_txt(origem.iloc[0], len(risco_df))}). "
+                            + ("Indica procedimento replicado, não descuido pontual."
+                               if origem.iloc[0] / len(risco_df) >= 0.2 else "Distribuição sem concentração relevante.")))
+                    # 3. Risco recente x volume
+                    if not mensal_dev.empty and len(mensal_dev) >= 4 and n_critico:
+                        ult3_meses = mensal_dev['Ano_Mês'].tail(3).tolist()
+                        crit_rec = criticos_df[criticos_df['Ano_Mês'].isin(ult3_meses)]['_entrada'].nunique()
+                        fator_vol = mensal_dev['Total'].tail(3).mean() / max(mensal_dev['Total'].iloc[:-3].mean(), 1)
+                        consideracoes.append((
+                            "Risco no período recente",
+                            f"{crit_rec} dos {n_critico} críticos caem nos últimos 3 meses "
+                            f"({', '.join(mensal_dev['Mês_Label'].tail(3))}), quando o volume médio foi "
+                            + f"{fator_vol:.1f}x".replace('.', ',') + " o dos meses anteriores."))
+                    # 4. Esteira sem gargalo
+                    consideracoes.append((
+                        "Esteira sem gargalo" if total_entradas and n_aprovadas / total_entradas >= 0.9 else "Atenção à esteira",
+                        f"{pct_txt(n_aprovadas, total_entradas)} das entregas passaram sem qualquer devolução e "
+                        f"{fmt_milhar(n_critico)} defeito(s) com potencial de dano físico foram retidos antes da produção."))
+                    cores_cons = [COR_VERMELHO, COR_LARANJA, COR_AZUL_PETROLEO, COR_VERDE_ESCURO]
+                    colunas_cons = st.columns(len(consideracoes))
+                    for i_c, (col_c, (titulo_c, texto_c)) in enumerate(zip(colunas_cons, consideracoes)):
+                        with col_c:
+                            st.markdown(
+                                f'<div class="metric-card" style="border-top: 4px solid {cores_cons[i_c]}; min-height: 210px;">'
+                                f'<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">'
+                                f'<span style="display:inline-flex; align-items:center; justify-content:center; width:28px; '
+                                f'height:28px; border-radius:50%; background:{cores_cons[i_c]}; color:#fff; font-weight:700;">{i_c + 1}</span>'
+                                f'<b style="color:{COR_PRETO_SUAVE};">{titulo_c}</b></div>'
+                                f'<div style="font-size:0.86rem; color:{COR_CINZA_TEXTO}; line-height:1.5;">{texto_c}</div></div>',
+                                unsafe_allow_html=True)
+                    n_zerados = len(motivo_sem_contagem)
+                    st.caption(f"Qualidade do dado: motivo de revisão preenchido em {fmt_milhar(n_devolvidas)} dos "
+                               f"{fmt_milhar(total_entradas)} registros; {fmt_milhar(n_zerados)} deles com contagem de "
+                               f"revisões zerada e {fmt_milhar(sem_motivo)} revisão(ões) sem motivo.")
+
                     # ---- Tabela completa + exportação
                     st.markdown("### :material/table_chart: Ranking Completo dos Motivos")
                     tabela_mot = resumo_mot.copy()
                     tabela_mot.insert(0, 'Posição', [f"{i + 1}º" for i in range(len(tabela_mot))])
                     tabela_mot['Ultimo'] = tabela_mot['Ultimo'].dt.strftime('%d/%m/%Y')
                     st.dataframe(
-                        tabela_mot[['Posição', 'Motivo', 'Cards', 'Revisoes', 'Pct', 'Acumulado', 'SREs', 'Empresas', 'Ultimo']],
-                        use_container_width=True, hide_index=True, height=min(420, 38 * len(tabela_mot) + 40),
+                        tabela_mot[['Posição', 'Motivo', 'Severidade', 'Cards', 'Revisoes', 'Pct', 'Acumulado',
+                                    'SREs', 'Empresas', 'Ultimo']],
+                        use_container_width=True, hide_index=True, height=min(460, 38 * len(tabela_mot) + 40),
                         column_config={
                             "Posição": st.column_config.TextColumn("Posição", width="small"),
                             "Motivo": st.column_config.TextColumn("Motivo", width="large"),
+                            "Severidade": st.column_config.TextColumn("Severidade", width="medium"),
                             "Cards": st.column_config.NumberColumn("Cards", format="%d"),
                             "Revisoes": st.column_config.NumberColumn("Revisões", format="%d",
                                                                       help="Soma de Revisões + Qtd. Revisões"),
@@ -2681,15 +2786,7 @@ if st.session_state.df_original is not None:
                     with st.expander("Ver chamados de um motivo", icon=":material/search:"):
                         motivo_escolhido = st.selectbox("Motivo:", resumo_mot['Motivo'].tolist(), key="motivo_detalhe")
                         det = motivos_ex[motivos_ex['Motivo'] == motivo_escolhido].drop_duplicates('Chamado')
-                        det = det.sort_values('Criado', ascending=False)
-                        colunas_det = {'Chamado': 'Chamado', 'Criado': 'Criado', 'SRE_Nome': 'SRE', 'Empresa': 'Empresa',
-                                       'Responsável_Formatado': 'Responsável', 'Status': 'Status',
-                                       'Revisões': 'Revisões', 'Qtd. Revisões': 'Qtd. Revisões',
-                                       'Motivo_Revisao': 'Motivo (original)'}
-                        colunas_det = {k: v for k, v in colunas_det.items() if k in det.columns}
-                        det_exibir = det[list(colunas_det)].rename(columns=colunas_det)
-                        if 'Criado' in det_exibir.columns:
-                            det_exibir['Criado'] = det_exibir['Criado'].dt.strftime('%d/%m/%Y %H:%M')
+                        det_exibir = tabela_chamados(det)
                         st.caption(f"{fmt_milhar(len(det_exibir))} chamado(s) com este motivo")
                         st.dataframe(det_exibir, use_container_width=True, hide_index=True, height=360)
     with tab_mapa:
