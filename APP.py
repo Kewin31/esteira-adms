@@ -3044,6 +3044,27 @@ if st.session_state.df_original is not None:
                 df_ipe = df_ipe[df_ipe['Ano'] == int(ano_ipe)]
             if meses_selecionados_numeros:
                 df_ipe = df_ipe[df_ipe['Mês'].isin(meses_selecionados_numeros)]
+            # Mês corrente ainda não fechou: fica fora do KPI por padrão
+            # (cards em andamento contariam como "não analisados" e derrubariam o índice)
+            mes_corrente = agora().strftime('%Y-%m')
+            tem_mes_corrente = bool((df_ipe['Ano_Mês'] == mes_corrente).any()) if 'Ano_Mês' in df_ipe.columns else False
+            if tem_mes_corrente:
+                incluir_corrente = st.toggle(
+                    f"Incluir {MESES_NOMES[agora().month]}/{agora().year} (mês em andamento)", value=False,
+                    key="ipe_incluir_mes_corrente",
+                    help="Desligado = só meses fechados, como na apuração oficial do KPI.")
+                so_mes_corrente = not (df_ipe['Ano_Mês'] < mes_corrente).any()
+                if so_mes_corrente and not incluir_corrente:
+                    st.warning(f"O filtro só tem {MESES_NOMES[agora().month]}, que ainda não fechou: mostrando a parcial.",
+                               icon=":material/warning:")
+                elif not incluir_corrente:
+                    qtd_fora = int((df_ipe['Ano_Mês'] == mes_corrente).sum())
+                    df_ipe = df_ipe[df_ipe['Ano_Mês'] < mes_corrente]
+                    st.caption(f"Considerando apenas meses fechados · {fmt_milhar(qtd_fora)} cards de "
+                               f"{MESES_NOMES[agora().month]} ficaram de fora até o mês fechar.")
+                else:
+                    st.caption(f"Atenção: {MESES_NOMES[agora().month]} é parcial — cards ainda em andamento "
+                               f"contam como não analisados e reduzem o IPE.")
             st.markdown("### :material/table_chart: Performance Detalhada - Período Selecionado")
             cards_total_periodo = len(df_ipe)
             total_sres_periodo = df_ipe['SRE'].nunique()
@@ -3084,7 +3105,8 @@ if st.session_state.df_original is not None:
                         "SRE": st.column_config.TextColumn("SRE", width="medium"),
                         "Cards Demandados": st.column_config.NumberColumn("Demandados", format="%d"),
                         "Cards Analisados": st.column_config.NumberColumn("Analisados", format="%d"),
-                        "Cards Reabertos": st.column_config.NumberColumn("Reabertos", format="%d"),
+                        "Cards Reabertos": st.column_config.NumberColumn("Reabertos (CR)", format="%d",
+                                                                         help="Cards com Retorno Cliente = SIM"),
                         "IPE (%)": st.column_config.ProgressColumn("IPE %", format="%.2f%%", min_value=0, max_value=100),
                         "Status": st.column_config.TextColumn("Status", width="small")
                     })
@@ -3125,7 +3147,7 @@ if st.session_state.df_original is not None:
                                     line=dict(color=COR_BRANCO, width=2)),
                         text=df_acum['IPE Acumulado (%)'].apply(lambda x: f'{x:.1f}%'.replace('.', ',')),
                         textposition='top center', textfont=dict(size=11, color=COR_AZUL_ESCURO), name='IPE Acumulado',
-                        hovertemplate='<b>%{x}</b><br>IPE: %{y:.1f}%<br>CD: %{customdata[0]:,}<br>CA: %{customdata[1]:,}<br>CR: %{customdata[2]:,}<br>SREs: %{customdata[3]}<extra></extra>',
+                        hovertemplate='<b>%{x}</b><br>IPE: %{y:.1f}%<br>CD: %{customdata[0]:,}<br>CA: %{customdata[1]:,}<br>CR (Retorno Cliente = SIM): %{customdata[2]:,}<br>SREs: %{customdata[3]}<extra></extra>',
                         customdata=df_acum[['CD_Acum', 'CA_Acum', 'CR_Acum', 'NA_Acum']].values
                     ))
                     fig_linha.add_hline(y=95, line_dash="dash", line_color=COR_VERDE_ESCURO, annotation_text="Meta 95%",
@@ -3167,12 +3189,12 @@ if st.session_state.df_original is not None:
                 st.markdown("""
                 **Fórmula:** `IPE = (CA - CR) / (CD + |((CT/CD)/NA) - 1|)`
                 - **CA** = Cards Analisados (Sincronizados)
-                - **CR** = Cards Reabertos (Cards com **'Retorno Cliente = Sim'**)
+                - **CR** = Cards Reabertos (cards com **'Retorno Cliente = SIM'**)
                 - **CD** = Cards Demandados (Total do período)
                 - **CT** = Cards Total (Total geral)
                 - **NA** = Número de Atendentes (SREs únicos)
                 **Meta: 95% | Limite máximo: 100%**
-                > **Importante:** Cards sem preenchimento na coluna 'Retorno Cliente' são considerados como **'Não'** (não contam como reabertos).
+                > **Importante:** cards sem preenchimento na coluna 'Retorno Cliente' contam como **'Não'** (não são reabertos). Devoluções por motivo de revisão **não** entram no CR. O mês em andamento fica fora por padrão (só meses fechados).
                 """)
         else:
             st.warning("Colunas necessárias ('SRE', 'Status', 'Retorno_Cliente') não encontradas.", icon=":material/warning:")
