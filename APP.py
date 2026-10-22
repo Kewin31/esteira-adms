@@ -2,6 +2,8 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
+from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import io
 import os
@@ -9,9 +11,21 @@ import time
 import hashlib
 import warnings
 from pytz import timezone
-import numpy as np
 import streamlit.components.v1 as components
 warnings.filterwarnings('ignore')
+
+TZ_BR = timezone('America/Sao_Paulo')
+
+# Remove a setinha dos deltas informativos (ex.: "99% do total") quando o Streamlit suporta;
+# em versões antigas o parâmetro é simplesmente ignorado
+import inspect as _inspect
+DELTA_SEM_SETA = {'delta_arrow': 'off'} if 'delta_arrow' in _inspect.signature(st.metric).parameters else {}
+
+
+def agora():
+    """Data/hora de Brasília (sem fuso, para comparar com as datas do CSV).
+    Evita que o 'mês atual' vire errado quando o servidor está em UTC."""
+    return datetime.now(TZ_BR).replace(tzinfo=None)
 
 # ============================================
 # PALETA DE CORES - NOVA IDENTIDADE VISUAL
@@ -36,6 +50,121 @@ CORES_GRADIENTE = [
     COR_VERMELHO,
     "#1E88E5"
 ]
+
+# Escalas contínuas da paleta (substituem 'Blues' e 'Viridis', que fugiam da identidade visual)
+ESCALA_AZUL = [[0, "#CFE8EC"], [0.5, COR_AZUL_PETROLEO], [1, COR_AZUL_ESCURO]]
+
+# Nomes de exibição dos SREs (antes repetido em dois lugares do código)
+APELIDOS_SRE = [
+    (("kewin", "ferreira"), "Kewin Marcel"),
+    (("pierry", "perez"), "Pierry Perez"),
+    (("bruna", "maciel"), "Bruna Maciel"),
+    (("ramiza", "irineu"), "Ramiza Irineu"),
+]
+
+# ============================================
+# ÍCONES (SVG no estilo Lucide — embutidos, funcionam sem internet)
+# Nos widgets nativos do Streamlit (abas, botões, alertas) usamos :material/...:
+# ============================================
+ICONES = {
+    'grafico': '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    'check': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    'lista': '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+    'revisao': '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+    'atividade': '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+    'mapa': '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/>',
+    'premio': '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>',
+    'calendario': '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
+    'ajustes': '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
+    'alvo': '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    'subida': '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+    'alerta': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>',
+    'equipe': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    'relogio': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    'empresa': '<rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>',
+    'jornal': '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>',
+    'info': '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/>',
+    'ideia': '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+    'email': '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    'arquivo': '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/>',
+    'base': '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>',
+    'medidor': '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+    'pino': '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+    'paleta': '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>',
+}
+
+
+def icone(nome, tamanho=20, cor="currentColor", espessura=2):
+    """Ícone SVG inline para usar dentro dos blocos HTML (cards, títulos, rodapé)."""
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{tamanho}" height="{tamanho}" '
+            f'viewBox="0 0 24 24" fill="none" stroke="{cor}" stroke-width="{espessura}" '
+            f'stroke-linecap="round" stroke-linejoin="round" '
+            f'style="vertical-align:-0.18em; flex-shrink:0;">{ICONES[nome]}</svg>')
+
+
+CORES_PODIO = {1: "#D4A017", 2: "#9AA5B1", 3: "#B87333"}
+
+
+def selo_posicao(pos, tamanho=26):
+    """Selo circular numerado (substitui as medalhas em emoji): ouro, prata, bronze e cinza."""
+    cor = CORES_PODIO.get(pos, COR_CINZA_TEXTO)
+    return (f'<span style="display:inline-flex; align-items:center; justify-content:center; '
+            f'width:{tamanho}px; height:{tamanho}px; border-radius:50%; background:{cor}; '
+            f'color:#fff; font-weight:700; font-size:{int(tamanho * 0.46)}px; flex-shrink:0;">{pos}º</span>')
+
+
+# ============================================
+# SEVERIDADE DOS MOTIVOS DE REVISÃO (mesma régua da apresentação "Panorama - SRE")
+# Ajuste as listas abaixo se a classificação mudar. Motivos não listados = "Qualidade / processo".
+# Comparação ignora maiúsculas/minúsculas e espaços extras.
+# ============================================
+SEV_CRITICO = "Potencial de dano físico"
+SEV_RISCO = "Risco operacional"
+SEV_QUALIDADE = "Qualidade / processo"
+SEVERIDADE_MOTIVOS = {
+    SEV_CRITICO: [
+        "Comando com endereço errado",
+        "IP/Porta com duplicidade na base",
+    ],
+    SEV_RISCO: [
+        "Erro de configuração de RTU / Unidade Remota",
+        "Erro de endereçamento (IP / porta / coordenada)",
+        "Equipamento sem By-pass",
+        "Erro no modelador elétrico / associações",
+        "Erro de TAG / nomenclatura / descrição de equipamento",
+        "ChangeSet divergente do chamado / solicitado",
+        "Comando associado ao equipamento errado",
+    ],
+}
+NIVEL_SEVERIDADE = {SEV_QUALIDADE: 1, SEV_RISCO: 2, SEV_CRITICO: 3}
+CORES_SEVERIDADE = {SEV_CRITICO: COR_VERMELHO, SEV_RISCO: COR_LARANJA, SEV_QUALIDADE: "#78909C"}
+_MAPA_SEVERIDADE = {" ".join(m.lower().split()): sev for sev, lista in SEVERIDADE_MOTIVOS.items() for m in lista}
+
+
+def classificar_motivo(motivo):
+    return _MAPA_SEVERIDADE.get(" ".join(str(motivo).lower().split()), SEV_QUALIDADE)
+
+
+MESES_NOMES = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho',
+               7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
+MESES_ABREV = {k: v[:3] for k, v in MESES_NOMES.items()}
+
+# ============================================
+# TEMA PADRÃO DOS GRÁFICOS (aplicado a todos)
+# ============================================
+pio.templates["energisa"] = go.layout.Template(layout=dict(
+    font=dict(family="Inter, 'Segoe UI', sans-serif", size=12, color=COR_PRETO_SUAVE),
+    colorway=[COR_AZUL_ESCURO, COR_VERDE_ESCURO, COR_LARANJA, COR_AZUL_PETROLEO,
+              "#7E57C2", "#1E88E5", "#8D6E63", COR_VERMELHO],
+    plot_bgcolor=COR_BRANCO, paper_bgcolor=COR_BRANCO,
+    title=dict(font=dict(size=15, color=COR_AZUL_ESCURO)),
+    xaxis=dict(gridcolor="#F1F3F5", linecolor=COR_CINZA_BORDA, zeroline=False, automargin=True),
+    yaxis=dict(gridcolor="#F1F3F5", linecolor=COR_CINZA_BORDA, zeroline=False, automargin=True),
+    hoverlabel=dict(bgcolor=COR_BRANCO, bordercolor=COR_CINZA_BORDA, font_size=12),
+    legend=dict(bgcolor="rgba(255,255,255,0)"),
+    separators=",.",
+))
+pio.templates.default = "plotly_white+energisa"
 
 # ============================================
 # MAPEAMENTO COMPLETO DAS EMPRESAS
@@ -78,7 +207,7 @@ CAMINHOS_ALTERNATIVOS = [
 # ============================================
 st.set_page_config(
     page_title="Esteira ADMS - Dashboard",
-    page_icon="📊",
+    page_icon=":material/monitoring:",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -168,10 +297,38 @@ st.markdown(f"""
     .quadrant-efficient {{ background-color: #FFF3E0; color: {COR_LARANJA}; border: 2px solid {COR_LARANJA}; }}
     .quadrant-careful {{ background-color: #E0F7FA; color: {COR_AZUL_PETROLEO}; border: 2px solid {COR_AZUL_PETROLEO}; }}
     .quadrant-needs-help {{ background-color: #FFEBEE; color: {COR_VERMELHO}; border: 2px solid {COR_VERMELHO}; }}
-    .dataframe {{ border-collapse: collapse; width: 100%; }}
-    .dataframe th {{ background-color: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; padding: 10px; text-align: left; }}
-    .dataframe td {{ padding: 8px; border-bottom: 1px solid {COR_CINZA_BORDA}; }}
-    .dataframe tr:hover {{ background-color: {COR_CINZA_FUNDO}; }}
+    /* Cards nativos do Streamlit (st.metric) no mesmo estilo dos .metric-card */
+    [data-testid="stMetric"] {{
+        background: {COR_BRANCO}; padding: 0.9rem 1rem; border-radius: 8px;
+        border: 1px solid {COR_CINZA_BORDA}; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        transition: all 0.3s ease;
+    }}
+    [data-testid="stMetric"]:hover {{ border-color: {COR_AZUL_PETROLEO}; box-shadow: 0 4px 12px rgba(0, 89, 115, 0.1); }}
+    [data-testid="stMetricValue"] {{ color: {COR_AZUL_ESCURO}; font-weight: 700; }}
+    [data-testid="stMetricLabel"] p {{ color: {COR_CINZA_TEXTO}; font-weight: 600; }}
+    /* Botões primários e secundários na paleta (o padrão do Streamlit é vermelho) */
+    button[kind="primary"], [data-testid="stBaseButton-primary"] {{
+        background: {COR_AZUL_ESCURO} !important; border-color: {COR_AZUL_ESCURO} !important; color: {COR_BRANCO} !important;
+    }}
+    button[kind="primary"]:hover, [data-testid="stBaseButton-primary"]:hover {{
+        background: {COR_AZUL_PETROLEO} !important; border-color: {COR_AZUL_PETROLEO} !important;
+    }}
+    button[kind="secondary"], [data-testid="stBaseButton-secondary"] {{
+        border-color: {COR_CINZA_BORDA} !important; color: {COR_AZUL_ESCURO} !important;
+    }}
+    button[kind="secondary"]:hover, [data-testid="stBaseButton-secondary"]:hover {{
+        border-color: {COR_AZUL_PETROLEO} !important; color: {COR_AZUL_PETROLEO} !important;
+    }}
+    /* Abas */
+    .stTabs [data-baseweb="tab-list"] {{ gap: 0.4rem; }}
+    .stTabs [data-baseweb="tab"] {{ font-weight: 600; }}
+    .stTabs [aria-selected="true"] {{ color: {COR_AZUL_ESCURO}; }}
+    /* Gráficos com moldura de card */
+    [data-testid="stPlotlyChart"] {{
+        background: {COR_BRANCO}; border: 1px solid {COR_CINZA_BORDA}; border-radius: 8px; padding: 6px;
+    }}
+    /* Expanders */
+    [data-testid="stExpander"] {{ background: {COR_BRANCO}; border-radius: 8px; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -195,22 +352,137 @@ def formatar_nome_responsavel(nome):
         return nome_formatado
     return nome_str.title()
 
-def criar_card_indicador_simples(valor, label, icone="📊"):
+def substituir_nome_sre(sre_nome):
+    """Nome de exibição do SRE (única definição — antes existia duplicada em duas abas)."""
+    if pd.isna(sre_nome):
+        return "Não informado"
+    sre_nome_str = str(sre_nome).lower()
+    for chaves, apelido in APELIDOS_SRE:
+        if any(c in sre_nome_str for c in chaves):
+            return apelido
+    return sre_nome
+
+def is_retorno_sim(valor):
+    if pd.isna(valor):
+        return False
+    return str(valor).strip().upper() in ['SIM', 'S', 'YES', 'Y', '1', 'TRUE']
+
+def converter_datas(serie):
+    """Converte as datas detectando o formato do arquivo.
+    - ISO (2026-03-04) é lido direto
+    - dd/mm/aaaa (padrão brasileiro) é o padrão quando há dúvida
+    - mm/dd/aaaa só é usado se o 2º número passar de 12 em alguma linha
+    Antes, pd.to_datetime sem dayfirst lia 03/04 como 4 de março."""
+    texto = serie.astype(str).str.strip()
+    amostra = texto[~texto.isin(['', 'nan', 'NaT', 'None'])].head(1000)
+    if amostra.empty:
+        return pd.to_datetime(serie, errors='coerce')
+    if amostra.str.match(r'^\d{4}-\d{1,2}-\d{1,2}').mean() > 0.5:
+        return pd.to_datetime(texto, errors='coerce', format='mixed')
+    partes = amostra.str.extract(r'^(\d{1,2})[/.\-](\d{1,2})[/.\-]\d{2,4}')
+    primeiro = pd.to_numeric(partes[0], errors='coerce')
+    segundo = pd.to_numeric(partes[1], errors='coerce')
+    dayfirst = not ((segundo > 12).any() and not (primeiro > 12).any())
+    return pd.to_datetime(texto, errors='coerce', dayfirst=dayfirst, format='mixed')
+
+def serie_diaria(datas):
+    """Contagem por dia INCLUINDO os dias úteis sem nenhum registro (valor 0).
+    Antes, o groupby só gerava os dias com registro, então 'Dias sem Sinc.' era sempre 0
+    e médias/percentis ficavam inflados."""
+    datas = pd.to_datetime(pd.Series(datas)).dropna().dt.normalize()
+    if datas.empty:
+        return pd.Series(dtype=int)
+    contagem = datas.value_counts().sort_index()
+    indice = pd.bdate_range(contagem.index.min(), contagem.index.max()).union(contagem.index)
+    return contagem.reindex(indice, fill_value=0).astype(int)
+
+def gradiente_azul(valores):
+    """Cores do azul-petróleo claro (menor) ao azul-escuro (maior).
+    Substitui o gradiente antigo, que ia de rgb(0,89,115) para rgb(0,89,115) (cor única)."""
+    valores = list(valores)
+    if not valores:
+        return []
+    mn, mx = min(valores), max(valores)
+    claro, escuro = (0x7F, 0xC4, 0xD0), (0x00, 0x59, 0x73)
+    cores = []
+    for v in valores:
+        t = 0.5 if mx == mn else (v - mn) / (mx - mn)
+        r, g, b = (int(claro[i] + t * (escuro[i] - claro[i])) for i in range(3))
+        cores.append(f'rgb({r}, {g}, {b})')
+    return cores
+
+def fmt_milhar(valor):
+    return f"{int(valor):,}".replace(",", ".")
+
+def criar_card_indicador_simples(valor, label, icone_nome="grafico", subtitulo=None, cor=None):
+    cor = cor or COR_AZUL_ESCURO
     if isinstance(valor, (int, float)):
-        valor_formatado = f"{valor:,}"
+        valor_formatado = fmt_milhar(valor)
     else:
         valor_formatado = str(valor)
-    return f'''
-    <div class="metric-card">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 1.8rem;">{icone}</span>
-            <div>
-                <div class="metric-value">{valor_formatado}</div>
-                <div class="metric-label">{label}</div>
-            </div>
-        </div>
-    </div>
-    '''
+    simbolo = icone(icone_nome, 24, cor) if icone_nome in ICONES else icone_nome
+    sub = (f'<div style="font-size:0.75rem; color:{COR_CINZA_TEXTO}; margin-top:0.2rem;">{subtitulo}</div>'
+           if subtitulo else '')
+    # HTML numa linha só: linhas em branco/indentadas fazem o Markdown do Streamlit
+    # transformar o resto do card em bloco de código (o "</div>" que aparecia na tela)
+    return (f'<div class="metric-card" style="border-left: 4px solid {cor};">'
+            f'<div style="display: flex; align-items: center; gap: 14px;">'
+            f'<div style="background: {cor}14; width: 48px; height: 48px; border-radius: 12px; '
+            f'display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{simbolo}</div>'
+            f'<div>'
+            f'<div class="metric-value" style="color:{cor};">{valor_formatado}</div>'
+            f'<div class="metric-label">{label}</div>'
+            f'{sub}'
+            f'</div></div></div>')
+
+def quebrar_rotulo(texto, largura=18):
+    """Quebra rótulos longos em linhas (<br>) para caber no eixo dos gráficos."""
+    palavras, linhas, atual = str(texto).split(), [], ""
+    for p in palavras:
+        if atual and len(atual) + 1 + len(p) > largura:
+            linhas.append(atual)
+            atual = p
+        else:
+            atual = f"{atual} {p}".strip()
+    if atual:
+        linhas.append(atual)
+    return "<br>".join(linhas[:3]) + ("…" if len(linhas) > 3 else "")
+
+
+def motivo_preenchido(serie):
+    """True onde há motivo informado. Funciona no pandas 2 (vazio vira 'nan' como texto)
+    e no pandas 3 (vazio continua NaN mesmo depois de .astype(str))."""
+    texto = serie.astype(str).str.strip()
+    return serie.notna() & ~texto.isin(['', 'nan', 'NaN', 'None', '<NA>', 'NaT'])
+
+
+def explodir_motivos(df_base):
+    """Uma linha por (card, motivo). Aceita vários motivos no mesmo card separados por ';'
+    (inclusive o formato ';#' das listas do SharePoint) e padroniza maiúsculas/espaços."""
+    if 'Motivo_Revisao' not in df_base.columns or df_base.empty:
+        return df_base.iloc[0:0].assign(Motivo=pd.Series(dtype=str))
+    texto = df_base['Motivo_Revisao'].astype(str).str.strip()
+    preenchido = motivo_preenchido(df_base['Motivo_Revisao'])
+    ex = df_base.loc[preenchido].copy()
+    ex['_entrada'] = ex.index  # identifica a linha original (um chamado pode aparecer em mais de uma linha)
+    if ex.empty:
+        return ex.assign(Motivo=pd.Series(dtype=str))
+    ex['Motivo'] = texto[preenchido].str.replace(';#', ';', regex=False).str.split(';')
+    # reset_index: o explode repete o índice, o que desalinha agrupamentos em algumas versões do pandas
+    ex = ex.explode('Motivo').reset_index(drop=True)
+    ex['Motivo'] = ex['Motivo'].astype(str).str.strip(' #').str.replace(r'\s+', ' ', regex=True)
+    ex = ex[ex['Motivo'].notna() & ~ex['Motivo'].isin(['', 'nan', 'None'])].reset_index(drop=True)
+    # "Fase errada" e "fase  errada" viram o mesmo motivo (mostra a grafia mais usada)
+    ex['_chave_motivo'] = ex['Motivo'].str.lower()
+    grafia = ex.groupby('_chave_motivo')['Motivo'].agg(lambda s: s.value_counts().index[0])
+    ex['Motivo'] = ex['_chave_motivo'].map(grafia)
+    return ex.drop(columns='_chave_motivo')
+
+
+def titulo_secao(texto, icone_nome):
+    """Título de seção (barra verde) com ícone SVG no lugar do emoji."""
+    return (f'<div class="section-title" style="display:flex; align-items:center; gap:10px;">'
+            f'{icone(icone_nome, 20, COR_AZUL_ESCURO)}<span>{texto}</span></div>')
 
 def calcular_hash_arquivo(conteudo):
     return hashlib.md5(conteudo).hexdigest()
@@ -219,11 +491,16 @@ def calcular_hash_arquivo(conteudo):
 # FUNÇÃO PRINCIPAL DE CARREGAMENTO DE DADOS
 # ============================================
 @st.cache_data(ttl=300)
-def carregar_dados(uploaded_file=None, caminho_arquivo=None):
+def carregar_dados(uploaded_file=None, caminho_arquivo=None, conteudo_bytes=None):
     """Carrega e processa os dados - Adaptado para o formato do arquivo ADMS.
     Suporta 'Revisões', 'Qtd. Revisões' e variações, criando Revisões_Total (soma das duas)."""
     try:
-        if uploaded_file:
+        if conteudo_bytes is not None:
+            try:
+                conteudo = conteudo_bytes.decode('utf-8-sig')
+            except UnicodeDecodeError:
+                conteudo = conteudo_bytes.decode('latin-1')
+        elif uploaded_file:
             conteudo_bytes = uploaded_file.getvalue()
             conteudo = conteudo_bytes.decode('utf-8-sig')
         elif caminho_arquivo and os.path.exists(caminho_arquivo):
@@ -252,10 +529,12 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
             return None, "Formato de arquivo inválido - cabeçalho não encontrado", None
 
         data_str = '\n'.join(lines[header_line:])
-        df = pd.read_csv(io.StringIO(data_str), quotechar='"')
+        df = pd.read_csv(io.StringIO(data_str), quotechar='"', dtype={'Chamado': str})
 
         # Remove espaços extras dos nomes das colunas
         df.columns = [str(c).strip() for c in df.columns]
+        if 'Chamado' in df.columns:
+            df['Chamado'] = df['Chamado'].astype(str).str.strip()
 
         # ============================================
         # MAPEAMENTO DE COLUNAS
@@ -324,7 +603,7 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         date_columns = ['Criado', 'Modificado', 'Vencimento']
         for col in date_columns:
             if col in df.columns:
-                df[col] = pd.to_datetime(df[col], errors='coerce')
+                df[col] = converter_datas(df[col])
 
         # CRIAÇÃO DE COLUNAS DE DATA
         if 'Criado' in df.columns:
@@ -358,10 +637,25 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None):
         if 'Sincronização' in df.columns:
             df['Sincronização'] = df['Sincronização'].astype(str).str.strip()
 
-        hash_conteudo = calcular_hash_arquivo(conteudo_bytes)
-        timestamp = time.time()
+        # COLUNAS PRÉ-CALCULADAS (usadas em várias abas; evita .apply dentro de loops)
+        if 'Status' in df.columns:
+            df['Status'] = df['Status'].astype('string').str.strip()
+            df['Sinc'] = df['Status'].eq('Sincronizado').fillna(False).astype(bool)
+        else:
+            df['Sinc'] = False
+        df['Com_Revisao'] = df['Revisões_Total'] > 0
+        if 'Retorno_Cliente' in df.columns:
+            df['Reaberto'] = df['Retorno_Cliente'].apply(is_retorno_sim)
+        if 'SRE' in df.columns:
+            df['SRE_Nome'] = df['SRE'].apply(substituir_nome_sre)
+        if 'Criado' in df.columns:
+            df['Data'] = df['Criado'].dt.normalize()
+            df['Mês_Label'] = df['Mês'].map(MESES_ABREV) + '/' + df['Criado'].dt.strftime('%y')
 
-        return df, "✅ Dados carregados com sucesso", f"{hash_conteudo}_{timestamp}"
+        # Hash só do conteúdo (antes incluía o timestamp e nunca batia na comparação)
+        hash_conteudo = calcular_hash_arquivo(conteudo.encode('utf-8'))
+
+        return df, "Dados carregados com sucesso", hash_conteudo
 
     except Exception as e:
         import traceback
@@ -376,271 +670,38 @@ def encontrar_arquivo_dados():
             return caminho
     return None
 
-def verificar_atualizacao_arquivo():
-    caminho_arquivo = encontrar_arquivo_dados()
-    if caminho_arquivo and os.path.exists(caminho_arquivo):
-        if 'ultima_modificacao' not in st.session_state:
-            st.session_state.ultima_modificacao = os.path.getmtime(caminho_arquivo)
-            return False
-        modificacao_atual = os.path.getmtime(caminho_arquivo)
-        if modificacao_atual > st.session_state.ultima_modificacao:
-            st.session_state.ultima_modificacao = modificacao_atual
-            return True
-    return False
-
 def verificar_e_atualizar_arquivo():
+    """True enquanto o CSV local tiver conteúdo diferente do que está carregado.
+    Corrigido: o hash agora é calculado do mesmo jeito nos dois lados, e o aviso
+    não 'some' na segunda chamada da mesma execução."""
+    if st.session_state.get('arquivo_mudou'):
+        return True
     caminho_arquivo = encontrar_arquivo_dados()
-    if caminho_arquivo and os.path.exists(caminho_arquivo):
-        if 'ultima_modificacao' not in st.session_state:
-            st.session_state.ultima_modificacao = os.path.getmtime(caminho_arquivo)
-            return False
-        modificacao_atual = os.path.getmtime(caminho_arquivo)
-        if (modificacao_atual > st.session_state.ultima_modificacao and
-            st.session_state.df_original is not None):
-            with open(caminho_arquivo, 'rb') as f:
-                conteudo_atual = f.read()
-            hash_atual = calcular_hash_arquivo(conteudo_atual)
-            if 'file_hash' not in st.session_state or hash_atual != st.session_state.file_hash:
-                st.session_state.ultima_modificacao = modificacao_atual
-                return True
+    if not (caminho_arquivo and os.path.exists(caminho_arquivo)):
+        return False
+    modificacao_atual = os.path.getmtime(caminho_arquivo)
+    if 'ultima_modificacao' not in st.session_state:
         st.session_state.ultima_modificacao = modificacao_atual
+        return False
+    if modificacao_atual > st.session_state.ultima_modificacao and st.session_state.df_original is not None:
+        st.session_state.ultima_modificacao = modificacao_atual
+        with open(caminho_arquivo, 'r', encoding='utf-8-sig') as f:
+            hash_atual = calcular_hash_arquivo(f.read().encode('utf-8'))
+        if hash_atual != st.session_state.get('file_hash'):
+            st.session_state.arquivo_mudou = True
+            return True
     return False
 
 def limpar_sessao_dados():
     keys_to_clear = ['df_original', 'df_filtrado', 'arquivo_atual',
                      'ultima_modificacao', 'file_hash', 'uploaded_file_name',
-                     'ultima_atualizacao']
+                     'ultima_atualizacao', 'arquivo_mudou']
     for key in keys_to_clear:
         if key in st.session_state:
             del st.session_state[key]
 
 def get_horario_brasilia():
-    try:
-        tz = timezone('America/Sao_Paulo')
-        return datetime.now(tz).strftime('%d/%m/%Y %H:%M:%S')
-    except:
-        return datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-
-def criar_popup_indicadores(df):
-    hoje = datetime.now()
-    mes_atual = hoje.month
-    ano_atual = hoje.year
-    nome_mes = hoje.strftime('%B').capitalize()
-    meses_pt = {
-        'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
-        'April': 'Abril', 'May': 'Maio', 'June': 'Junho',
-        'July': 'Julho', 'August': 'Agosto', 'September': 'Setembro',
-        'October': 'Outubro', 'November': 'Novembro', 'December': 'Dezembro'
-    }
-    nome_mes_pt = meses_pt.get(nome_mes, nome_mes)
-    df_mes = df[(df['Criado'].dt.month == mes_atual) &
-                (df['Criado'].dt.year == ano_atual)].copy()
-    total_cards_mes = len(df_mes)
-    cards_validados = len(df_mes[df_mes['Status'] == 'Sincronizado'])
-    cards_com_erro = len(df_mes[df_mes['Revisões_Total'] > 0])
-    cards_sem_erro = cards_validados - cards_com_erro
-    taxa_sucesso = (cards_validados / total_cards_mes * 100) if total_cards_mes > 0 else 0
-    taxa_erro = (cards_com_erro / cards_validados * 100) if cards_validados > 0 else 0
-    mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
-    ano_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
-    df_mes_anterior = df[(df['Criado'].dt.month == mes_anterior) &
-                         (df['Criado'].dt.year == ano_anterior)].copy()
-    cards_validados_anterior = len(df_mes_anterior[df_mes_anterior['Status'] == 'Sincronizado'])
-    if cards_validados_anterior > 0:
-        variacao = ((cards_validados - cards_validados_anterior) / cards_validados_anterior * 100)
-    else:
-        variacao = 0
-    if cards_com_erro == 0:
-        texto_principal = f"✅ **SRE VALIDOU {cards_validados} CARDS SEM RETORNO DE ERRO!**"
-        subtexto = f"Performance excepcional em {nome_mes_pt} - 100% de aprovação direta"
-        emoji_titulo = "🎯"
-        cor_destaque = COR_VERDE_ESCURO
-    elif taxa_erro <= 5:
-        texto_principal = f"⚡ **SRE VALIDOU {cards_validados} CARDS COM APENAS {cards_com_erro} AJUSTES**"
-        subtexto = f"Alta qualidade no mês de {nome_mes_pt} - Taxa de erro de apenas {taxa_erro:.1f}%"
-        emoji_titulo = "🚀"
-        cor_destaque = COR_AZUL_PETROLEO
-    else:
-        texto_principal = f"📊 **SRE VALIDOU {cards_validados} CARDS, {cards_com_erro} COM RETORNO**"
-        subtexto = f"Análise de {nome_mes_pt} - {taxa_sucesso:.1f}% de taxa de sucesso"
-        emoji_titulo = "📈"
-        cor_destaque = COR_LARANJA
-    popup_html = f'''
-    <div id="popupOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0, 0, 0, 0.7); z-index: 10000; display: flex;
-                justify-content: center; align-items: center; backdrop-filter: blur(3px);">
-        <div style="background: {COR_BRANCO}; width: 90%; max-width: 900px; max-height: 90vh;
-                    border-radius: 12px; padding: 0; overflow: hidden;
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out;">
-            <div style="background: linear-gradient(135deg, {COR_AZUL_ESCURO}, {COR_AZUL_PETROLEO});
-                        padding: 1.5rem 2rem; color: {COR_BRANCO};">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h2 style="margin: 0; font-size: 1.6rem;">{emoji_titulo} MANCHETE DO MÊS</h2>
-                        <p style="margin: 0.3rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">
-                        {nome_mes_pt} {ano_atual} | Resumo Executivo
-                        </p>
-                    </div>
-                    <button onclick="document.getElementById('popupOverlay').style.display='none'"
-                            style="background: rgba(255,255,255,0.2); color: {COR_BRANCO};
-                                   border: none; width: 36px; height: 36px;
-                                   border-radius: 50%; font-size: 1.3rem;
-                                   cursor: pointer;">×</button>
-                </div>
-            </div>
-            <div style="padding: 2rem;">
-                <div style="background: {cor_destaque}10; padding: 1.5rem; border-radius: 8px;
-                            border-left: 4px solid {cor_destaque}; margin-bottom: 2rem;">
-                    <h3 style="color: {COR_PRETO_SUAVE}; margin: 0 0 0.5rem 0; font-size: 1.1rem;">{texto_principal}</h3>
-                    <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.9rem;">{subtexto}</p>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem;">
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_ESCURO};">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px;
-                                        border-radius: 8px; display: flex; align-items: center;
-                                        justify-content: center; font-size: 1.3rem;">📋</div>
-                            <div>
-                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_ESCURO};">
-                                    {total_cards_mes}
-                                </div>
-                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">TOTAL DE CARDS</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERDE_ESCURO};">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; width: 45px; height: 45px;
-                                        border-radius: 8px; display: flex; align-items: center;
-                                        justify-content: center; font-size: 1.3rem;">✅</div>
-                            <div>
-                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_VERDE_ESCURO};">
-                                    {cards_validados}
-                                </div>
-                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">VALIDADOS PELO SRE</div>
-                            </div>
-                        </div>
-                        <p style="color: {COR_CINZA_TEXTO}; margin: 0.5rem 0 0 0; font-size: 0.75rem;">
-                        {variacao:+.1f}% vs mês anterior
-                        </p>
-                    </div>
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_AZUL_PETROLEO};">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: {COR_AZUL_PETROLEO}; color: {COR_BRANCO}; width: 45px; height: 45px;
-                                        border-radius: 8px; display: flex; align-items: center;
-                                        justify-content: center; font-size: 1.3rem;">🎯</div>
-                            <div>
-                                <div style="font-size: 1.8rem; font-weight: 700; color: {COR_AZUL_PETROLEO};">
-                                    {cards_sem_erro}
-                                </div>
-                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">SEM RETORNO DE ERRO</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border-top: 3px solid {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO};">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO};
-                                        color: {COR_BRANCO}; width: 45px; height: 45px;
-                                        border-radius: 8px; display: flex; align-items: center;
-                                        justify-content: center; font-size: 1.3rem;">{'⚠️' if cards_com_erro > 0 else '✅'}</div>
-                            <div>
-                                <div style="font-size: 1.8rem; font-weight: 700;
-                                            color: {COR_VERMELHO if cards_com_erro > 0 else COR_CINZA_TEXTO}">
-                                    {cards_com_erro}
-                                </div>
-                                <div style="color: {COR_CINZA_TEXTO}; font-size: 0.8rem;">COM RETORNO DE ERRO</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
-                    <div style="background: {COR_CINZA_FUNDO}; padding: 1rem; border-radius: 8px;">
-                        <h4 style="color: {COR_PRETO_SUAVE}; margin: 0 0 1rem 0;">📈 EVOLUÇÃO MENSAL</h4>
-                        <div style="height: 180px; display: flex; align-items: end; gap: 20px;">
-                            <div style="text-align: center; flex: 1;">
-                                <div style="background: {COR_CINZA_TEXTO}; height: {max(10, min(100, cards_validados_anterior/5))}px;
-                                            border-radius: 4px 4px 0 0;"></div>
-                                <div style="margin-top: 8px; font-size: 0.8rem; color: {COR_CINZA_TEXTO};">
-                                    {mes_anterior:02d}/{ano_anterior}
-                                </div>
-                                <div style="font-weight: bold; color: {COR_PRETO_SUAVE};">{cards_validados_anterior}</div>
-                            </div>
-                            <div style="text-align: center; flex: 1;">
-                                <div style="background: {COR_VERDE_ESCURO}; height: {max(10, min(100, cards_validados/5))}px;
-                                            border-radius: 4px 4px 0 0;"></div>
-                                <div style="margin-top: 8px; font-size: 0.8rem; color: {COR_CINZA_TEXTO};">
-                                    {mes_atual:02d}/{ano_atual}
-                                </div>
-                                <div style="font-weight: bold; color: {COR_PRETO_SUAVE};">{cards_validados}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="background: #FFF8E1; padding: 1rem; border-radius: 8px; border-left: 4px solid {COR_LARANJA};">
-                        <h4 style="color: {COR_LARANJA}; margin: 0 0 0.8rem 0;">💡 INSIGHTS</h4>
-                        <ul style="color: {COR_CINZA_TEXTO}; padding-left: 1.2rem; margin: 0; font-size: 0.85rem;">
-                            <li style="margin-bottom: 0.5rem;">
-                                {f"🎉 Recorde de validações!" if variacao > 20 else "📊 Performance consistente"}
-                            </li>
-                            <li style="margin-bottom: 0.5rem;">
-                                {f"✅ Qualidade excepcional" if cards_com_erro == 0 else f"🎯 {cards_sem_erro} cards perfeitos"}
-                            </li>
-                            <li>
-                                {f"🚀 Meta atingida: {taxa_sucesso:.0f}% de sucesso" if taxa_sucesso >= 90 else f"📈 Oportunidade: melhorar {100-taxa_sucesso:.0f}%"}
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div style="background: {COR_CINZA_FUNDO}; padding: 1rem 2rem; border-top: 1px solid {COR_CINZA_BORDA};">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.8rem;">
-                    📅 Atualizado em {hoje.strftime('%d/%m/%Y %H:%M')}
-                    </p>
-                    <button onclick="document.getElementById('popupOverlay').style.display='none'"
-                            style="background: {COR_AZUL_ESCURO}; color: {COR_BRANCO}; border: none;
-                                   padding: 0.5rem 1.2rem; border-radius: 6px;
-                                   cursor: pointer; font-weight: 500;">
-                        Fechar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <style>
-    @keyframes slideIn {{
-        from {{ transform: translateY(-30px); opacity: 0; }}
-        to {{ transform: translateY(0); opacity: 1; }}
-    }}
-    </style>
-    '''
-    return popup_html
-
-def calcular_taxa_retorno_sre(df, sre_nome):
-    df_sre = df[df['SRE'] == sre_nome].copy()
-    if len(df_sre) == 0:
-        return 0, 0, 0
-    total_cards = len(df_sre)
-    if 'Revisões_Total' in df_sre.columns:
-        cards_com_revisoes = len(df_sre[df_sre['Revisões_Total'] > 0])
-        taxa_retorno = (cards_com_revisoes / total_cards * 100) if total_cards > 0 else 0
-    else:
-        taxa_retorno = 0
-        cards_com_revisoes = 0
-    cards_sincronizados = len(df_sre[df_sre['Status'] == 'Sincronizado'])
-    return taxa_retorno, cards_com_revisoes, cards_sincronizados
-
-def analisar_tendencia_mensal_sre(df, sre_nome):
-    df_sre = df[df['SRE'] == sre_nome].copy()
-    if len(df_sre) == 0 or 'Criado' not in df_sre.columns:
-        return None
-    df_sre['Mes_Ano'] = df_sre['Criado'].dt.strftime('%Y-%m')
-    sinc_mes = df_sre[df_sre['Status'] == 'Sincronizado'].groupby('Mes_Ano').size().reset_index()
-    sinc_mes.columns = ['Mes_Ano', 'Sincronizados']
-    total_mes = df_sre.groupby('Mes_Ano').size().reset_index()
-    total_mes.columns = ['Mes_Ano', 'Total']
-    dados_mes = pd.merge(total_mes, sinc_mes, on='Mes_Ano', how='left').fillna(0)
-    dados_mes = dados_mes.sort_values('Mes_Ano')
-    return dados_mes
+    return agora().strftime('%d/%m/%Y %H:%M:%S')
 
 # ============================================
 # FUNÇÕES DO MAPA
@@ -694,7 +755,7 @@ def criar_mapa_folium(df_mapa):
     try:
         import folium
     except ImportError:
-        st.error("⚠️ Biblioteca 'folium' não instalada. Execute: pip install folium")
+        st.error("Biblioteca 'folium' não instalada. Execute: pip install folium", icon=":material/error:")
         return None
     if df_mapa.empty:
         return None
@@ -722,11 +783,12 @@ def criar_mapa_folium(df_mapa):
         r = raio(row['sincronismos'])
         rank = rank_map[row['empresa']]
         pct = row['sincronismos'] / total * 100 if total > 0 else 0
-        medal = {1: '🥇', 2: '🥈', 3: '🥉'}.get(rank, f'#{rank}')
+        medal = selo_posicao(rank, 22)
         tooltip_html = f"""
-        <div style="font-family: 'Segoe UI', sans-serif; min-width: 220px; padding: 4px;">
+        <div style="font-family: 'Inter', 'Segoe UI', sans-serif; min-width: 220px; padding: 4px;">
             <div style="background: {COR_AZUL_ESCURO}; color: white; padding: 10px 14px;
-                border-radius: 8px 8px 0 0; font-weight: 700; font-size: 14px;">
+                border-radius: 8px 8px 0 0; font-weight: 700; font-size: 14px;
+                display:flex; align-items:center; gap:8px;">
                 {medal} {row['empresa_nome']}</div>
             <div style="background: white; border: 1px solid #ddd; border-top: none;
                 border-radius: 0 0 8px 8px; padding: 12px 14px;">
@@ -744,7 +806,7 @@ def criar_mapa_folium(df_mapa):
                     <tr><td style="color:{COR_CINZA_TEXTO}; padding:4px 0;">% do Total</td>
                         <td style="font-weight:600; text-align:right; color:{COR_AZUL_PETROLEO};">{pct:.1f}%</td></tr>
                     <tr><td style="color:{COR_CINZA_TEXTO}; padding:4px 0;">Ranking</td>
-                        <td style="font-weight:600; text-align:right;">{medal} {rank}º lugar</td></tr>
+                        <td style="font-weight:600; text-align:right;">{rank}º lugar</td></tr>
                 </table>
             </div>
         </div>
@@ -774,32 +836,32 @@ def criar_mapa_folium(df_mapa):
     legenda_html = f"""
     <div style="position: fixed; bottom: 30px; left: 20px; z-index: 9999;
         background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        padding: 14px 20px; font-family: 'Segoe UI', sans-serif; min-width: 210px;
+        padding: 14px 20px; font-family: 'Inter', 'Segoe UI', sans-serif; min-width: 210px;
         border: 1px solid {COR_CINZA_BORDA};">
         <div style="font-weight:800; font-size:13px; color:{COR_PRETO_SUAVE}; margin-bottom:12px; letter-spacing:0.5px;">
-            📊 VOLUME DE SINCRONIZAÇÕES</div>
+            <span style="display:inline-flex; align-items:center; gap:6px;">{icone('grafico', 15, COR_AZUL_ESCURO)} VOLUME DE SINCRONIZAÇÕES</span></div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <div style="width: 140px; height: 12px; border-radius: 6px;
                 background: linear-gradient(to right, {COR_AZUL_PETROLEO}, {COR_LARANJA}, {COR_VERMELHO});
                 border: 1px solid #ddd;"></div></div>
         <div style="display:flex; justify-content:space-between; font-size:10px; color:{COR_CINZA_TEXTO}; margin-bottom:12px;">
-            <span>⬅️ Menor volume</span><span>Maior volume ➡️</span></div>
+            <span>Menor volume</span><span>Maior volume</span></div>
         <div style="border-top:1px solid {COR_CINZA_BORDA}; padding-top:10px; font-size:10px; color:{COR_CINZA_TEXTO};">
-            <div>🔍 Passe o mouse sobre uma bolha</div><div>para ver os detalhes completos</div></div>
+            <div style="display:flex; gap:6px; align-items:flex-start;">{icone('info', 13, COR_CINZA_TEXTO)}
+            <span>Passe o mouse sobre uma bolha<br>para ver os detalhes completos</span></div></div>
     </div>
     """
     m.get_root().html.add_child(folium.Element(legenda_html))
     if len(df_bolhas_sorted) >= 1:
         top3_rows = df_bolhas_sorted.head(3)
         top3_html_items = ""
-        medals = ['🥇', '🥈', '🥉']
         for i, (_, row) in enumerate(top3_rows.iterrows()):
             pct_t = row['sincronismos'] / total * 100 if total > 0 else 0
             cor_top = cor_gradiente_folium(row['sincronismos'], min_sinc, max_sinc)
             top3_html_items += f"""
             <div style="display:flex; align-items:center; gap:10px; padding: 8px 0;
                 border-bottom: 1px solid {COR_CINZA_BORDA};">
-                <span style="font-size:18px;">{medals[i]}</span>
+                {selo_posicao(i + 1, 24)}
                 <div style="flex:1;">
                     <div style="font-weight:700; font-size:12px; color:{COR_PRETO_SUAVE};">{row['empresa_nome'][:25]}</div>
                     <div style="font-size:10px; color:{COR_CINZA_TEXTO};">{row['estado']}</div>
@@ -813,10 +875,10 @@ def criar_mapa_folium(df_mapa):
         painel_html = f"""
         <div style="position: fixed; top: 90px; right: 20px; z-index: 9999;
             background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            padding: 14px 18px; font-family: 'Segoe UI', sans-serif; min-width: 240px;
+            padding: 14px 18px; font-family: 'Inter', 'Segoe UI', sans-serif; min-width: 240px;
             border: 1px solid {COR_CINZA_BORDA};">
             <div style="font-weight:800; font-size:13px; color:{COR_PRETO_SUAVE}; margin-bottom:10px; letter-spacing:0.5px;">
-                🏆 TOP EMPRESAS</div>
+                <span style="display:inline-flex; align-items:center; gap:6px;">{icone('premio', 15, COR_AZUL_ESCURO)} TOP EMPRESAS</span></div>
             {top3_html_items}
             <div style="padding-top:10px; font-size:11px; color:{COR_CINZA_TEXTO}; text-align:center; border-top:1px solid {COR_CINZA_BORDA}; margin-top:5px;">
                 <strong style="color:{COR_AZUL_ESCURO};">Total: {total:,}</strong> sincronizações</div>
@@ -848,9 +910,9 @@ def criar_grafico_barras(df_mapa):
         percentual = (row['sincronismos'] / total * 100) if total > 0 else 0
         fig.add_trace(go.Bar(
             x=[row['sincronismos']], y=[f"{row['empresa']} - {row['empresa_nome'][:20]}"],
-            orientation='h', text=[f"{row['sincronismos']:,} ({percentual:.1f}%)"],
-            textposition='outside', marker_color=cor,
-            marker_line_color=COR_AZUL_ESCURO, marker_line_width=1,
+            orientation='h', text=[f"{fmt_milhar(row['sincronismos'])}  ·  " + f"{percentual:.1f}%".replace('.', ',')],
+            textposition='outside', cliponaxis=False, marker_color=cor,
+            marker_line_width=0,
             hovertemplate=f"<b>{row['empresa_nome']}</b><br>" +
                           f"Sincronizações: {row['sincronismos']:,}<br>" +
                           f"Percentual: {percentual:.1f}%<br>" +
@@ -859,7 +921,7 @@ def criar_grafico_barras(df_mapa):
             name=row['empresa']
         ))
     fig.update_layout(
-        title=dict(text="<b>RANKING </b>", font=dict(size=16, color=COR_AZUL_ESCURO), x=0.5),
+        title=dict(text="<b>Ranking de sincronizações</b>", font=dict(size=15, color=COR_AZUL_ESCURO), x=0.01),
         xaxis_title="Número de Sincronizações", yaxis_title="", height=450, showlegend=False,
         plot_bgcolor=COR_BRANCO,
         xaxis=dict(gridcolor=COR_CINZA_BORDA, tickformat="d", title_font=dict(size=12)),
@@ -873,12 +935,12 @@ def criar_grafico_barras(df_mapa):
 # ============================================
 with st.sidebar:
     st.markdown(f"""
-    <div style="text-align: center; padding: 1rem 0;">
-        <h3 style="color: {COR_AZUL_ESCURO}; margin: 0;">⚙️ Painel de Controle</h3>
-        <p style="color: {COR_CINZA_TEXTO}; margin: 0; font-size: 0.85rem;">Filtros e Configurações</p>
+    <div style="text-align: center; padding: 0.6rem 0 0.2rem 0;">
+        <h3 style="color: {COR_AZUL_ESCURO}; margin: 0; display:inline-flex; align-items:center; gap:8px;">
+            {icone('ajustes', 22, COR_AZUL_ESCURO)} Painel de Controle</h3>
+        <p style="color: {COR_CINZA_TEXTO}; margin: 0.2rem 0 0 0; font-size: 0.85rem;">Filtros e Configurações</p>
     </div>
     """, unsafe_allow_html=True)
-    st.markdown("---")
     if 'df_original' not in st.session_state:
         st.session_state.df_original = None
         st.session_state.df_filtrado = None
@@ -887,77 +949,81 @@ with st.sidebar:
         st.session_state.uploaded_file_name = None
         st.session_state.ultima_atualizacao = None
     if st.session_state.df_original is not None:
-        with st.container():
-            st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-            st.markdown("**🔍 Filtros de Análise**")
+        with st.container(border=True):
+            st.markdown("**:material/filter_alt: Filtros de Análise**")
             df = st.session_state.df_original.copy()
             if 'Ano' in df.columns:
                 anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
                 if anos_disponiveis:
                     anos_opcoes = ['Todos os Anos'] + list(anos_disponiveis)
-                    ano_selecionado = st.selectbox("📅 Ano", options=anos_opcoes, key="filtro_ano")
+                    ano_selecionado = st.selectbox(":material/calendar_month: Ano", options=anos_opcoes, key="filtro_ano")
                     if ano_selecionado != 'Todos os Anos':
                         df = df[df['Ano'] == int(ano_selecionado)]
             if 'Mês' in df.columns:
                 meses_disponiveis = sorted(df['Mês'].dropna().unique().astype(int))
                 if meses_disponiveis:
                     meses_opcoes = ['Todos os Meses'] + [str(m) for m in meses_disponiveis]
-                    mes_selecionado = st.selectbox("📆 Mês", options=meses_opcoes, key="filtro_mes")
+                    mes_selecionado = st.selectbox(
+                        ":material/date_range: Mês", options=meses_opcoes, key="filtro_mes",
+                        format_func=lambda m: m if m == 'Todos os Meses' else MESES_NOMES[int(m)])
                     if mes_selecionado != 'Todos os Meses':
                         df = df[df['Mês'] == int(mes_selecionado)]
             if 'Responsável_Formatado' in df.columns:
                 responsaveis = ['Todos'] + sorted(df['Responsável_Formatado'].dropna().unique())
-                responsavel_selecionado = st.selectbox("👤 Responsável", options=responsaveis, key="filtro_responsavel")
+                responsavel_selecionado = st.selectbox(":material/person: Responsável", options=responsaveis, key="filtro_responsavel")
                 if responsavel_selecionado != 'Todos':
                     df = df[df['Responsável_Formatado'] == responsavel_selecionado]
-            busca_chamado = st.text_input("🔎 Buscar Chamado", placeholder="Digite número do chamado...", key="busca_chamado")
+            busca_chamado = st.text_input(":material/search: Buscar Chamado", placeholder="Digite número do chamado...", key="busca_chamado")
             if busca_chamado:
-                df = df[df['Chamado'].astype(str).str.contains(busca_chamado, na=False)]
+                df = df[df['Chamado'].astype(str).str.contains(busca_chamado.strip(), na=False, regex=False)]
             if 'Status' in df.columns:
                 status_opcoes = ['Todos'] + sorted(df['Status'].dropna().unique())
-                status_selecionado = st.selectbox("📊 Status", options=status_opcoes, key="filtro_status")
+                status_selecionado = st.selectbox(":material/flag: Status", options=status_opcoes, key="filtro_status")
                 if status_selecionado != 'Todos':
                     df = df[df['Status'] == status_selecionado]
             if 'Tipo_Chamado' in df.columns:
                 tipos = ['Todos'] + sorted(df['Tipo_Chamado'].dropna().unique())
-                tipo_selecionado = st.selectbox("📝 Tipo de Chamado", options=tipos, key="filtro_tipo")
+                tipo_selecionado = st.selectbox(":material/category: Tipo de Chamado", options=tipos, key="filtro_tipo")
                 if tipo_selecionado != 'Todos':
                     df = df[df['Tipo_Chamado'] == tipo_selecionado]
             if 'Empresa' in df.columns:
                 empresas = ['Todas'] + sorted(df['Empresa'].dropna().unique())
-                empresa_selecionada = st.selectbox("🏢 Empresa", options=empresas, key="filtro_empresa")
+                empresa_selecionada = st.selectbox(":material/apartment: Empresa", options=empresas, key="filtro_empresa")
                 if empresa_selecionada != 'Todas':
                     df = df[df['Empresa'] == empresa_selecionada]
             if 'SRE' in df.columns:
                 sres = ['Todos'] + sorted(df['SRE'].dropna().unique())
-                sre_selecionado = st.selectbox("🔧 SRE Responsável", options=sres, key="filtro_sre")
+                sre_selecionado = st.selectbox(
+                    ":material/engineering: SRE Responsável", options=sres, key="filtro_sre",
+                    format_func=lambda v: v if v == 'Todos' else substituir_nome_sre(v))
                 if sre_selecionado != 'Todos':
                     df = df[df['SRE'] == sre_selecionado]
             st.session_state.df_filtrado = df
-            st.markdown(f"**📈 Registros filtrados:** {len(df):,}")
-            st.markdown('</div>', unsafe_allow_html=True)
-    with st.container():
-        st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-        st.markdown("**🔄 Controles de Atualização**")
+            st.markdown(f"**:material/database: Registros filtrados:** {fmt_milhar(len(df))}")
+    with st.container(border=True):
+        st.markdown("**:material/sync: Controles de Atualização**")
         if st.session_state.df_original is not None:
             arquivo_atual = st.session_state.arquivo_atual
             if arquivo_atual and isinstance(arquivo_atual, str) and os.path.exists(arquivo_atual):
                 tamanho_kb = os.path.getsize(arquivo_atual) / 1024
                 ultima_mod = datetime.fromtimestamp(os.path.getmtime(arquivo_atual))
                 st.markdown(f"""
-                <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="margin: 0 0 0.3rem 0; font-weight: 600;">📄 Arquivo atual:</p>
+                <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;
+                            border: 1px solid {COR_CINZA_BORDA};">
+                    <p style="margin: 0 0 0.3rem 0; font-weight: 600; display:flex; align-items:center; gap:6px;">
+                        {icone('arquivo', 16, COR_AZUL_ESCURO)} Arquivo atual:</p>
                     <p style="margin: 0; font-size: 0.85rem; color: {COR_PRETO_SUAVE};">{os.path.basename(arquivo_atual)}</p>
-                    <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: {COR_CINZA_TEXTO};">
-                    📏 {tamanho_kb:.1f} KB | 📅 {ultima_mod.strftime('%d/%m/%Y %H:%M')}
+                    <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: {COR_CINZA_TEXTO}; display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+                    {icone('base', 12, COR_CINZA_TEXTO)} {tamanho_kb:.1f} KB &nbsp;|&nbsp; {icone('calendario', 12, COR_CINZA_TEXTO)} {ultima_mod.strftime('%d/%m/%Y %H:%M')}
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
                 if verificar_e_atualizar_arquivo():
-                    st.warning("⚠️ O arquivo local foi modificado! Clique em 'Recarregar Local' para atualizar.")
-            col_btn1, col_btn2 = st.columns(2)
+                    st.warning("O arquivo local foi modificado! Clique em 'Recarregar Local' para atualizar.",
+                               icon=":material/warning:")
+            col_btn1, col_btn2 = st.container(), st.container()
             with col_btn1:
-                if st.button("🔄 Recarregar Local", use_container_width=True, type="primary",
+                if st.button("Recarregar Local", icon=":material/refresh:", use_container_width=True, type="primary",
                            help="Recarrega os dados do arquivo local", key="btn_recarregar"):
                     caminho_atual = encontrar_arquivo_dados()
                     if caminho_atual and os.path.exists(caminho_atual):
@@ -972,31 +1038,34 @@ with st.sidebar:
                                     st.session_state.file_hash = hash_conteudo
                                     st.session_state.ultima_atualizacao = get_horario_brasilia()
                                     st.session_state.ultima_modificacao = os.path.getmtime(caminho_atual)
-                                    st.success(f"✅ Dados atualizados! {len(df_atualizado):,} registros")
+                                    st.session_state.arquivo_mudou = False
+                                    st.success(f"Dados atualizados! {fmt_milhar(len(df_atualizado))} registros",
+                                               icon=":material/check_circle:")
                                     time.sleep(1)
                                     st.rerun()
                                 else:
-                                    st.error(f"❌ Erro ao recarregar: {status}")
+                                    st.error(f"Erro ao recarregar: {status}", icon=":material/error:")
                             except Exception as e:
-                                st.error(f"❌ Erro: {str(e)}")
+                                st.error(f"Erro: {str(e)}", icon=":material/error:")
                     else:
-                        st.error("❌ Arquivo local não encontrado.")
+                        st.error("Arquivo local não encontrado.", icon=":material/error:")
             with col_btn2:
-                if st.button("🗑️ Limpar Tudo", use_container_width=True, type="secondary",
+                if st.button("Limpar Tudo", icon=":material/delete:", use_container_width=True, type="secondary",
                            help="Limpa todos os dados e cache", key="btn_limpar"):
                     st.cache_data.clear()
                     limpar_sessao_dados()
-                    st.success("✅ Dados e cache limpos!")
+                    st.success("Dados e cache limpos!", icon=":material/check_circle:")
                     time.sleep(1)
                     st.rerun()
             st.markdown("---")
-        st.markdown("**📤 Importar Dados**")
+        st.markdown("**:material/upload_file: Importar Dados**")
         if st.session_state.df_original is not None:
-            ultima_atualizacao = st.session_state.get('ultima_atualizacao', get_horario_brasilia())
+            ultima_atualizacao = st.session_state.get('ultima_atualizacao') or get_horario_brasilia()
             st.markdown(f"""
             <div class="status-success">
-                <strong>📊 Status atual:</strong><br>
-                <small>Registros: {len(st.session_state.df_original):,}</small><br>
+                <strong style="display:inline-flex; align-items:center; gap:6px;">
+                    {icone('check', 15, COR_VERDE_ESCURO)} Status atual:</strong><br>
+                <small>Registros: {fmt_milhar(len(st.session_state.df_original))}</small><br>
                 <small>Atualizado: {ultima_atualizacao}</small>
             </div>
             """, unsafe_allow_html=True)
@@ -1005,17 +1074,15 @@ with st.sidebar:
                                          help="Faça upload de um novo arquivo CSV para substituir os dados atuais",
                                          label_visibility="collapsed")
         if uploaded_file is not None:
-            current_hash = calcular_hash_arquivo(uploaded_file.getvalue())
             file_details = {"Nome": uploaded_file.name, "Tamanho": f"{uploaded_file.size / 1024:.1f} KB"}
-            st.write("📄 Detalhes do arquivo:")
+            st.write(":material/description: Detalhes do arquivo:")
             st.json(file_details)
-            if st.button("📥 Processar Arquivo", use_container_width=True, type="primary", key="btn_processar"):
+            if st.button("Processar Arquivo", icon=":material/upload:", use_container_width=True, type="primary",
+                         key="btn_processar"):
                 with st.spinner('Processando novo arquivo...'):
-                    temp_path = f"temp_{uploaded_file.name}"
-                    with open(temp_path, 'wb') as f:
-                        f.write(uploaded_file.getbuffer())
-                    df_novo, status, hash_conteudo = carregar_dados(caminho_arquivo=temp_path)
-                    os.remove(temp_path)
+                    # Lê direto da memória (antes gravava um temp_*.csv na pasta do app,
+                    # o que podia dar conflito com dois usuários ao mesmo tempo)
+                    df_novo, status, hash_conteudo = carregar_dados(conteudo_bytes=uploaded_file.getvalue())
                     if df_novo is not None:
                         st.session_state.df_original = df_novo
                         st.session_state.df_filtrado = df_novo.copy()
@@ -1023,14 +1090,14 @@ with st.sidebar:
                         st.session_state.file_hash = hash_conteudo
                         st.session_state.uploaded_file_name = uploaded_file.name
                         st.session_state.ultima_atualizacao = get_horario_brasilia()
+                        st.session_state.arquivo_mudou = False
                         if 'filtros_aplicados' in st.session_state:
                             del st.session_state.filtros_aplicados
-                        st.success(f"✅ {len(df_novo):,} registros carregados!")
+                        st.success(f"{fmt_milhar(len(df_novo))} registros carregados!", icon=":material/check_circle:")
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error(f"❌ {status}")
-        st.markdown('</div>', unsafe_allow_html=True)
+                        st.error(status, icon=":material/error:")
     if st.session_state.df_original is None:
         caminho_encontrado = encontrar_arquivo_dados()
         if caminho_encontrado:
@@ -1046,7 +1113,7 @@ with st.sidebar:
                         st.session_state.ultima_modificacao = os.path.getmtime(caminho_encontrado)
                     st.rerun()
                 else:
-                    st.error(f"❌ {status}")
+                    st.error(status, icon=":material/error:")
 
 # ============================================
 # HEADER - ESTILO GRADIENTE AZUL PETRÓLEO
@@ -1056,14 +1123,14 @@ st.markdown(f"""
     background: linear-gradient(135deg, {COR_AZUL_PETROLEO} 0%, {COR_AZUL_ESCURO} 100%);
     padding: 1.5rem 2rem;
     margin-bottom: 1.5rem;
-    border-radius: 0;
+    border-radius: 12px;
     box-shadow: 0 4px 15px rgba(2, 138, 159, 0.3);
 ">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
         <div>
             <h1 style="color: {COR_BRANCO}; margin: 0; font-size: 1.6rem; font-weight: 600;
                 letter-spacing: -0.3px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-                📊 ESTEIRA SRE (Site Reliability Engineering)
+                <span style="display:inline-flex; align-items:center; gap:10px;">{icone('atividade', 28, COR_BRANCO, 2.4)} ESTEIRA SRE (Site Reliability Engineering)</span>
             </h1>
             <p style="color: rgba(255,255,255,0.9); margin: 0.3rem 0 0 0; font-size: 0.85rem; font-weight: 400;">
                 Acompanhamento das validações da EAC | EMR | EMS | EMT | EPB | ERO | ESE | ESS | ETO
@@ -1074,359 +1141,63 @@ st.markdown(f"""
                 Dashboard de Performance
             </p>
             <p style="color: rgba(255,255,255,0.8); margin: 0.2rem 0 0 0; font-size: 0.75rem;">
-                v5.5 | Sistema de Performance SRE
+                v5.6 | Sistema de Performance SRE
             </p>
             <p style="color: rgba(255,255,255,0.7); margin: 0.3rem 0 0 0; font-size: 0.7rem; font-weight: 500;">
-                {datetime.now().strftime('%d/%m/%Y')}
+                {agora().strftime('%d/%m/%Y')}
             </p>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ============================================
-# BOTÕES MANCHETE
-# ============================================
-if st.session_state.df_original is not None:
-    if 'show_popup' not in st.session_state:
-        st.session_state.show_popup = False
-    col_btn_manchete, col_espaco = st.columns([2, 10])
-    with col_btn_manchete:
-        if st.button("📰 **VER MANCHETE**", help="Clique para ver os principais indicadores do mês",
-                    type="secondary", use_container_width=True, key="btn_manchete"):
-            st.session_state.show_popup = True
-
 if st.session_state.df_original is not None:
     if verificar_e_atualizar_arquivo():
-        st.info("🔔 O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.")
-
-if st.session_state.df_original is not None and st.session_state.show_popup:
-    df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
-    with st.expander("📰 MANCHETE - INDICADORES PRINCIPAIS", expanded=True):
-        st.markdown("### 📰 MANCHETE - RELATÓRIO ")
-        st.markdown("---")
-        st.markdown("#### 📅 SELECIONE O PERÍODO")
-        col_periodo1, col_periodo2 = st.columns(2)
-        with col_periodo1:
-            periodo_opcoes = ["Mês Atual", "Últimos 30 dias", "Últimos 90 dias",
-                              "Este Ano", "Ano Passado", "Todo o Período"]
-            periodo_selecionado = st.selectbox("Período de análise:", options=periodo_opcoes,
-                                               index=0, key="popup_periodo")
-        with col_periodo2:
-            if 'Ano' in df.columns:
-                anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
-                if anos_disponiveis:
-                    ano_especifico = st.selectbox("Ou selecione um ano:",
-                                                  options=['Selecionar ano...'] + list(anos_disponiveis),
-                                                  key="popup_ano")
-                else:
-                    ano_especifico = 'Selecionar ano...'
-            else:
-                ano_especifico = 'Selecionar ano...'
-        hoje = datetime.now()
-        df_filtrado_periodo = df.copy()
-        periodo_titulo = ""
-        if periodo_selecionado == "Mês Atual":
-            mes_atual = hoje.month
-            ano_atual = hoje.year
-            df_filtrado_periodo = df[(df['Criado'].dt.month == mes_atual) &
-                                    (df['Criado'].dt.year == ano_atual)].copy()
-            periodo_titulo = f"Mês Atual ({mes_atual:02d}/{ano_atual})"
-        elif periodo_selecionado == "Últimos 30 dias":
-            data_limite = hoje - timedelta(days=30)
-            df_filtrado_periodo = df[df['Criado'] >= data_limite].copy()
-            periodo_titulo = "Últimos 30 dias"
-        elif periodo_selecionado == "Últimos 90 dias":
-            data_limite = hoje - timedelta(days=90)
-            df_filtrado_periodo = df[df['Criado'] >= data_limite].copy()
-            periodo_titulo = "Últimos 90 dias"
-        elif periodo_selecionado == "Este Ano":
-            ano_atual = hoje.year
-            df_filtrado_periodo = df[df['Criado'].dt.year == ano_atual].copy()
-            periodo_titulo = f"Este Ano ({ano_atual})"
-        elif periodo_selecionado == "Ano Passado":
-            ano_passado = hoje.year - 1
-            df_filtrado_periodo = df[df['Criado'].dt.year == ano_passado].copy()
-            periodo_titulo = f"Ano Passado ({ano_passado})"
-        elif periodo_selecionado == "Todo o Período":
-            periodo_titulo = "Todo o Período Disponíve"
-        elif ano_especifico != 'Selecionar ano...':
-            df_filtrado_periodo = df[df['Criado'].dt.year == int(ano_especifico)].copy()
-            periodo_titulo = f"Ano {ano_especifico}"
-        total_cards = len(df_filtrado_periodo)
-        validados = len(df_filtrado_periodo[df_filtrado_periodo['Status'] == 'Sincronizado'])
-        com_erro = len(df_filtrado_periodo[df_filtrado_periodo['Revisões_Total'] > 0])
-        sem_erro = validados - com_erro
-        taxa_sucesso = (validados / total_cards * 100) if total_cards > 0 else 0
-        taxa_erro = (com_erro / validados * 100) if validados > 0 else 0
-        df_anterior = pd.DataFrame()
-        periodo_anterior_titulo = ""
-        try:
-            if periodo_selecionado == "Mês Atual":
-                mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
-                ano_anterior = ano_atual if mes_atual > 1 else ano_atual - 1
-                df_anterior = df[(df['Criado'].dt.month == mes_anterior) &
-                                (df['Criado'].dt.year == ano_anterior)].copy()
-                periodo_anterior_titulo = f"{mes_anterior:02d}/{ano_anterior}"
-            elif periodo_selecionado == "Últimos 30 dias":
-                data_inicio_anterior = hoje - timedelta(days=60)
-                data_fim_anterior = hoje - timedelta(days=30)
-                df_anterior = df[(df['Criado'] >= data_inicio_anterior) &
-                                (df['Criado'] < data_fim_anterior)].copy()
-                periodo_anterior_titulo = "30 dias anteriores"
-            elif periodo_selecionado == "Últimos 90 dias":
-                data_inicio_anterior = hoje - timedelta(days=180)
-                data_fim_anterior = hoje - timedelta(days=90)
-                df_anterior = df[(df['Criado'] >= data_inicio_anterior) &
-                                (df['Criado'] < data_fim_anterior)].copy()
-                periodo_anterior_titulo = "90 dias anteriores"
-            elif periodo_selecionado == "Este Ano":
-                ano_anterior = ano_atual - 1
-                df_anterior = df[df['Criado'].dt.year == ano_anterior].copy()
-                periodo_anterior_titulo = f"Ano {ano_anterior}"
-            elif periodo_selecionado == "Ano Passado":
-                ano_anterior_2 = ano_passado - 1
-                df_anterior = df[df['Criado'].dt.year == ano_anterior_2].copy()
-                periodo_anterior_titulo = f"Ano {ano_anterior_2}"
-        except Exception as e:
-            df_anterior = pd.DataFrame()
-        if not df_anterior.empty:
-            total_cards_anterior = len(df_anterior)
-            validados_anterior = len(df_anterior[df_anterior['Status'] == 'Sincronizado'])
-            com_erro_anterior = len(df_anterior[df_anterior['Revisões_Total'] > 0])
-            taxa_sucesso_anterior = (validados_anterior / total_cards_anterior * 100) if total_cards_anterior > 0 else 0
-        else:
-            total_cards_anterior = 0
-            validados_anterior = 0
-            com_erro_anterior = 0
-            taxa_sucesso_anterior = 0
-        st.markdown(f"#### 🎯 DESTAQUE DO PERÍODO: {periodo_titulo}")
-        if total_cards == 0:
-            st.error(f"⚠️ **NENHUM DADO DISPONÍVEL** para {periodo_titulo.lower()}")
-        elif com_erro == 0 and validados > 0:
-            st.success(f"**✅ SRE VALIDOU {validados} CARDS SEM RETORNO DE ERRO!**")
-            st.info(f"Performance excepcional - 100% de aprovação direta")
-        elif taxa_erro <= 5:
-            st.warning(f"**⚡ SRE VALIDOU {validados} CARDS COM APENAS {com_erro} AJUSTES**")
-            st.info(f"Alta qualidade - Taxa de erro: {taxa_erro:.1f}%")
-        else:
-            st.warning(f"**📊 SRE VALIDOU {validados} CARDS, {com_erro} COM RETORNO**")
-            st.info(f"Taxa de sucesso: {taxa_sucesso:.1f}% | {sem_erro} cards perfeitos")
-        st.markdown("---")
-        if not df_anterior.empty and total_cards_anterior > 0:
-            st.markdown("#### 📈 COMPARAÇÃO COM PERÍODO ANTERIOR")
-            periodos = [periodo_anterior_titulo, periodo_titulo]
-            cards_totais = [total_cards_anterior, total_cards]
-            cards_validados = [validados_anterior, validados]
-            taxa_sucesso_vals = [taxa_sucesso_anterior, taxa_sucesso]
-            fig_comparativo = go.Figure()
-            fig_comparativo.add_trace(go.Bar(x=periodos, y=cards_totais, name='Total Cards',
-                                             marker_color=COR_AZUL_ESCURO, text=cards_totais,
-                                             textposition='outside', textfont=dict(size=10), width=0.35))
-            fig_comparativo.add_trace(go.Bar(x=periodos, y=cards_validados, name='Validados',
-                                             marker_color=COR_VERDE_ESCURO, text=cards_validados,
-                                             textposition='outside', textfont=dict(size=10), width=0.35))
-            fig_comparativo.add_trace(go.Scatter(x=periodos, y=taxa_sucesso_vals, name='Taxa Sucesso',
-                                                 yaxis='y2', mode='lines+markers+text',
-                                                 line=dict(color=COR_LARANJA, width=2),
-                                                 marker=dict(size=8, color=COR_LARANJA),
-                                                 text=[f"{v:.1f}%" for v in taxa_sucesso_vals],
-                                                 textposition='top center', textfont=dict(size=9)))
-            fig_comparativo.update_layout(
-                title=dict(text='Comparativo: Período Atual vs Anterior', font=dict(size=14)),
-                barmode='group',
-                yaxis=dict(title=dict(text='Quantidade', font=dict(size=11)),
-                           gridcolor='rgba(0,0,0,0.05)', rangemode='tozero'),
-                yaxis2=dict(title=dict(text='Taxa Sucesso (%)', font=dict(size=11)),
-                            overlaying='y', side='right',
-                            range=[0, max(100, max(taxa_sucesso_vals) * 1.1)],
-                            gridcolor='rgba(0,0,0,0.02)'),
-                height=300, showlegend=True, plot_bgcolor=COR_BRANCO,
-                margin=dict(l=50, r=50, t=50, b=50),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5, font=dict(size=10)),
-                xaxis=dict(tickfont=dict(size=10))
-            )
-            fig_comparativo.update_traces(marker_line_width=0.5, selector=dict(type='bar'))
-            st.plotly_chart(fig_comparativo, use_container_width=True, config={'displayModeBar': False})
-            if total_cards_anterior > 0:
-                variacao_total = ((total_cards - total_cards_anterior) / total_cards_anterior * 100)
-                variacao_validados = ((validados - validados_anterior) / validados_anterior * 100) if validados_anterior > 0 else 0
-                variacao_taxa = taxa_sucesso - taxa_sucesso_anterior
-            else:
-                variacao_total = 100
-                variacao_validados = 100 if validados > 0 else 0
-                variacao_taxa = taxa_sucesso
-            st.markdown("##### 📊 VARIAÇÃO PERCENTUAL")
-            col_var1, col_var2, col_var3 = st.columns(3)
-            with col_var1:
-                st.metric(label="Total Cards", value=f"{total_cards:,}", delta=f"{variacao_total:+.1f}%",
-                          delta_color="normal" if variacao_total >= 0 else "inverse",
-                          help=f"Anterior: {total_cards_anterior:,}")
-            with col_var2:
-                st.metric(label="Validados", value=f"{validados:,}", delta=f"{variacao_validados:+.1f}%",
-                          delta_color="normal" if variacao_validados >= 0 else "inverse",
-                          help=f"Anterior: {validados_anterior:,}")
-            with col_var3:
-                st.metric(label="Taxa Sucesso", value=f"{taxa_sucesso:.1f}%", delta=f"{variacao_taxa:+.1f}pp",
-                          delta_color="normal" if variacao_taxa >= 0 else "inverse",
-                          help=f"Anterior: {taxa_sucesso_anterior:.1f}%")
-            st.markdown("---")
-        st.markdown("#### 📊 INDICADORES PRINCIPAIS")
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("📋 Total Cards", total_cards, delta=None, help="Total de cards no período")
-        with col2:
-            st.metric("✅ Validados", validados, f"{taxa_sucesso:.1f}%",
-                      delta_color="normal" if taxa_sucesso >= 90 else "off",
-                      help="Cards sincronizados (aprovados)")
-        with col3:
-            st.metric("🎯 Sem Erro", sem_erro,
-                      f"{(sem_erro/validados*100) if validados>0 else 0:.1f}%" if validados > 0 else "0%",
-                      help="Aprovação direta na primeira validação")
-        with col4:
-            st.metric("⚠️ Com Erro", com_erro, f"{taxa_erro:.1f}%" if validados > 0 else "0%",
-                      delta_color="inverse", help="Cards que retornaram para ajuste")
-        st.markdown("---")
-        st.markdown("#### 📈 ANÁLISE DETALHADA")
-        if total_cards > 0:
-            if 'Criado' in df_filtrado_periodo.columns and len(df_filtrado_periodo) > 0:
-                dias_unicos = df_filtrado_periodo['Criado'].dt.date.nunique()
-                media_diaria = total_cards / dias_unicos if dias_unicos > 0 else 0
-                col_analise1, col_analise2, col_analise3 = st.columns(3)
-                with col_analise1:
-                    st.metric("📅 Dias com atividade", dias_unicos)
-                with col_analise2:
-                    st.metric("📊 Média diária", f"{media_diaria:.1f}")
-                with col_analise3:
-                    if 'Revisões_Total' in df_filtrado_periodo.columns:
-                        media_revisoes = df_filtrado_periodo['Revisões_Total'].mean()
-                        st.metric("📝 Média revisões/card", f"{media_revisoes:.1f}")
-                    else:
-                        st.metric("📝 Revisões", "N/A")
-            st.markdown("##### 🏆 CLASSIFICAÇÃO DE PERFORMANCE")
-            if taxa_sucesso >= 95:
-                st.success("""
-                **⭐ EXCELENTE**
-                - Meta de qualidade superada (>95%)
-                - Processos altamente eficientes
-                - Recomendação: Manter padrões atuais
-                """)
-            elif taxa_sucesso >= 85:
-                st.info("""
-                **👍 BOM DESEMPENHO**
-                - Dentro dos padrões esperados (85-94%)
-                - Processos consistentes
-                - Recomendação: Pequenos ajustes pontuais
-                """)
-            elif taxa_sucesso >= 70:
-                st.warning("""
-                **⚠️ OPORTUNIDADE DE MELHORIA**
-                - Abaixo do ideal (70-84%)
-                - Processos precisam de revisão
-                - Recomendação: Identificar causas principais
-                """)
-            else:
-                st.error("""
-                **🚨 ATENÇÃO NECESSÁRIA**
-                - Performance crítica (<70%)
-                - Processos ineficientes
-                - Recomendação: Revisão urgente dos fluxos
-                """)
-        else:
-            st.info(f"ℹ️ Nenhum dado disponível para análise no período: {periodo_titulo}")
-        st.markdown("---")
-        st.markdown(f"""
-        <div style="background: {COR_CINZA_FUNDO}; padding: 1.2rem; border-radius: 8px; border: 1px solid {COR_CINZA_BORDA};">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 600;">Ações disponíveis</p>
-                    <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.85rem;">
-                    Exporte o relatório completo ou feche a manchete
-                    </p>
-                </div>
-                <div style="display: flex; gap: 0.8rem;">
-                    <button onclick="document.getElementById('exportBtn').click()"
-                            style="background: {COR_VERDE_ESCURO}; color: {COR_BRANCO}; border: none; padding: 0.6rem 1.2rem;
-                                   border-radius: 6px; cursor: pointer; font-weight: 500;">
-                        📥 Exportar PDF
-                    </button>
-                    <button onclick="document.getElementById('closeBtn').click()"
-                            style="background: {COR_CINZA_TEXTO}; color: {COR_BRANCO}; border: none;
-                                   padding: 0.6rem 1.2rem; border-radius: 6px;
-                                   cursor: pointer; font-weight: 500;">
-                        ✕ Fechar
-                    </button>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        col_exportar, col_fechar = st.columns(2)
-        with col_exportar:
-            if st.button("📥 **EXPORTAR PDF**", type="primary", use_container_width=True,
-                        help="Gerar relatório completo em formato PDF", key="btn_exportar_pdf_final"):
-                st.info("""
-                📄 **Funcionalidade de PDF em desenvolvimento...**
-                Para uma implementação completa, você pode usar:
-                - `fpdf` ou `reportlab` para gerar PDFs
-                - `weasyprint` para converter HTML para PDF
-                - `pdfkit` (requer wkhtmltopdf)
-                """)
-        with col_fechar:
-            if st.button("✕ **FECHAR**", type="secondary", use_container_width=True, key="btn_fechar_final"):
-                st.session_state.show_popup = False
-                st.rerun()
-        st.markdown(f"""
-        <div style="background: {COR_CINZA_FUNDO}; padding: 0.8rem; border-radius: 6px; margin-top: 1rem;">
-            <small>📅 <strong>Período analisado:</strong> {periodo_titulo}</small><br>
-            <small>🕒 <strong>Atualizado em:</strong> {hoje.strftime('%d/%m/%Y %H:%M')}</small><br>
-            <small>📊 <strong>Base de dados:</strong> {len(df):,} registros totais</small>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info("O arquivo local foi atualizado! Clique em 'Recarregar Local' na barra lateral para atualizar os dados.",
+                icon=":material/notifications_active:")
 
 # ============================================
 # EXIBIR DASHBOARD SE HOUVER DADOS
 # ============================================
 if st.session_state.df_original is not None:
     df = st.session_state.df_filtrado if st.session_state.df_filtrado is not None else st.session_state.df_original
-    tab_principal, tab_mapa, tab_ipe, tab_estatistica = st.tabs(["📊 Principal", "🗺️ Mapa", "📈 KPI", "📈 Análise Estatística"])
+    tab_principal, tab_mapa, tab_ipe, tab_estatistica = st.tabs([
+        ":material/dashboard: Principal", ":material/map: Mapa",
+        ":material/target: KPI", ":material/query_stats: Análise Estatística"])
     with tab_principal:
-        st.markdown("## 📊 Base de Dados")
-        if 'Criado' in df.columns and not df.empty:
-            data_min = df['Criado'].min()
-            data_max = df['Criado'].max()
-            st.markdown(f"""
-            <div class="info-base">
-                <p style="margin: 0; font-weight: 600;">📅 Base atualizada em: {get_horario_brasilia()}</p>
-                <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO};">
-                Período coberto: {data_min.strftime('%d/%m/%Y')} a {data_max.strftime('%d/%m/%Y')} |
-                Total de registros: {len(df):,}
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-        st.markdown("## 📈 INDICADORES PRINCIPAIS")
+        st.markdown("## :material/monitoring: INDICADORES PRINCIPAIS")
         col1, col2, col3 = st.columns(3)
+        total_atual = len(df)
         with col1:
-            total_atual = len(df)
-            st.markdown(criar_card_indicador_simples(total_atual, "Total de Demandas", "📋"), unsafe_allow_html=True)
+            st.markdown(criar_card_indicador_simples(total_atual, "Total de Demandas", "lista",
+                                                     subtitulo="cards no recorte atual"), unsafe_allow_html=True)
         with col2:
             if 'Status' in df.columns:
-                sincronizados = len(df[df['Status'] == 'Sincronizado'])
-                st.markdown(criar_card_indicador_simples(sincronizados, "Sincronizados", "✅"), unsafe_allow_html=True)
+                sincronizados = int(df['Sinc'].sum())
+                pct_sinc = f"{(sincronizados / total_atual * 100) if total_atual else 0:.1f}".replace('.', ',')
+                st.markdown(criar_card_indicador_simples(sincronizados, "Sincronizados", "check",
+                                                         subtitulo=f"{pct_sinc}% das demandas", cor=COR_VERDE_ESCURO),
+                            unsafe_allow_html=True)
         with col3:
             if 'Revisões_Total' in df.columns:
                 total_revisoes = int(df['Revisões_Total'].sum())
-                st.markdown(criar_card_indicador_simples(total_revisoes, "Total de Revisões", "📝"), unsafe_allow_html=True)
+                cards_com_rev = int(df['Com_Revisao'].sum())
+                st.markdown(criar_card_indicador_simples(total_revisoes, "Total de Revisões", "revisao",
+                                                         subtitulo=f"em {fmt_milhar(cards_com_rev)} cards", cor=COR_LARANJA),
+                            unsafe_allow_html=True)
         st.markdown("---")
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "📅 Evolução de Demandas",
-            "📊 Análise de Revisões",
-            "📈 Sincronização Diária",
-            "🏆 Análise Avançada SRE"
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            ":material/calendar_month: Evolução de Demandas",
+            ":material/rate_review: Análise de Revisões",
+            ":material/show_chart: Sincronização Diária",
+            ":material/emoji_events: Análise Avançada SRE",
+            ":material/fact_check: Motivos de Revisão"
         ])
         with tab1:
             col_titulo, col_seletor = st.columns([3, 1])
+            anos_disponiveis = []
             with col_titulo:
-                st.markdown(f'<div class="section-title">📅 EVOLUÇÃO DE DEMANDAS POR MÊS</div>', unsafe_allow_html=True)
+                st.markdown(titulo_secao("EVOLUÇÃO DE DEMANDAS POR MÊS", "calendario"), unsafe_allow_html=True)
             with col_seletor:
                 if 'Ano' in df.columns:
                     anos_disponiveis = sorted(df['Ano'].dropna().unique().astype(int))
@@ -1442,57 +1213,82 @@ if st.session_state.df_original is not None:
                     todos_meses = pd.DataFrame({'Mês_Num': range(1, 13), 'Nome_Mês': ordem_meses_abreviados})
                     demandas_por_mes = df_ano.groupby('Mês_Num').size().reset_index()
                     demandas_por_mes.columns = ['Mês_Num', 'Quantidade']
+                    sinc_por_mes = df_ano[df_ano['Sinc']].groupby('Mês_Num').size().rename('Sincronizados').reset_index()
                     demandas_completas = pd.merge(todos_meses, demandas_por_mes, on='Mês_Num', how='left')
-                    demandas_completas['Quantidade'] = demandas_completas['Quantidade'].fillna(0).astype(int)
+                    demandas_completas = pd.merge(demandas_completas, sinc_por_mes, on='Mês_Num', how='left')
+                    demandas_completas[['Quantidade', 'Sincronizados']] = (
+                        demandas_completas[['Quantidade', 'Sincronizados']].fillna(0).astype(int))
+                    # Meses que ainda não chegaram (ano corrente) ficam sem ponto, em vez de cair a zero
+                    if ano_selecionado == agora().year:
+                        futuros = demandas_completas['Mês_Num'] > agora().month
+                        demandas_completas[['Quantidade', 'Sincronizados']] = (
+                            demandas_completas[['Quantidade', 'Sincronizados']].astype(float).mask(
+                                futuros.values.reshape(-1, 1).repeat(2, axis=1)))
                     fig_mes = go.Figure()
                     fig_mes.add_trace(go.Scatter(
                         x=demandas_completas['Nome_Mês'], y=demandas_completas['Quantidade'],
-                        mode='lines+markers+text', name='Demandas',
+                        mode='lines+markers+text', name='Demandas', line_shape='spline',
                         line=dict(color=COR_AZUL_ESCURO, width=3),
-                        marker=dict(size=10, color=COR_AZUL_PETROLEO),
-                        text=demandas_completas['Quantidade'], textposition='top center',
-                        textfont=dict(size=12, color=COR_AZUL_ESCURO)
+                        fill='tozeroy', fillcolor='rgba(0, 89, 115, 0.08)',
+                        marker=dict(size=9, color=COR_AZUL_ESCURO, line=dict(color=COR_BRANCO, width=2)),
+                        text=demandas_completas['Quantidade'].map(lambda v: '' if pd.isna(v) else int(v)),
+                        textposition='top center',
+                        textfont=dict(size=12, color=COR_AZUL_ESCURO),
+                        hovertemplate='%{x}: %{y} demandas<extra></extra>'
+                    ))
+                    fig_mes.add_trace(go.Scatter(
+                        x=demandas_completas['Nome_Mês'], y=demandas_completas['Sincronizados'],
+                        mode='lines+markers', name='Sincronizados', line_shape='spline',
+                        line=dict(color=COR_VERDE_ESCURO, width=2, dash='dot'),
+                        marker=dict(size=7, color=COR_VERDE_ESCURO),
+                        hovertemplate='%{x}: %{y} sincronizados<extra></extra>'
                     ))
                     fig_mes.update_layout(
                         title=f"Demandas em {ano_selecionado}", xaxis_title="Mês",
-                        yaxis_title="Número de Demandas", plot_bgcolor=COR_BRANCO,
-                        height=450, showlegend=False, margin=dict(t=50, b=50, l=50, r=50),
-                        xaxis=dict(gridcolor='rgba(0,0,0,0.05)', tickmode='array',
-                                   tickvals=list(range(12)), ticktext=ordem_meses_abreviados),
-                        yaxis=dict(gridcolor='rgba(0,0,0,0.05)', rangemode='tozero')
+                        yaxis_title="Número de Demandas",
+                        height=450, showlegend=True, margin=dict(t=70, b=50, l=50, r=30),
+                        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+                        xaxis=dict(showgrid=False, categoryorder='array', categoryarray=ordem_meses_abreviados),
+                        yaxis=dict(rangemode='tozero'),
+                        hovermode='x unified'
                     )
-                    total_ano = int(demandas_completas['Quantidade'].sum())
+                    total_ano = int(demandas_completas['Quantidade'].fillna(0).sum())
                     fig_mes.add_annotation(
-                        x=0.5, y=0.95, xref="paper", yref="paper",
-                        text=f"Total no ano: {total_ano:,} demandas", showarrow=False,
-                        font=dict(size=12, color=COR_AZUL_ESCURO, weight="bold"),
-                        bgcolor="rgba(255,255,255,0.9)", bordercolor=COR_AZUL_ESCURO,
-                        borderwidth=1, borderpad=4
+                        x=0.01, y=1.0, xref="paper", yref="paper", xanchor='left', yanchor='bottom',
+                        text=f"Total no ano: <b>{fmt_milhar(total_ano)}</b> demandas", showarrow=False,
+                        font=dict(size=12, color=COR_AZUL_ESCURO),
+                        bgcolor="rgba(2,138,159,0.08)", borderpad=6
                     )
                     st.plotly_chart(fig_mes, use_container_width=True)
                     col_stats1, col_stats2, col_stats3 = st.columns(3)
+                    meses_com_dado = demandas_completas[demandas_completas['Quantidade'].fillna(0) > 0]
                     with col_stats1:
                         mes_max = demandas_completas.loc[demandas_completas['Quantidade'].idxmax()]
-                        st.metric("📈 Mês com mais demandas", f"{mes_max['Nome_Mês']}: {int(mes_max['Quantidade']):,}")
+                        st.metric(":material/trending_up: Mês com mais demandas", f"{mes_max['Nome_Mês']}: {fmt_milhar(mes_max['Quantidade'])}")
                     with col_stats2:
-                        mes_min = demandas_completas.loc[demandas_completas['Quantidade'].idxmin()]
-                        st.metric("📉 Mês com menos demandas", f"{mes_min['Nome_Mês']}: {int(mes_min['Quantidade']):,}")
+                        # Considera só meses que já têm dados (antes meses futuros zerados viravam o "mínimo")
+                        base_min = meses_com_dado if not meses_com_dado.empty else demandas_completas
+                        mes_min = base_min.loc[base_min['Quantidade'].idxmin()]
+                        st.metric(":material/trending_down: Mês com menos demandas", f"{mes_min['Nome_Mês']}: {fmt_milhar(mes_min['Quantidade'])}")
                     with col_stats3:
-                        media_mensal = int(demandas_completas['Quantidade'].mean())
-                        st.metric("📊 Média mensal", f"{media_mensal:,}")
+                        media_mensal = int(round(meses_com_dado['Quantidade'].mean())) if not meses_com_dado.empty else 0
+                        st.metric(":material/functions: Média mensal", fmt_milhar(media_mensal),
+                                  help="Média dos meses com registro no ano selecionado")
         with tab2:
-            st.markdown(f'<div class="section-title">📊 REVISÕES POR RESPONSÁVEL</div>', unsafe_allow_html=True)
+            st.markdown(titulo_secao("REVISÕES POR RESPONSÁVEL", "revisao"), unsafe_allow_html=True)
             col_rev_filtro1, col_rev_filtro2 = st.columns(2)
+            ano_rev, mes_rev = 'Todos os Anos', 'Todos os Meses'
             with col_rev_filtro1:
                 if 'Ano' in df.columns:
                     anos_rev = sorted(df['Ano'].dropna().unique().astype(int))
                     anos_opcoes_rev = ['Todos os Anos'] + list(anos_rev)
-                    ano_rev = st.selectbox("📅 Filtrar por Ano:", options=anos_opcoes_rev, key="filtro_ano_revisoes")
+                    ano_rev = st.selectbox(":material/calendar_month: Filtrar por Ano:", options=anos_opcoes_rev, key="filtro_ano_revisoes")
             with col_rev_filtro2:
                 if 'Mês' in df.columns:
                     meses_rev = sorted(df['Mês'].dropna().unique().astype(int))
                     meses_opcoes_rev = ['Todos os Meses'] + [str(m) for m in meses_rev]
-                    mes_rev = st.selectbox("📆 Filtrar por Mês:", options=meses_opcoes_rev, key="filtro_mes_revisoes")
+                    mes_rev = st.selectbox(":material/date_range: Filtrar por Mês:", options=meses_opcoes_rev, key="filtro_mes_revisoes",
+                                           format_func=lambda m: m if m == 'Todos os Meses' else MESES_NOMES[int(m)])
             df_rev = df.copy()
             if ano_rev != 'Todos os Anos':
                 df_rev = df_rev[df_rev['Ano'] == int(ano_rev)]
@@ -1500,7 +1296,9 @@ if st.session_state.df_original is not None:
                 df_rev = df_rev[df_rev['Mês'] == int(mes_rev)]
             if 'Revisões_Total' in df_rev.columns and 'Responsável_Formatado' in df_rev.columns:
                 df_com_revisoes = df_rev[df_rev['Revisões_Total'] > 0].copy()
-                if not df_com_revisoes.empty:
+                if df_com_revisoes.empty:
+                    st.success("Nenhuma revisão registrada no período selecionado.", icon=":material/verified:")
+                else:
                     revisoes_por_responsavel = df_com_revisoes.groupby('Responsável_Formatado').agg({
                         'Revisões_Total': 'sum', 'Chamado': 'count'
                     }).reset_index()
@@ -1510,15 +1308,13 @@ if st.session_state.df_original is not None:
                     if ano_rev != 'Todos os Anos':
                         titulo_rev += f' - {ano_rev}'
                     if mes_rev != 'Todos os Meses':
-                        meses_nomes = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
-                                       5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
-                                       9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
-                        titulo_rev += f' - {meses_nomes[int(mes_rev)]}'
-                    fig_revisoes = go.Figure()
-                    max_revisoes = revisoes_por_responsavel['Total_Revisões'].max()
-                    min_revisoes = revisoes_por_responsavel['Total_Revisões'].min()
+                        titulo_rev += f' - {MESES_NOMES[int(mes_rev)]}'
+                    top15 = revisoes_por_responsavel.head(15).iloc[::-1]  # maior no topo (barras horizontais)
+                    max_revisoes = top15['Total_Revisões'].max()
+                    min_revisoes = top15['Total_Revisões'].min()
                     colors = []
-                    for valor in revisoes_por_responsavel['Total_Revisões']:
+                    for valor in top15['Total_Revisões']:
+                        # Mesmo gradiente verde → vermelho de antes (menos → mais revisões)
                         if max_revisoes == min_revisoes:
                             colors.append(COR_VERMELHO)
                         else:
@@ -1527,43 +1323,54 @@ if st.session_state.df_original is not None:
                             green = int(40 * normalized + 167 * (1 - normalized))
                             blue = int(40 * normalized + 69 * (1 - normalized))
                             colors.append(f'rgb({red}, {green}, {blue})')
+                    fig_revisoes = go.Figure()
                     fig_revisoes.add_trace(go.Bar(
-                        x=revisoes_por_responsavel['Responsável'].head(15),
-                        y=revisoes_por_responsavel['Total_Revisões'].head(15),
+                        y=top15['Responsável'], x=top15['Total_Revisões'], orientation='h',
                         name='Total de Revisões',
-                        text=revisoes_por_responsavel['Total_Revisões'].head(15),
-                        textposition='outside', marker_color=colors[:15],
-                        marker_line_color=COR_PRETO_SUAVE, marker_line_width=1.5, opacity=0.8
+                        text=top15['Total_Revisões'], textposition='outside', cliponaxis=False,
+                        marker_color=colors, marker_line_width=0,
+                        customdata=top15['Chamados_Com_Revisão'],
+                        hovertemplate='<b>%{y}</b><br>%{x} revisões em %{customdata} chamados<extra></extra>'
                     ))
                     fig_revisoes.update_layout(
-                        title=titulo_rev, xaxis_title='Responsável', yaxis_title='Total de Revisões',
-                        plot_bgcolor=COR_BRANCO, height=500, showlegend=False,
-                        margin=dict(t=50, b=100, l=50, r=50),
-                        xaxis=dict(tickangle=45, gridcolor='rgba(0,0,0,0.05)'),
-                        yaxis=dict(gridcolor='rgba(0,0,0,0.05)')
+                        title=titulo_rev, xaxis_title='Total de Revisões', yaxis_title='',
+                        height=max(380, 34 * len(top15) + 120), showlegend=False,
+                        margin=dict(t=50, b=40, l=10, r=50),
+                        xaxis=dict(rangemode='tozero'), yaxis=dict(showgrid=False)
                     )
                     st.plotly_chart(fig_revisoes, use_container_width=True)
+                    col_rv1, col_rv2, col_rv3 = st.columns(3)
+                    col_rv1.metric(":material/edit_note: Total de revisões", fmt_milhar(df_com_revisoes['Revisões_Total'].sum()))
+                    col_rv2.metric(":material/assignment_late: Chamados com revisão", fmt_milhar(len(df_com_revisoes)),
+                                   help=f"De {fmt_milhar(len(df_rev))} chamados no período")
+                    col_rv3.metric(":material/person_alert: Responsável com mais revisões",
+                                   revisoes_por_responsavel.iloc[0]['Responsável'],
+                                   f"{int(revisoes_por_responsavel.iloc[0]['Total_Revisões'])} revisões",
+                                   delta_color="off", **DELTA_SEM_SETA)
         with tab3:
-            st.markdown(f'<div class="section-title">📈 CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA</div>', unsafe_allow_html=True)
+            st.markdown(titulo_secao("CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA", "subida"), unsafe_allow_html=True)
             col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
+            ano_sinc, mes_sinc, sre_sinc, empresa_sinc = 'Todos os Anos', 'Todos os Meses', 'Todos os SREs', 'Todas Empresas'
             with col_filtro1:
                 if 'Ano' in df.columns:
                     anos_sinc = sorted(df['Ano'].dropna().unique().astype(int))
                     anos_opcoes_sinc = ['Todos os Anos'] + list(anos_sinc)
-                    ano_sinc = st.selectbox("📅 Ano:", options=anos_opcoes_sinc, key="filtro_ano_sinc")
+                    ano_sinc = st.selectbox(":material/calendar_month: Ano:", options=anos_opcoes_sinc, key="filtro_ano_sinc")
             with col_filtro2:
                 if 'Mês' in df.columns:
                     meses_sinc = sorted(df['Mês'].dropna().unique().astype(int))
                     meses_opcoes_sinc = ['Todos os Meses'] + [str(m) for m in meses_sinc]
-                    mes_sinc = st.selectbox("📆 Mês:", options=meses_opcoes_sinc, key="filtro_mes_sinc")
+                    mes_sinc = st.selectbox(":material/date_range: Mês:", options=meses_opcoes_sinc, key="filtro_mes_sinc",
+                                            format_func=lambda m: m if m == 'Todos os Meses' else MESES_NOMES[int(m)])
             with col_filtro3:
                 if 'SRE' in df.columns:
                     sres_sinc = ['Todos os SREs'] + sorted(df['SRE'].dropna().unique())
-                    sre_sinc = st.selectbox("🔧 SRE:", options=sres_sinc, key="filtro_sre_sinc")
+                    sre_sinc = st.selectbox(":material/engineering: SRE:", options=sres_sinc, key="filtro_sre_sinc",
+                                            format_func=lambda v: v if v == 'Todos os SREs' else substituir_nome_sre(v))
             with col_filtro4:
                 if 'Empresa' in df.columns:
                     empresas_sinc = ['Todas Empresas'] + sorted(df['Empresa'].dropna().unique())
-                    empresa_sinc = st.selectbox("🏢 Empresa:", options=empresas_sinc, key="filtro_empresa_sinc")
+                    empresa_sinc = st.selectbox(":material/apartment: Empresa:", options=empresas_sinc, key="filtro_empresa_sinc")
             df_sinc = df.copy()
             if ano_sinc != 'Todos os Anos':
                 df_sinc = df_sinc[df_sinc['Ano'] == int(ano_sinc)]
@@ -1574,172 +1381,2065 @@ if st.session_state.df_original is not None:
             if empresa_sinc != 'Todas Empresas':
                 df_sinc = df_sinc[df_sinc['Empresa'] == empresa_sinc]
             if 'Status' in df_sinc.columns and 'Criado' in df_sinc.columns:
-                df_sincronizados = df_sinc[df_sinc['Status'] == 'Sincronizado'].copy()
+                df_sincronizados = df_sinc[df_sinc['Sinc']].copy()
                 if not df_sincronizados.empty:
-                    df_sincronizados['Data'] = df_sincronizados['Criado'].dt.date
-                    df_sincronizados['Ano_Mes'] = df_sincronizados['Criado'].dt.strftime('%Y-%m')
-                    df_sincronizados['Dia_Semana'] = df_sincronizados['Criado'].dt.day_name()
-                    df_sincronizados['Semana_Ano'] = df_sincronizados['Criado'].dt.isocalendar().week
-                    df_sincronizados['Dia_Mes'] = df_sincronizados['Criado'].dt.day
-                    dias_semana_map = {'Monday': 'Segunda', 'Tuesday': 'Terça', 'Wednesday': 'Quarta',
-                                       'Thursday': 'Quinta', 'Friday': 'Sexta', 'Saturday': 'Sábado', 'Sunday': 'Domingo'}
-                    df_sincronizados['Dia_Semana_PT'] = df_sincronizados['Dia_Semana'].map(dias_semana_map)
                     df_sincronizados = df_sincronizados.sort_values('Criado')
-                    sincronizados_por_dia = df_sincronizados.groupby('Data').size().reset_index()
-                    sincronizados_por_dia.columns = ['Data', 'Quantidade']
-                    sincronizados_por_dia = sincronizados_por_dia.sort_values('Data')
-                    st.markdown("### 📊 Indicadores Principais")
+                    dias_semana_pt = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+                    # Série diária COM os dias úteis zerados (corrige "Dias sem Sinc." sempre 0)
+                    serie_sinc = serie_diaria(df_sincronizados['Data'])
+                    sincronizados_por_dia = serie_sinc.rename_axis('Data').reset_index(name='Quantidade')
+                    uteis = sincronizados_por_dia[sincronizados_por_dia['Data'].dt.dayofweek < 5]
+                    st.markdown("### :material/monitoring: Indicadores Principais")
                     total_sincronizados = int(sincronizados_por_dia['Quantidade'].sum())
-                    media_diaria = sincronizados_por_dia['Quantidade'].mean()
+                    media_diaria = uteis['Quantidade'].mean() if not uteis.empty else sincronizados_por_dia['Quantidade'].mean()
                     max_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmax()]
-                    min_dia = sincronizados_por_dia.loc[sincronizados_por_dia['Quantidade'].idxmin()]
-                    dias_com_zero = len(sincronizados_por_dia[sincronizados_por_dia['Quantidade'] == 0])
-                    dias_trabalhados = len(sincronizados_por_dia)
-                    variacao = 0
-                    if len(sincronizados_por_dia) > 1:
-                        primeiro_valor = sincronizados_por_dia['Quantidade'].iloc[0]
-                        ultimo_valor = sincronizados_por_dia['Quantidade'].iloc[-1]
-                        if primeiro_valor > 0:
-                            variacao = ((ultimo_valor - primeiro_valor) / primeiro_valor) * 100
+                    base_min = uteis if not uteis.empty else sincronizados_por_dia
+                    min_dia = base_min.loc[base_min['Quantidade'].idxmin()]
+                    dias_com_zero = int((uteis['Quantidade'] == 0).sum())
+                    dias_trabalhados = int((sincronizados_por_dia['Quantidade'] > 0).sum())
+                    # Variação: média dos últimos 7 dias úteis vs os 7 anteriores
+                    # (antes comparava só o primeiro com o último dia, o que oscilava muito)
+                    variacao = None
+                    if len(uteis) >= 14:
+                        recentes = uteis['Quantidade'].iloc[-7:].mean()
+                        anteriores = uteis['Quantidade'].iloc[-14:-7].mean()
+                        if anteriores > 0:
+                            variacao = (recentes - anteriores) / anteriores * 100
                     col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
                     with col_kpi1:
-                        st.metric("✅ Total Sincronizado", f"{total_sincronizados:,}",
-                                  f"{variacao:+.1f}%" if variacao != 0 else None,
-                                  delta_color="normal" if variacao >= 0 else "inverse")
+                        st.metric(":material/task_alt: Total Sincronizado", fmt_milhar(total_sincronizados),
+                                  f"{variacao:+.1f}% (7 dias úteis)" if variacao is not None else None,
+                                  delta_color="normal",
+                                  help="Variação: média dos últimos 7 dias úteis vs os 7 anteriores")
                     with col_kpi2:
-                        st.metric("📊 Média Diária", f"{media_diaria:.1f}", f"Dias: {dias_trabalhados}")
+                        st.metric(":material/bar_chart: Média Diária", f"{media_diaria:.1f}".replace('.', ','),
+                                  f"Dias com sinc.: {dias_trabalhados}", delta_color="off", **DELTA_SEM_SETA,
+                                  help="Média por dia útil, contando os dias sem sincronização como zero")
                     with col_kpi3:
-                        st.metric("📈 Dia com Mais Sinc.", f"{int(max_dia['Quantidade']):,}", f"{max_dia['Data'].strftime('%d/%m')}")
+                        st.metric(":material/trending_up: Dia com Mais Sinc.", fmt_milhar(max_dia['Quantidade']),
+                                  f"{max_dia['Data'].strftime('%d/%m')}", delta_color="off", **DELTA_SEM_SETA)
                     with col_kpi4:
-                        st.metric("⚠️ Dias sem Sinc.", f"{dias_com_zero}",
-                                  f"{min_dia['Data'].strftime('%d/%m')}: {int(min_dia['Quantidade']):,}")
-                    with st.expander("📋 Visualização Detalhada por Dia", expanded=False):
-                        sincronizados_por_dia['Dia_Semana'] = sincronizados_por_dia['Data'].apply(lambda x: x.strftime('%A'))
-                        sincronizados_por_dia['Dia_Semana_PT'] = sincronizados_por_dia['Dia_Semana'].map(dias_semana_map)
-                        sincronizados_por_dia['Diferenca'] = sincronizados_por_dia['Quantidade'].diff()
-                        sincronizados_por_dia['Variacao_%'] = (sincronizados_por_dia['Diferenca'] / sincronizados_por_dia['Quantidade'].shift(1) * 100).round(1)
-                        sincronizados_por_dia['Media_Movel_7'] = sincronizados_por_dia['Quantidade'].rolling(window=7, min_periods=1).mean().round(1)
+                        st.metric(":material/event_busy: Dias sem Sinc.", f"{dias_com_zero}",
+                                  f"Menor dia útil {min_dia['Data'].strftime('%d/%m')}: {int(min_dia['Quantidade'])}",
+                                  delta_color="off", **DELTA_SEM_SETA, help=f"Dias úteis sem sincronização, de {len(uteis)} no intervalo")
+                    with st.expander("Visualização Detalhada por Dia", expanded=False, icon=":material/table_view:"):
                         tabela_detalhada = sincronizados_por_dia.copy()
-                        tabela_detalhada['Data_Formatada'] = tabela_detalhada['Data'].apply(lambda x: x.strftime('%d/%m/%Y'))
+                        tabela_detalhada['Dia_Semana_PT'] = tabela_detalhada['Data'].dt.dayofweek.map(dict(enumerate(dias_semana_pt)))
+                        tabela_detalhada['Diferenca'] = tabela_detalhada['Quantidade'].diff()
+                        qtd_anterior = tabela_detalhada['Quantidade'].shift(1).astype(float)
+                        # Dia anterior com 0 sincronizações fica sem variação % (evita divisão por zero)
+                        tabela_detalhada['Variacao_%'] = (tabela_detalhada['Diferenca'].astype(float)
+                                                          / qtd_anterior.where(qtd_anterior > 0) * 100).round(1)
+                        tabela_detalhada['Media_Movel_7'] = tabela_detalhada['Quantidade'].rolling(window=7, min_periods=1).mean().round(1)
+                        tabela_detalhada['Data_Formatada'] = tabela_detalhada['Data'].dt.strftime('%d/%m/%Y')
                         tabela_detalhada = tabela_detalhada.sort_values('Data', ascending=False)
                         colunas_exibir = ['Data_Formatada', 'Dia_Semana_PT', 'Quantidade',
                                           'Diferenca', 'Variacao_%', 'Media_Movel_7']
-                        st.dataframe(tabela_detalhada[colunas_exibir], use_container_width=True,
+                        st.dataframe(tabela_detalhada[colunas_exibir], use_container_width=True, hide_index=True,
                                      column_config={
                                          "Data_Formatada": st.column_config.TextColumn("Data"),
                                          "Dia_Semana_PT": st.column_config.TextColumn("Dia Semana"),
-                                         "Quantidade": st.column_config.NumberColumn("Sinc. do Dia", format="%d"),
+                                         "Quantidade": st.column_config.ProgressColumn(
+                                             "Sinc. do Dia", format="%d", min_value=0,
+                                             max_value=int(max(1, tabela_detalhada['Quantidade'].max()))),
                                          "Diferenca": st.column_config.NumberColumn("Δ vs Dia Anterior", format="%+d"),
                                          "Variacao_%": st.column_config.NumberColumn("Variação %", format="%+.1f%%"),
                                          "Media_Movel_7": st.column_config.NumberColumn("Média 7 dias", format="%.1f")
                                      })
-                    st.markdown("### 📅 Sincronizações por Dia")
-                    anos_disponiveis = sorted(df_sincronizados['Criado'].dt.year.unique())
-                    df_semanal_real = df_sincronizados.copy()
-                    if 2026 not in anos_disponiveis:
-                        df_semanal_real = df_semanal_real[df_semanal_real['Criado'].dt.year != 2026]
-                    df_semanal_real['Data_Formatada'] = df_semanal_real['Criado'].dt.strftime('%d/%m/%Y')
-                    sinc_por_dia = df_semanal_real.groupby('Data').size().reset_index()
-                    sinc_por_dia.columns = ['Data', 'Quantidade']
-                    sinc_por_dia = sinc_por_dia.sort_values('Data')
-                    if len(sinc_por_dia) > 30:
-                        sinc_por_dia_recente = sinc_por_dia.tail(30)
-                    else:
-                        sinc_por_dia_recente = sinc_por_dia.copy()
-                    sinc_por_dia_recente['Data_Formatada'] = sinc_por_dia_recente['Data'].apply(lambda x: x.strftime('%d/%m'))
+                    st.markdown("### :material/calendar_view_day: Sincronizações por Dia")
+                    sinc_por_dia = sincronizados_por_dia.copy()
+                    sinc_por_dia['Media_Movel_7'] = sinc_por_dia['Quantidade'].rolling(7, min_periods=1).mean()
+                    sinc_por_dia_recente = sinc_por_dia.tail(30).copy() if len(sinc_por_dia) > 30 else sinc_por_dia.copy()
+                    sinc_por_dia_recente['Data_Formatada'] = sinc_por_dia_recente['Data'].dt.strftime('%d/%m')
                     fig_dias = go.Figure()
-                    max_quant = sinc_por_dia_recente['Quantidade'].max()
-                    min_quant = sinc_por_dia_recente['Quantidade'].min()
-                    colors = []
-                    for valor in sinc_por_dia_recente['Quantidade']:
-                        if max_quant == min_quant:
-                            colors.append(COR_AZUL_ESCURO)
-                        else:
-                            normalized = (valor - min_quant) / (max_quant - min_quant)
-                            red = int(0 * normalized + 0 * (1 - normalized))
-                            green = int(89 * normalized + 89 * (1 - normalized))
-                            blue = int(115 * normalized + 115 * (1 - normalized))
-                            colors.append(f'rgb({red}, {green}, {blue})')
                     fig_dias.add_trace(go.Bar(
                         x=sinc_por_dia_recente['Data_Formatada'], y=sinc_por_dia_recente['Quantidade'],
                         name='Sincronizações', text=sinc_por_dia_recente['Quantidade'],
-                        textposition='outside', marker_color=colors,
-                        marker_line_color=COR_AZUL_PETROLEO, marker_line_width=1.5, opacity=0.8
+                        textposition='outside', cliponaxis=False,
+                        marker_color=gradiente_azul(sinc_por_dia_recente['Quantidade']), marker_line_width=0,
+                        customdata=sinc_por_dia_recente['Data'].dt.dayofweek.map(dict(enumerate(dias_semana_pt))),
+                        hovertemplate='%{x} (%{customdata}): <b>%{y}</b> sinc.<extra></extra>'
+                    ))
+                    fig_dias.add_trace(go.Scatter(
+                        x=sinc_por_dia_recente['Data_Formatada'], y=sinc_por_dia_recente['Media_Movel_7'],
+                        name='Média móvel 7 dias', mode='lines', line=dict(color=COR_LARANJA, width=2.5, shape='spline'),
+                        hovertemplate='Média 7d: %{y:.1f}<extra></extra>'
                     ))
                     fig_dias.update_layout(
                         title='Sincronizações por Dia (Período Recente)' if len(sinc_por_dia) > 30 else 'Sincronizações por Dia',
                         xaxis_title='Data (Dia/Mês)', yaxis_title='Quantidade de Sincronizações',
-                        height=400, plot_bgcolor=COR_BRANCO, showlegend=False,
-                        margin=dict(t=50, b=50, l=50, r=50),
-                        xaxis=dict(gridcolor='rgba(0,0,0,0.05)', tickangle=45),
-                        yaxis=dict(gridcolor='rgba(0,0,0,0.05)', rangemode='tozero')
+                        height=420, showlegend=True,
+                        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+                        margin=dict(t=70, b=50, l=50, r=30),
+                        xaxis=dict(showgrid=False, tickangle=-45, type='category'),
+                        yaxis=dict(rangemode='tozero'), bargap=0.2
                     )
                     st.plotly_chart(fig_dias, use_container_width=True)
                     col_dia1, col_dia2, col_dia3 = st.columns(3)
                     with col_dia1:
                         dia_max = sinc_por_dia.loc[sinc_por_dia['Quantidade'].idxmax()]
-                        st.metric("📈 Melhor Dia", dia_max['Data'].strftime('%d/%m/%Y'), f"{int(dia_max['Quantidade'])} sinc.")
+                        st.metric(":material/trending_up: Melhor Dia", dia_max['Data'].strftime('%d/%m/%Y'),
+                                  f"{int(dia_max['Quantidade'])} sinc.", delta_color="off", **DELTA_SEM_SETA)
                     with col_dia2:
-                        dia_min = sinc_por_dia.loc[sinc_por_dia['Quantidade'].idxmin()]
-                        st.metric("📉 Pior Dia", dia_min['Data'].strftime('%d/%m/%Y'), f"{int(dia_min['Quantidade'])} sinc.")
+                        dia_min = base_min.loc[base_min['Quantidade'].idxmin()]
+                        st.metric(":material/trending_down: Pior Dia", dia_min['Data'].strftime('%d/%m/%Y'),
+                                  f"{int(dia_min['Quantidade'])} sinc.", delta_color="off", **DELTA_SEM_SETA,
+                                  help="Considera só dias úteis")
                     with col_dia3:
-                        media_dia_total = sinc_por_dia['Quantidade'].mean()
-                        st.metric("📊 Média por Dia", f"{media_dia_total:.1f}")
-                    st.markdown("### 👥 Sincronizações por SRE")
+                        st.metric(":material/functions: Média por Dia", f"{media_diaria:.1f}".replace('.', ','),
+                                  help="Média por dia útil (dias sem sincronização contam como zero)")
+
+                    # NOVO: calendário (estilo GitHub) — mostra dias zerados e semanas fracas de relance
+                    st.markdown("### :material/calendar_month: Calendário de Sincronizações")
+                    contagem_cal = df_sincronizados['Data'].value_counts()
+                    fim_cal = contagem_cal.index.max()
+                    ini_cal = max(contagem_cal.index.min(), fim_cal - timedelta(weeks=26))
+                    dias_cal = pd.date_range(ini_cal - timedelta(days=ini_cal.dayofweek), fim_cal)
+                    cal = pd.DataFrame({'Data': dias_cal, 'Qtd': contagem_cal.reindex(dias_cal, fill_value=0).values})
+                    cal['Semana'] = cal['Data'] - pd.to_timedelta(cal['Data'].dt.dayofweek, unit='D')
+                    cal['Dia'] = cal['Data'].dt.dayofweek
+                    z_cal = cal.pivot(index='Dia', columns='Semana', values='Qtd').reindex(range(7))
+                    txt_cal = cal.assign(T=cal['Data'].dt.strftime('%d/%m/%Y')).pivot(
+                        index='Dia', columns='Semana', values='T').reindex(range(7))
+                    fig_cal = go.Figure(go.Heatmap(
+                        z=z_cal.values, x=z_cal.columns, y=['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                        customdata=txt_cal.values, colorscale=[[0, '#F1F3F5'], [0.01, '#CFE8EC'],
+                                                               [0.5, COR_AZUL_PETROLEO], [1, COR_AZUL_ESCURO]],
+                        xgap=3, ygap=3, showscale=False,
+                        hovertemplate='%{customdata}: <b>%{z}</b> sinc.<extra></extra>'))
+                    fig_cal.update_layout(title='Últimas 26 semanas · cada quadrado é um dia', height=280,
+                                          margin=dict(t=50, b=30, l=40, r=20))
+                    fig_cal.update_yaxes(autorange='reversed', showgrid=False)
+                    fig_cal.update_xaxes(tickformat='%b/%y', dtick='M1', showgrid=False)
+                    st.plotly_chart(fig_cal, use_container_width=True, config={'displayModeBar': False})
+
+                    # Agrupamento dos gráficos de evolução (Dia é o padrão, igual à versão anterior)
+                    agrupamento = st.radio(":material/tune: Agrupar evolução por:", ["Dia", "Semana", "Mês"],
+                                           horizontal=True, key="agrupamento_sinc",
+                                           help="Semana/Mês deixam as linhas menos ruidosas em períodos longos")
+                    freq_agrup = {'Dia': 'D', 'Semana': 'W-MON', 'Mês': 'MS'}[agrupamento]
+                    fmt_agrup = {'Dia': '%d/%m', 'Semana': '%d/%m', 'Mês': '%b/%y'}[agrupamento]
+
+                    def evolucao(coluna):
+                        if agrupamento == 'Dia':
+                            chave = pd.Grouper(key='Data', freq='D')
+                        else:
+                            chave = pd.Grouper(key='Data', freq=freq_agrup, label='left', closed='left')
+                        piv = df_sincronizados.groupby([chave, coluna]).size().unstack(fill_value=0)
+                        return piv
+
+                    st.markdown("### :material/groups: Sincronizações por SRE")
                     if 'SRE' in df_sincronizados.columns:
-                        sre_por_dia = df_sincronizados.groupby(['Data', 'SRE']).size().reset_index()
-                        sre_por_dia.columns = ['Data', 'SRE', 'Quantidade']
-                        pivot_sre = sre_por_dia.pivot_table(index='Data', columns='SRE',
-                                                            values='Quantidade', aggfunc='sum', fill_value=0).reset_index()
+                        pivot_sre = evolucao('SRE_Nome')
                         fig_sre = go.Figure()
-                        for sre in pivot_sre.columns[1:]:
+                        for sre in pivot_sre.columns:
                             fig_sre.add_trace(go.Bar(
-                                x=pivot_sre['Data'], y=pivot_sre[sre], name=sre,
-                                hovertemplate='Data: %{x|%d/%m/%Y}<br>SRE: ' + sre + '<br>Quantidade: %{y}<extra></extra>'
+                                x=pivot_sre.index, y=pivot_sre[sre], name=sre,
+                                hovertemplate='%{x|%d/%m/%Y}<br>' + sre + ': <b>%{y}</b><extra></extra>'
                             ))
                         fig_sre.update_layout(
-                            title='Sincronizações por SRE (Stacked)', barmode='stack', height=400,
+                            title='Sincronizações por SRE (Stacked)', barmode='stack', height=420,
                             xaxis_title="Data", yaxis_title="Quantidade de Sincronizações",
-                            xaxis=dict(tickformat='%d/%m', tickangle=45),
-                            showlegend=True,
-                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                            xaxis=dict(tickformat=fmt_agrup, showgrid=False), bargap=0.15,
+                            showlegend=True, hovermode='x unified',
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                            margin=dict(t=70)
                         )
                         st.plotly_chart(fig_sre, use_container_width=True)
-                    st.markdown("### 📝 Sincronizações por Tipo de Chamado")
+                    st.markdown("### :material/category: Sincronizações por Tipo de Chamado")
                     if 'Tipo_Chamado' in df_sincronizados.columns:
                         col_tipo1, col_tipo2 = st.columns([2, 1])
                         with col_tipo1:
-                            tipo_por_dia = df_sincronizados.groupby(['Data', 'Tipo_Chamado']).size().reset_index()
-                            tipo_por_dia.columns = ['Data', 'Tipo', 'Quantidade']
-                            pivot_tipo = tipo_por_dia.pivot_table(index='Data', columns='Tipo',
-                                                                  values='Quantidade', aggfunc='sum', fill_value=0).reset_index()
+                            pivot_tipo = evolucao('Tipo_Chamado')
                             fig_tipo = go.Figure()
                             top_tipos = df_sincronizados['Tipo_Chamado'].value_counts().head(5).index.tolist()
                             for tipo in top_tipos:
                                 if tipo in pivot_tipo.columns:
                                     fig_tipo.add_trace(go.Scatter(
-                                        x=pivot_tipo['Data'], y=pivot_tipo[tipo],
-                                        mode='lines+markers', name=tipo,
-                                        hovertemplate='Data: %{x|%d/%m/%Y}<br>Tipo: ' + tipo + '<br>Quantidade: %{y}<extra></extra>'
+                                        x=pivot_tipo.index, y=pivot_tipo[tipo],
+                                        mode='lines+markers', name=tipo, line=dict(width=2.5, shape='spline'),
+                                        marker=dict(size=6),
+                                        hovertemplate='%{x|%d/%m/%Y}<br>' + str(tipo) + ': <b>%{y}</b><extra></extra>'
                                     ))
                             fig_tipo.update_layout(
-                                title='Evolução dos 5 Tipos Mais Frequentes', height=350,
+                                title='Evolução dos 5 Tipos Mais Frequentes', height=380,
                                 xaxis_title="Data", yaxis_title="Quantidade",
-                                xaxis=dict(tickformat='%d/%m', tickangle=45), showlegend=True
+                                xaxis=dict(tickformat=fmt_agrup, showgrid=False), yaxis=dict(rangemode='tozero'),
+                                showlegend=True, legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0),
+                                margin=dict(t=70)
                             )
                             st.plotly_chart(fig_tipo, use_container_width=True)
                         with col_tipo2:
                             tipo_dist = df_sincronizados['Tipo_Chamado'].value_counts().reset_index()
                             tipo_dist.columns = ['Tipo', 'Quantidade']
                             tipo_dist['Percentual'] = (tipo_dist['Quantidade'] / total_sincronizados * 100).round(1)
-                            st.markdown("**📊 Distribuição por Tipo:**")
+                            st.markdown("**:material/donut_small: Distribuição por Tipo:**")
                             for idx, row in tipo_dist.head(5).iterrows():
+                                pct_txt = f"{row['Percentual']:.1f}".replace('.', ',')
                                 st.markdown(f"""
-                                <div style="padding: 8px; margin-bottom: 5px; background: {COR_CINZA_FUNDO}; border-radius: 5px;">
-                                    <strong>{row['Tipo']}</strong><br>
-                                    <small>{row['Quantidade']} ({row['Percentual']}%)</small>
+                                <div style="padding: 10px 12px; margin-bottom: 8px; background: {COR_BRANCO};
+                                            border: 1px solid {COR_CINZA_BORDA}; border-radius: 8px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                                        <strong style="font-size:0.88rem;">{row['Tipo']}</strong>
+                                        <span style="font-weight:700; color:{COR_AZUL_ESCURO};">{fmt_milhar(row['Quantidade'])}</span>
+                                    </div>
+                                    <div style="background:{COR_CINZA_FUNDO}; height:6px; border-radius:3px; margin-top:6px;">
+                                        <div style="background:{COR_AZUL_PETROLEO}; width:{row['Percentual']}%; height:6px; border-radius:3px;"></div>
+                                    </div>
+                                    <small style="color:{COR_CINZA_TEXTO};">{pct_txt}% do total</small>
                                 </div>
                                 """, unsafe_allow_html=True)
-                    st.markdown("### 🏢 Sincronizações por Empresa")
+                    st.markdown("### :material/apartment: Sincronizações por Empresa")
                     if 'Empresa' in df_sincronizados.columns:
-                        col_empresa1, col_empresa2 = 
+                        col_empresa1, col_empresa2 = st.columns([2, 1])
+                        with col_empresa1:
+                            pivot_empresa = evolucao('Empresa')
+                            fig_empresa = go.Figure()
+                            top_empresas = df_sincronizados['Empresa'].value_counts().head(5).index.tolist()
+                            for empresa in top_empresas:
+                                if empresa in pivot_empresa.columns:
+                                    fig_empresa.add_trace(go.Scatter(
+                                        x=pivot_empresa.index, y=pivot_empresa[empresa],
+                                        mode='lines', name=empresa, stackgroup='one', line=dict(width=1),
+                                        hovertemplate='%{x|%d/%m/%Y}<br>' + empresa + ': <b>%{y}</b><extra></extra>'
+                                    ))
+                            fig_empresa.update_layout(
+                                title='Sincronizações por Empresa (Top 5) - Gráfico de Área Empilhado',
+                                height=380, xaxis_title="Data", yaxis_title="Quantidade",
+                                xaxis=dict(tickformat=fmt_agrup, showgrid=False), hovermode='x unified',
+                                showlegend=True, legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0),
+                                margin=dict(t=70)
+                            )
+                            st.plotly_chart(fig_empresa, use_container_width=True)
+                        with col_empresa2:
+                            empresa_rank = df_sincronizados['Empresa'].value_counts().reset_index()
+                            empresa_rank.columns = ['Empresa', 'Quantidade']
+                            empresa_rank['Percentual'] = (empresa_rank['Quantidade'] / total_sincronizados * 100).round(1)
+                            st.markdown("**:material/leaderboard: Ranking Empresas:**")
+                            for idx, row in empresa_rank.head(5).iterrows():
+                                cor_borda = list(CORES_PODIO.values())[idx] if idx < 3 else COR_CINZA_BORDA
+                                pct_txt = f"{row['Percentual']:.1f}".replace('.', ',')
+                                nome_emp = MAPEAMENTO_EMPRESAS.get(row['Empresa'], {}).get('nome_completo', '')
+                                st.markdown(f"""
+                                <div style="padding: 10px 12px; margin-bottom: 8px; background: {COR_BRANCO};
+                                            border: 1px solid {COR_CINZA_BORDA}; border-left: 4px solid {cor_borda};
+                                            border-radius: 8px; display:flex; align-items:center; gap:10px;">
+                                    {selo_posicao(idx + 1, 26)}
+                                    <div style="flex:1; line-height:1.25;">
+                                        <strong>{row['Empresa']}</strong><br>
+                                        <small style="color:{COR_CINZA_TEXTO};">{nome_emp}</small>
+                                    </div>
+                                    <div style="text-align:right; line-height:1.25;">
+                                        <strong style="color:{COR_AZUL_ESCURO};">{fmt_milhar(row['Quantidade'])}</strong><br>
+                                        <small style="color:{COR_CINZA_TEXTO};">{pct_txt}%</small>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                else:
+                    st.warning("Nenhum chamado sincronizado encontrado com os filtros aplicados.", icon=":material/warning:")
+            else:
+                st.info("Selecione filtros para visualizar os dados de sincronização por dia.", icon=":material/info:")
+        with tab4:
+            st.markdown(titulo_secao("PERFORMANCE DOS SREs", "premio"), unsafe_allow_html=True)
+            if 'SRE' in df.columns and 'Status' in df.columns and 'Revisões_Total' in df.columns:
+                col_filtro1, col_filtro2 = st.columns(2)
+                ano_sre, mes_sre = 'Todos', 'Todos'
+                with col_filtro1:
+                    if 'Ano' in df.columns:
+                        anos_sre = sorted(df['Ano'].dropna().unique().astype(int))
+                        anos_opcoes_sre = ['Todos'] + list(anos_sre)
+                        ano_sre = st.selectbox(":material/calendar_month: Filtrar por Ano:", options=anos_opcoes_sre, key="filtro_ano_sre")
+                with col_filtro2:
+                    if 'Mês' in df.columns:
+                        meses_sre = sorted(df['Mês'].dropna().unique().astype(int))
+                        meses_opcoes_sre = ['Todos'] + [str(m) for m in meses_sre]
+                        mes_sre = st.selectbox(":material/date_range: Filtrar por Mês:", options=meses_opcoes_sre, key="filtro_mes_sre",
+                                               format_func=lambda m: m if m == 'Todos' else MESES_NOMES[int(m)])
+                df_sre = df.copy()
+                if 'Ano' in df_sre.columns and ano_sre != 'Todos':
+                    df_sre = df_sre[df_sre['Ano'] == int(ano_sre)]
+                if 'Mês' in df_sre.columns and mes_sre != 'Todos':
+                    df_sre = df_sre[df_sre['Mês'] == int(mes_sre)]
+                df_sincronizados = df_sre[df_sre['Sinc']].copy()
+                if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
+                    st.markdown("### :material/bar_chart: Sincronizados por SRE")
+                    sinc_por_sre_nome = (df_sincronizados.groupby('SRE_Nome').size()
+                                         .reset_index(name='Sincronizados')
+                                         .sort_values('Sincronizados', ascending=False))
+                    total_sinc_sre = sinc_por_sre_nome['Sincronizados'].sum()
+                    top_sre = sinc_por_sre_nome.head(15)
+                    fig_sinc_bar = go.Figure()
+                    fig_sinc_bar.add_trace(go.Bar(
+                        x=top_sre['SRE_Nome'], y=top_sre['Sincronizados'],
+                        name='Sincronizados',
+                        text=[f"<b>{fmt_milhar(v)}</b>  ·  " + f"{v / total_sinc_sre * 100:.1f}%".replace('.', ',')
+                              for v in top_sre['Sincronizados']],
+                        textposition='outside', cliponaxis=False,
+                        marker_color=gradiente_azul(top_sre['Sincronizados']), marker_line_width=0,
+                        hovertemplate='<b>%{x}</b><br>%{y} sincronizados<extra></extra>'
+                    ))
+                    titulo_grafico = 'Sincronizados por SRE'
+                    if ano_sre != 'Todos' or mes_sre != 'Todos':
+                        titulo_grafico += ' - Filtrado'
+                        if ano_sre != 'Todos':
+                            titulo_grafico += f' ({ano_sre}'
+                        if mes_sre != 'Todos':
+                            if ano_sre != 'Todos':
+                                titulo_grafico += f' - {MESES_NOMES[int(mes_sre)]})'
+                            else:
+                                titulo_grafico += f' ({MESES_NOMES[int(mes_sre)]})'
+                        elif ano_sre != 'Todos':
+                            titulo_grafico += ')'
+                    fig_sinc_bar.update_layout(
+                        title=titulo_grafico, xaxis_title='SRE', yaxis_title='Número de Sincronizados',
+                        height=460, showlegend=False, bargap=0.35,
+                        margin=dict(t=60, b=60, l=50, r=30),
+                        xaxis=dict(showgrid=False, categoryorder='total descending'),
+                        yaxis=dict(rangemode='tozero')
+                    )
+                    st.plotly_chart(fig_sinc_bar, use_container_width=True)
+                    col_top1, col_top2, col_top3 = st.columns(3)
+                    for posicao, coluna in enumerate([col_top1, col_top2, col_top3]):
+                        if len(sinc_por_sre_nome) > posicao:
+                            linha_sre = sinc_por_sre_nome.iloc[posicao]
+                            pct_sre = f"{linha_sre['Sincronizados'] / total_sinc_sre * 100:.1f}".replace('.', ',')
+                            with coluna:
+                                st.markdown(f"""
+                                <div class="metric-card" style="border-top: 4px solid {CORES_PODIO[posicao + 1]};">
+                                    <div style="display:flex; align-items:center; gap:12px;">
+                                        {selo_posicao(posicao + 1, 40)}
+                                        <div>
+                                            <div class="metric-label" style="margin:0;">{posicao + 1}º Lugar Sincronizados</div>
+                                            <div style="font-size:1.25rem; font-weight:700; color:{COR_PRETO_SUAVE};">{linha_sre['SRE_Nome']}</div>
+                                            <div style="font-size:0.85rem; color:{COR_AZUL_ESCURO}; font-weight:600;">
+                                                {fmt_milhar(linha_sre['Sincronizados'])} sinc. · {pct_sre}% do total</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                    st.markdown("### :material/table_chart: Performance Detalhada dos SREs")
+                    df_sres_metrics = (df_sre.groupby('SRE_Nome')
+                                       .agg(Total_Cards=('Sinc', 'size'), Sincronizados=('Sinc', 'sum'),
+                                            Cards_Retorno=('Com_Revisao', 'sum'), Revisoes=('Revisões_Total', 'sum'))
+                                       .reset_index().rename(columns={'SRE_Nome': 'SRE'}))
+                    df_sres_metrics['Taxa_Retorno'] = (df_sres_metrics['Cards_Retorno'] /
+                                                       df_sres_metrics['Total_Cards'] * 100).round(1)
+                    df_sres_metrics['Participacao'] = (df_sres_metrics['Sincronizados'] /
+                                                       max(df_sres_metrics['Sincronizados'].sum(), 1) * 100).round(1)
+                    df_sres_metrics = df_sres_metrics.sort_values('Sincronizados', ascending=False)
+                    st.dataframe(df_sres_metrics, use_container_width=True, hide_index=True,
+                                 column_config={
+                                     "SRE": st.column_config.TextColumn("SRE"),
+                                     "Total_Cards": st.column_config.NumberColumn("Total Cards", format="%d"),
+                                     "Sincronizados": st.column_config.NumberColumn("Sincronizados", format="%d"),
+                                     "Cards_Retorno": st.column_config.NumberColumn("Cards Retorno", format="%d",
+                                                                                    help="Cards com Revisões + Qtd. Revisões > 0"),
+                                     "Revisoes": st.column_config.NumberColumn("Total Revisões", format="%d",
+                                                                               help="Soma de Revisões + Qtd. Revisões"),
+                                     "Taxa_Retorno": st.column_config.ProgressColumn("Taxa Retorno", format="%.1f%%",
+                                                                                     min_value=0, max_value=100),
+                                     "Participacao": st.column_config.ProgressColumn("Participação", format="%.1f%%",
+                                                                                     min_value=0, max_value=100),
+                                 })
+                st.markdown("---")
+                st.markdown(titulo_secao("ANÁLISE DE SAZONALIDADE", "calendario"), unsafe_allow_html=True)
+                with st.expander("**SOBRE ESTA ANÁLISE**", expanded=False, icon=":material/info:"):
+                    st.markdown("""
+                    **Análise de Sazonalidade e Padrões Temporais:**
+                    Esta análise identifica padrões no fluxo de demandas ao longo do tempo:
+                    **:material/calendar_view_week: Padrões por Dia da Semana:**
+                    - Identifica quais dias têm mais/menos demandas
+                    - Mostra taxa de sincronização por dia
+                    - Útil para planejamento de recursos
+                    **:material/schedule: Demandas por Hora do Dia:**
+                    - Identifica horários de pico de criação de chamados
+                    - Mostra horários com maior taxa de sincronização
+                    - Filtros por ano e mês disponíveis
+                    **:material/calendar_month: Sazonalidade Mensal:**
+                    - Distribuição de demandas ao longo dos meses
+                    - Identifica meses com maior volume
+                    - Mostra taxa de sincronização mensal
+                    - Inclui todos os 12 meses (Janeiro a Dezembro)
+                    **:material/bar_chart: Tipos de Gráficos:**
+                    - Gráficos de barras para comparação
+                    - Gráficos de linha para tendências
+                    - Taxas de sincronização sobrepostas
+                    - Mapa de calor dia da semana × hora
+                    **:material/target: Objetivo:**
+                    Otimizar alocação de recursos e identificar padrões para melhorar eficiência.
+                    """)
+                if 'Criado' in df.columns and 'Status' in df.columns:
+                    col_saz_filtro1, col_saz_filtro2, col_saz_filtro3 = st.columns(3)
+                    with col_saz_filtro1:
+                        anos_saz = sorted(df['Ano'].dropna().unique().astype(int))
+                        anos_opcoes_saz = ['Todos os Anos'] + list(anos_saz)
+                        ano_saz = st.selectbox(":material/calendar_month: Selecionar Ano:", options=anos_opcoes_saz,
+                                               index=len(anos_opcoes_saz)-1, key="ano_saz")
+                    with col_saz_filtro2:
+                        if ano_saz != 'Todos os Anos':
+                            meses_ano = df[df['Ano'] == int(ano_saz)]['Mês'].unique()
+                            meses_opcoes = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_ano])
+                            mes_saz = st.selectbox(":material/date_range: Selecionar Mês:", options=meses_opcoes, key="mes_saz",
+                                                   format_func=lambda m: m if m == 'Todos os Meses' else MESES_NOMES[int(m)])
+                        else:
+                            mes_saz = 'Todos os Meses'
+                    with col_saz_filtro3:
+                        # Corrigido: este seletor não alterava nada nos gráficos. Agora controla as séries exibidas.
+                        tipo_analise = st.selectbox(":material/stacked_bar_chart: Tipo de Análise:",
+                                                    options=["Demandas Totais", "Apenas Sincronizados", "Comparativo"],
+                                                    index=2, key="tipo_analise_saz")
+                    mostrar_total = tipo_analise in ("Demandas Totais", "Comparativo")
+                    mostrar_sinc = tipo_analise in ("Apenas Sincronizados", "Comparativo")
+                    mostrar_taxa = tipo_analise == "Comparativo"
+                    df_saz = df.copy()
+                    if ano_saz != 'Todos os Anos':
+                        df_saz = df_saz[df_saz['Ano'] == int(ano_saz)]
+                    if mes_saz != 'Todos os Meses':
+                        df_saz = df_saz[df_saz['Mês'] == int(mes_saz)]
+                    st.markdown("### :material/calendar_view_week: Padrões por Dia da Semana")
+                    dias_semana = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                    dias_portugues = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+                    dia_mapping = dict(zip(dias_semana, dias_portugues))
+                    df_saz['Dia_Semana'] = df_saz['Criado'].dt.day_name()
+                    df_saz['Dia_Semana_PT'] = df_saz['Dia_Semana'].map(dia_mapping)
+                    col_dia1, col_dia2 = st.columns(2)
+                    with col_dia1:
+                        demanda_dia = df_saz['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
+                        demanda_dia.columns = ['Dia', 'Total_Demandas']
+                        sinc_dia = df_saz[df_saz['Status'] == 'Sincronizado']['Dia_Semana_PT'].value_counts().reindex(dias_portugues).reset_index()
+                        sinc_dia.columns = ['Dia', 'Sincronizados']
+                        dados_dia = pd.merge(demanda_dia, sinc_dia, on='Dia', how='left').fillna(0)
+                        dados_dia['Taxa_Sinc'] = (dados_dia['Sincronizados'] / dados_dia['Total_Demandas'] * 100).round(1)
+                        fig_dias = go.Figure()
+                        if mostrar_total:
+                            fig_dias.add_trace(go.Bar(x=dados_dia['Dia'], y=dados_dia['Total_Demandas'],
+                                                      name='Total Demandas', marker_color=COR_AZUL_ESCURO,
+                                                      text=dados_dia['Total_Demandas'].astype(int), textposition='outside',
+                                                      cliponaxis=False))
+                        if mostrar_sinc:
+                            fig_dias.add_trace(go.Bar(x=dados_dia['Dia'], y=dados_dia['Sincronizados'],
+                                                      name='Sincronizados', marker_color=COR_VERDE_ESCURO,
+                                                      text=dados_dia['Sincronizados'].astype(int), textposition='outside',
+                                                      cliponaxis=False))
+                        if mostrar_taxa:
+                            fig_dias.add_trace(go.Scatter(x=dados_dia['Dia'], y=dados_dia['Taxa_Sinc'],
+                                                          name='Taxa Sinc (%)', yaxis='y2',
+                                                          mode='lines+markers',
+                                                          line=dict(color=COR_LARANJA, width=3, shape='spline'),
+                                                          marker=dict(size=9, line=dict(color=COR_BRANCO, width=2)),
+                                                          hovertemplate='%{x}: %{y:.1f}%<extra>Taxa Sinc</extra>'))
+                        fig_dias.update_layout(
+                            title='Demandas e Sincronizações por Dia da Semana', barmode='group', bargap=0.25,
+                            yaxis=dict(title='Quantidade', range=[0, max(1, dados_dia['Total_Demandas'].max()) * 1.35]),
+                            yaxis2=dict(title='Taxa Sinc (%)', overlaying='y', side='right', range=[0, 105],
+                                        ticksuffix='%', showgrid=False),
+                            xaxis=dict(showgrid=False),
+                            height=420, showlegend=True, hovermode='x unified',
+                            legend=dict(orientation='h', yanchor='top', y=-0.12, x=0),
+                            margin=dict(t=60, b=70)
+                        )
+                        st.plotly_chart(fig_dias, use_container_width=True)
+                    with col_dia2:
+                        st.markdown("### :material/schedule: Demandas por Hora do Dia")
+                        col_hora_filtro1, col_hora_filtro2 = st.columns(2)
+                        with col_hora_filtro1:
+                            anos_hora = sorted(df['Ano'].dropna().unique().astype(int))
+                            anos_opcoes_hora = ['Todos os Anos'] + list(anos_hora)
+                            ano_hora = st.selectbox("Ano para análise horária:", options=anos_opcoes_hora,
+                                                    index=len(anos_opcoes_hora)-1, key="ano_hora")
+                        with col_hora_filtro2:
+                            if ano_hora != 'Todos os Anos':
+                                meses_hora = df[df['Ano'] == int(ano_hora)]['Mês'].unique()
+                                meses_opcoes_hora = ['Todos os Meses'] + sorted([str(int(m)) for m in meses_hora])
+                                mes_hora = st.selectbox("Mês para análise horária:", options=meses_opcoes_hora, key="mes_hora",
+                                                        format_func=lambda m: m if m == 'Todos os Meses' else MESES_NOMES[int(m)])
+                            else:
+                                mes_hora = 'Todos os Meses'
+                        df_hora = df.copy()
+                        if ano_hora != 'Todos os Anos':
+                            df_hora = df_hora[df_hora['Ano'] == int(ano_hora)]
+                        if mes_hora != 'Todos os Meses':
+                            df_hora = df_hora[df_hora['Mês'] == int(mes_hora)]
+                        subtitulo_hora = "Análise por Hora"
+                        if ano_hora != 'Todos os Anos':
+                            subtitulo_hora += f" - {ano_hora}"
+                        if mes_hora != 'Todos os Meses':
+                            subtitulo_hora += f" - {MESES_NOMES[int(mes_hora)]}"
+                        st.markdown(f"**Período:** {subtitulo_hora}")
+                        df_hora['Hora'] = df_hora['Criado'].dt.hour
+                        demanda_hora = df_hora['Hora'].value_counts().sort_index().reset_index()
+                        demanda_hora.columns = ['Hora', 'Total_Demandas']
+                        sinc_hora = df_hora[df_hora['Status'] == 'Sincronizado']['Hora'].value_counts().sort_index().reset_index()
+                        sinc_hora.columns = ['Hora', 'Sincronizados']
+                        dados_hora = pd.merge(demanda_hora, sinc_hora, on='Hora', how='left').fillna(0)
+                        dados_hora['Taxa_Sinc'] = (dados_hora['Sincronizados'] / dados_hora['Total_Demandas'] * 100).where(dados_hora['Total_Demandas'] > 0, 0).round(1)
+                        fig_horas = go.Figure()
+                        fig_horas.add_trace(go.Scatter(x=dados_hora['Hora'], y=dados_hora['Total_Demandas'],
+                                                       name='Total Demandas', mode='lines+markers',
+                                                       line=dict(color=COR_AZUL_ESCURO, width=3, shape='spline'),
+                                                       fill='tozeroy', fillcolor='rgba(0, 89, 115, 0.08)',
+                                                       marker=dict(size=8, line=dict(color=COR_BRANCO, width=2)),
+                                                       hovertemplate='%{x}h: %{y} demandas<extra></extra>'))
+                        fig_horas.add_trace(go.Scatter(x=dados_hora['Hora'], y=dados_hora['Sincronizados'],
+                                                       name='Sincronizados', mode='lines+markers',
+                                                       line=dict(color=COR_VERDE_ESCURO, width=3, shape='spline'),
+                                                       marker=dict(size=8, line=dict(color=COR_BRANCO, width=2)),
+                                                       hovertemplate='%{x}h: %{y} sincronizados<extra></extra>'))
+                        if not dados_hora.empty:
+                            pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
+                            pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
+                            hora_pico_demanda = f"{int(pico_demanda['Hora'])}:00h"
+                            hora_pico_sinc = f"{int(pico_sinc['Hora'])}:00h"
+                            fig_horas.add_annotation(x=pico_demanda['Hora'], y=pico_demanda['Total_Demandas'],
+                                                     text=f"Pico Demandas: {int(pico_demanda['Total_Demandas'])}<br>{hora_pico_demanda}",
+                                                     showarrow=True, arrowhead=2, ax=0, ay=-40, arrowcolor=COR_AZUL_ESCURO,
+                                                     bgcolor="white", bordercolor=COR_AZUL_ESCURO, borderpad=4,
+                                                     font=dict(size=11, color=COR_AZUL_ESCURO))
+                            fig_horas.add_annotation(x=pico_sinc['Hora'], y=pico_sinc['Sincronizados'],
+                                                     text=f"Pico Sinc: {int(pico_sinc['Sincronizados'])}<br>{hora_pico_sinc}",
+                                                     showarrow=True, arrowhead=2, ax=0, ay=40, arrowcolor=COR_VERDE_ESCURO,
+                                                     bgcolor="white", bordercolor=COR_VERDE_ESCURO, borderpad=4,
+                                                     font=dict(size=11, color=COR_VERDE_ESCURO))
+                        fig_horas.update_layout(
+                            title=f'Demandas por Hora do Dia - {subtitulo_hora}',
+                            xaxis_title='Hora do Dia', yaxis_title='Quantidade',
+                            xaxis=dict(dtick=1, ticksuffix='h', showgrid=False), yaxis=dict(rangemode='tozero'),
+                            height=420, showlegend=True,
+                            legend=dict(orientation='h', yanchor='top', y=-0.15, x=0),
+                            margin=dict(t=60, b=80)
+                        )
+                        st.plotly_chart(fig_horas, use_container_width=True)
+                        if not dados_hora.empty:
+                            col_hora_stats1, col_hora_stats2, col_hora_stats3 = st.columns(3)
+                            with col_hora_stats1:
+                                hora_pico_demanda = dados_hora.loc[dados_hora['Total_Demandas'].idxmax()]
+                                hora_formatada = f"{int(hora_pico_demanda['Hora'])}:00h"
+                                st.metric(":material/schedule: Pico de Demandas", hora_formatada,
+                                          f"{int(hora_pico_demanda['Total_Demandas'])} demandas")
+                            with col_hora_stats2:
+                                HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
+                                dados_sinc_pico = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)].copy()
+                                if not dados_sinc_pico.empty:
+                                    hora_pico_sinc = dados_sinc_pico.loc[dados_sinc_pico['Sincronizados'].idxmax()]
+                                    hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
+                                    st.metric(":material/task_alt: Pico de Sincronizações", hora_sinc_formatada,
+                                              f"{int(hora_pico_sinc['Sincronizados'])} sinc.")
+                                else:
+                                    hora_pico_sinc = dados_hora.loc[dados_hora['Sincronizados'].idxmax()]
+                                    hora_sinc_formatada = f"{int(hora_pico_sinc['Hora'])}:00h"
+                                    st.metric(":material/task_alt: Pico de Sincronizações", hora_sinc_formatada,
+                                              f"{int(hora_pico_sinc['Sincronizados'])} sinc.",
+                                              help="Pico calculado fora dos horários de sincronismo")
+                            with col_hora_stats3:
+                                HORARIOS_SINCRONISMO = [8, 9, 10, 11, 12, 14, 15, 16]
+                                MINIMO_CHAMADOS = 2
+                                dados_hora_validos = dados_hora[
+                                    dados_hora['Hora'].isin(HORARIOS_SINCRONISMO) &
+                                    (dados_hora['Total_Demandas'] >= MINIMO_CHAMADOS)
+                                ]
+                                if not dados_hora_validos.empty:
+                                    melhor_taxa_hora = dados_hora_validos.loc[dados_hora_validos['Taxa_Sinc'].idxmax()]
+                                    hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
+                                    st.metric(":material/emoji_events: Melhor Taxa Sinc.", hora_taxa_formatada,
+                                              f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%")
+                                else:
+                                    dados_fallback = dados_hora[dados_hora['Hora'].isin(HORARIOS_SINCRONISMO)]
+                                    if not dados_fallback.empty:
+                                        melhor_taxa_hora = dados_fallback.loc[dados_fallback['Taxa_Sinc'].idxmax()]
+                                        hora_taxa_formatada = f"{int(melhor_taxa_hora['Hora'])}:00h"
+                                        st.metric(":material/emoji_events: Melhor Taxa Sinc.", hora_taxa_formatada,
+                                                  f"{melhor_taxa_hora['Taxa_Sinc']:.1f}%",
+                                                  help="Taxa calculada com volume baixo de dados")
+                                    else:
+                                        st.metric(":material/emoji_events: Melhor Taxa Sinc.", "N/A",
+                                                  "Sem dados nos horários 8-12,14-16h")
+                    # NOVO: mapa de calor dia da semana × hora (respeita os filtros de ano/mês acima)
+                    st.markdown("### :material/grid_on: Mapa de Calor · Dia da Semana × Hora")
+                    if not df_saz.empty:
+                        base_calor = df_saz[df_saz['Sinc']] if tipo_analise == "Apenas Sincronizados" else df_saz
+                        mapa_calor = (base_calor.assign(DiaN=base_calor['Criado'].dt.dayofweek,
+                                                        HoraN=base_calor['Criado'].dt.hour)
+                                      .pivot_table(index='DiaN', columns='HoraN', values='Criado',
+                                                   aggfunc='count', fill_value=0)
+                                      .reindex(index=range(7), fill_value=0))
+                        mapa_calor = mapa_calor.loc[mapa_calor.sum(axis=1) > 0]
+                        if not mapa_calor.empty:
+                            fig_calor = go.Figure(go.Heatmap(
+                                z=mapa_calor.values, x=[f"{h}h" for h in mapa_calor.columns],
+                                y=[dias_portugues[i] for i in mapa_calor.index],
+                                colorscale=[[0, '#F1F8FA'], [0.35, '#8CCAD5'], [0.7, COR_AZUL_PETROLEO], [1, COR_AZUL_ESCURO]],
+                                xgap=2, ygap=2, text=mapa_calor.values, texttemplate='%{text}',
+                                textfont=dict(size=10),
+                                colorbar=dict(title='Qtd', thickness=12),
+                                hovertemplate='%{y}, %{x}: <b>%{z}</b><extra></extra>'))
+                            fig_calor.update_layout(
+                                title=('Sincronizados' if tipo_analise == "Apenas Sincronizados" else 'Demandas criadas')
+                                      + ' por dia da semana e hora', height=340, margin=dict(t=50, b=40))
+                            fig_calor.update_yaxes(autorange='reversed', showgrid=False)
+                            fig_calor.update_xaxes(showgrid=False)
+                            st.plotly_chart(fig_calor, use_container_width=True)
+                    st.markdown("### :material/calendar_month: Sazonalidade Mensal")
+                    col_saz_mes1, col_saz_mes2 = st.columns(2)
+                    with col_saz_mes1:
+                        anos_saz_mes = sorted(df['Ano'].dropna().unique().astype(int))
+                        anos_opcoes_saz_mes = ['Todos os Anos'] + list(anos_saz_mes)
+                        ano_saz_mes = st.selectbox(":material/calendar_month: Selecionar Ano para análise mensal:",
+                                                   options=anos_opcoes_saz_mes,
+                                                   index=len(anos_opcoes_saz_mes)-1, key="ano_saz_mes")
+                    with col_saz_mes2:
+                        if ano_saz_mes != 'Todos os Anos':
+                            st.markdown(f"**Ano selecionado:** {ano_saz_mes}")
+                        else:
+                            st.markdown("**Todos os anos**")
+                    if ano_saz_mes != 'Todos os Anos':
+                        df_saz_mes = df[df['Ano'] == int(ano_saz_mes)].copy()
+                    else:
+                        df_saz_mes = df.copy()
+                    if not df_saz_mes.empty:
+                        meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                        meses_nomes_completos = {
+                            'Jan': 'Janeiro', 'Fev': 'Fevereiro', 'Mar': 'Março', 'Abr': 'Abril',
+                            'Mai': 'Maio', 'Jun': 'Junho', 'Jul': 'Julho', 'Ago': 'Agosto',
+                            'Set': 'Setembro', 'Out': 'Outubro', 'Nov': 'Novembro', 'Dez': 'Dezembro'
+                        }
+                        if 'Nome_Mês' in df_saz_mes.columns:
+                            df_saz_mes['Mês_Abrev'] = df_saz_mes['Nome_Mês']
+                        else:
+                            df_saz_mes['Mês_Abrev'] = df_saz_mes['Criado'].dt.month.map({
+                                1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+                                5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+                                9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+                            })
+                        demanda_mes = df_saz_mes.groupby('Mês_Abrev').size().reset_index()
+                        demanda_mes.columns = ['Mês', 'Total']
+                        demanda_mes = demanda_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                        demanda_mes['Total'] = demanda_mes['Total'].fillna(0).astype(int)
+                        sinc_mes = df_saz_mes[df_saz_mes['Status'] == 'Sincronizado'].groupby('Mês_Abrev').size().reset_index()
+                        sinc_mes.columns = ['Mês', 'Sincronizados']
+                        sinc_mes = sinc_mes.set_index('Mês').reindex(meses_ordem).reset_index()
+                        sinc_mes['Sincronizados'] = sinc_mes['Sincronizados'].fillna(0).astype(int)
+                        dados_mes = pd.merge(demanda_mes, sinc_mes, on='Mês', how='left').fillna(0)
+                        dados_mes['Taxa_Sinc'] = (dados_mes['Sincronizados'] / dados_mes['Total'] * 100).where(dados_mes['Total'] > 0, 0).round(1)
+                        titulo_grafico = f'Distribuição Mensal'
+                        if ano_saz_mes != 'Todos os Anos':
+                            titulo_grafico += f' - {ano_saz_mes}'
+                        fig_mes_saz = go.Figure()
+                        if mostrar_total:
+                            fig_mes_saz.add_trace(go.Bar(x=dados_mes['Mês'], y=dados_mes['Total'],
+                                                         name='Total Demandas', marker_color=COR_AZUL_ESCURO,
+                                                         text=dados_mes['Total'], textposition='outside', cliponaxis=False))
+                        if mostrar_sinc:
+                            fig_mes_saz.add_trace(go.Bar(x=dados_mes['Mês'], y=dados_mes['Sincronizados'],
+                                                         name='Sincronizados', marker_color=COR_VERDE_ESCURO,
+                                                         text=dados_mes['Sincronizados'], textposition='outside',
+                                                         cliponaxis=False))
+                        if mostrar_taxa:
+                            dados_taxa = dados_mes[dados_mes['Total'] > 0]  # não desenha 0% em meses sem dados
+                            fig_mes_saz.add_trace(go.Scatter(x=dados_taxa['Mês'], y=dados_taxa['Taxa_Sinc'],
+                                                             name='Taxa Sinc (%)', yaxis='y2',
+                                                             mode='lines+markers',
+                                                             line=dict(color=COR_LARANJA, width=3, shape='spline'),
+                                                             marker=dict(size=9, line=dict(color=COR_BRANCO, width=2)),
+                                                             hovertemplate='%{x}: %{y:.1f}%<extra>Taxa Sinc</extra>'))
+                        fig_mes_saz.update_layout(
+                            title=titulo_grafico, barmode='group', bargap=0.25,
+                            yaxis=dict(title='Quantidade', range=[0, max(1, dados_mes['Total'].max()) * 1.35]),
+                            yaxis2=dict(title='Taxa Sinc (%)', overlaying='y', side='right', range=[0, 105],
+                                        ticksuffix='%', showgrid=False),
+                            xaxis=dict(showgrid=False, categoryorder='array', categoryarray=meses_ordem),
+                            height=420, showlegend=True, hovermode='x unified',
+                            legend=dict(orientation='h', yanchor='top', y=-0.12, x=0),
+                            margin=dict(t=60, b=70)
+                        )
+                        st.plotly_chart(fig_mes_saz, use_container_width=True)
+                        col_pico1, col_pico2, col_pico3 = st.columns(3)
+                        with col_pico1:
+                            mes_maior_demanda = dados_mes.loc[dados_mes['Total'].idxmax()]
+                            st.metric(":material/trending_up: Mês com mais demandas",
+                                      f"{meses_nomes_completos.get(mes_maior_demanda['Mês'], mes_maior_demanda['Mês'])}: {int(mes_maior_demanda['Total'])}")
+                        with col_pico2:
+                            mes_maior_sinc = dados_mes.loc[dados_mes['Sincronizados'].idxmax()]
+                            st.metric(":material/task_alt: Mês com mais sincronizações",
+                                      f"{meses_nomes_completos.get(mes_maior_sinc['Mês'], mes_maior_sinc['Mês'])}: {int(mes_maior_sinc['Sincronizados'])}")
+                        with col_pico3:
+                            melhor_taxa = dados_mes.loc[dados_mes['Taxa_Sinc'].idxmax()]
+                            st.metric(":material/emoji_events: Melhor taxa de sincronização",
+                                      f"{meses_nomes_completos.get(melhor_taxa['Mês'], melhor_taxa['Mês'])}: " + f"{melhor_taxa['Taxa_Sinc']:.1f}%".replace('.', ','))
+                st.markdown("---")
+                col_top, col_dist = st.columns([2, 1])
+                with col_top:
+                    st.markdown(titulo_secao("TOP 10 RESPONSÁVEIS", "equipe"), unsafe_allow_html=True)
+                    if 'Responsável_Formatado' in df.columns:
+                        top_responsaveis = df['Responsável_Formatado'].value_counts().head(10).reset_index()
+                        top_responsaveis.columns = ['Responsável', 'Demandas']
+                        fig_top = px.bar(top_responsaveis, x='Demandas', y='Responsável',
+                                         orientation='h', text='Demandas', color='Demandas',
+                                         color_continuous_scale=ESCALA_AZUL)
+                        fig_top.update_traces(texttemplate='%{text}', textposition='outside', cliponaxis=False,
+                                              marker_line_width=0,
+                                              hovertemplate='<b>%{y}</b><br>%{x} demandas<extra></extra>')
+                        fig_top.update_layout(height=500, showlegend=False, coloraxis_showscale=False, bargap=0.3,
+                                              yaxis={'categoryorder': 'total ascending'},
+                                              margin=dict(t=20, b=20, l=20, r=20),
+                                              xaxis_title="Número de Demandas", yaxis_title="")
+                        st.plotly_chart(fig_top, use_container_width=True)
+                with col_dist:
+                    st.markdown(titulo_secao("DISTRIBUIÇÃO POR TIPO", "grafico"), unsafe_allow_html=True)
+                    if 'Tipo_Chamado' in df.columns:
+                        tipos_chamado = df['Tipo_Chamado'].value_counts().reset_index()
+                        tipos_chamado.columns = ['Tipo', 'Quantidade']
+                        tipos_chamado = tipos_chamado.sort_values('Quantidade', ascending=True)
+                        fig_tipos = px.bar(tipos_chamado, x='Quantidade', y='Tipo',
+                                           orientation='h', title='', text='Quantidade',
+                                           color='Quantidade', color_continuous_scale=ESCALA_AZUL)
+                        fig_tipos.update_traces(texttemplate='%{text}', textposition='outside', cliponaxis=False,
+                                                marker_line_width=0,
+                                                hovertemplate='<b>%{y}</b><br>%{x} chamados<extra></extra>')
+                        fig_tipos.update_layout(height=500, showlegend=False, coloraxis_showscale=False, bargap=0.3,
+                                                yaxis={'categoryorder': 'total ascending'},
+                                                margin=dict(t=20, b=20, l=20, r=20),
+                                                xaxis_title="Quantidade", yaxis_title="")
+                        st.plotly_chart(fig_tipos, use_container_width=True)
+                st.markdown("---")
+                st.markdown(titulo_secao("ÚLTIMAS DEMANDAS REGISTRADAS", "relogio"), unsafe_allow_html=True)
+                if 'Criado' in df.columns:
+                    filtro_chamado_principal = st.text_input(":material/search: Buscar chamado específico:",
+                                                             placeholder="Digite o número do chamado...",
+                                                             key="filtro_chamado_principal")
+                    col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
+                    with col_filtro1:
+                        qtd_demandas = st.slider("Número de demandas:", min_value=5, max_value=50,
+                                                 value=15, step=5, key="slider_demandas")
+                    with col_filtro2:
+                        ordenar_por = st.selectbox("Ordenar por:",
+                                                   options=['Data (Mais Recente)', 'Data (Mais Antiga)',
+                                                            'Revisões (Maior)', 'Revisões (Menor)'],
+                                                   key="select_ordenar")
+                    with col_filtro3:
+                        mostrar_colunas = st.multiselect("Colunas a mostrar:",
+                                                         options=['Chamado', 'Tipo_Chamado', 'Responsável', 'Status',
+                                                                  'Prioridade', 'Revisões', 'Revisões_Total',
+                                                                  'Qtd. Revisões', 'Empresa', 'SRE', 'Data',
+                                                                  'Responsável_Formatado'],
+                                                         default=['Chamado', 'Tipo_Chamado', 'Responsável_Formatado',
+                                                                  'Status', 'Data'],
+                                                         key="select_colunas")
+                    with col_filtro4:
+                        filtro_chamado_tabela = st.text_input("Filtro adicional:",
+                                                              placeholder="Ex: 12345",
+                                                              key="input_filtro_chamado")
+                    ultimas_demandas = df.copy()
+                    if filtro_chamado_principal:
+                        ultimas_demandas = ultimas_demandas[
+                            ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_principal, na=False)
+                        ]
+                    if ordenar_por == 'Data (Mais Recente)':
+                        ultimas_demandas = ultimas_demandas.sort_values('Criado', ascending=False)
+                    elif ordenar_por == 'Data (Mais Antiga)':
+                        ultimas_demandas = ultimas_demandas.sort_values('Criado', ascending=True)
+                    elif ordenar_por == 'Revisões (Maior)':
+                        ultimas_demandas = ultimas_demandas.sort_values('Revisões_Total', ascending=False)
+                    elif ordenar_por == 'Revisões (Menor)':
+                        ultimas_demandas = ultimas_demandas.sort_values('Revisões_Total', ascending=True)
+                    if filtro_chamado_tabela:
+                        ultimas_demandas = ultimas_demandas[
+                            ultimas_demandas['Chamado'].astype(str).str.contains(filtro_chamado_tabela, na=False)
+                        ]
+                    ultimas_demandas = ultimas_demandas.head(qtd_demandas)
+                    display_data = pd.DataFrame()
+                    if 'Chamado' in mostrar_colunas and 'Chamado' in ultimas_demandas.columns:
+                        display_data['Chamado'] = ultimas_demandas['Chamado']
+                    if 'Tipo_Chamado' in mostrar_colunas and 'Tipo_Chamado' in ultimas_demandas.columns:
+                        display_data['Tipo'] = ultimas_demandas['Tipo_Chamado']
+                    if 'Responsável' in mostrar_colunas and 'Responsável' in ultimas_demandas.columns:
+                        display_data['Responsável'] = ultimas_demandas['Responsável']
+                    if 'Responsável_Formatado' in mostrar_colunas and 'Responsável_Formatado' in ultimas_demandas.columns:
+                        display_data['Responsável Formatado'] = ultimas_demandas['Responsável_Formatado']
+                    if 'Status' in mostrar_colunas and 'Status' in ultimas_demandas.columns:
+                        display_data['Status'] = ultimas_demandas['Status']
+                    if 'Prioridade' in mostrar_colunas and 'Prioridade' in ultimas_demandas.columns:
+                        display_data['Prioridade'] = ultimas_demandas['Prioridade']
+                    if 'Revisões' in mostrar_colunas and 'Revisões' in ultimas_demandas.columns:
+                        display_data['Revisões'] = ultimas_demandas['Revisões']
+                    if 'Qtd. Revisões' in mostrar_colunas and 'Qtd. Revisões' in ultimas_demandas.columns:
+                        display_data['Qtd. Revisões'] = ultimas_demandas['Qtd. Revisões']
+                    if 'Revisões_Total' in mostrar_colunas and 'Revisões_Total' in ultimas_demandas.columns:
+                        display_data['Revisões_Total'] = ultimas_demandas['Revisões_Total']
+                    if 'Empresa' in mostrar_colunas and 'Empresa' in ultimas_demandas.columns:
+                        display_data['Empresa'] = ultimas_demandas['Empresa']
+                    if 'SRE' in mostrar_colunas and 'SRE' in ultimas_demandas.columns:
+                        display_data['SRE'] = ultimas_demandas['SRE']
+                    if 'Data' in mostrar_colunas and 'Criado' in ultimas_demandas.columns:
+                        display_data['Data Criação'] = ultimas_demandas['Criado'].dt.strftime('%d/%m/%Y %H:%M')
+                    if not display_data.empty:
+                        st.dataframe(display_data, use_container_width=True, height=400, hide_index=True)
+                        csv = display_data.to_csv(index=False).encode('utf-8-sig')
+                        st.download_button(label="Exportar esta tabela", icon=":material/download:", data=csv,
+                                           file_name=f"ultimas_demandas_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                           mime="text/csv", use_container_width=True, key="btn_exportar")
+                    else:
+                        st.info("Nenhum resultado encontrado com os filtros aplicados.", icon=":material/search_off:")
+        with tab5:
+            st.markdown(titulo_secao("MOTIVOS DE REVISÃO", "revisao"), unsafe_allow_html=True)
+            if 'Motivo_Revisao' not in df.columns:
+                st.info("A coluna 'Motivo Revisão' não foi encontrada no arquivo carregado.", icon=":material/info:")
+            else:
+                # ------------------------------------------------------------------
+                # FILTROS DA ABA
+                # ------------------------------------------------------------------
+                col_mf1, col_mf2, col_mf3, col_mf4 = st.columns(4)
+                ano_mot, mes_mot, sre_mot, emp_mot = 'Todos os Anos', 'Todos os Meses', 'Todos os SREs', 'Todas Empresas'
+                with col_mf1:
+                    if 'Ano' in df.columns:
+                        ano_mot = st.selectbox(":material/calendar_month: Ano:", key="filtro_ano_motivo",
+                                               options=['Todos os Anos'] + sorted(df['Ano'].dropna().unique().astype(int)))
+                with col_mf2:
+                    if 'Mês' in df.columns:
+                        ano_ref = df if ano_mot == 'Todos os Anos' else df[df['Ano'] == int(ano_mot)]
+                        mes_mot = st.selectbox(":material/date_range: Mês:", key="filtro_mes_motivo",
+                                               options=['Todos os Meses'] + [str(m) for m in sorted(ano_ref['Mês'].dropna().unique().astype(int))],
+                                               format_func=lambda m: m if m == 'Todos os Meses' else MESES_NOMES[int(m)])
+                with col_mf3:
+                    if 'SRE_Nome' in df.columns:
+                        sre_mot = st.selectbox(":material/engineering: SRE:", key="filtro_sre_motivo",
+                                               options=['Todos os SREs'] + sorted(df['SRE_Nome'].dropna().unique()))
+                with col_mf4:
+                    if 'Empresa' in df.columns:
+                        emp_mot = st.selectbox(":material/apartment: Empresa:", key="filtro_empresa_motivo",
+                                               options=['Todas Empresas'] + sorted(df['Empresa'].dropna().unique()))
+                df_mot = df.copy()
+                if ano_mot != 'Todos os Anos':
+                    df_mot = df_mot[df_mot['Ano'] == int(ano_mot)]
+                if mes_mot != 'Todos os Meses':
+                    df_mot = df_mot[df_mot['Mês'] == int(mes_mot)]
+                if sre_mot != 'Todos os SREs':
+                    df_mot = df_mot[df_mot['SRE_Nome'] == sre_mot]
+                if emp_mot != 'Todas Empresas':
+                    df_mot = df_mot[df_mot['Empresa'] == emp_mot]
+                # Plataforma: Elipse (coluna ChangeSet) x ADMS (Telemetry / Manual), como na apresentação
+                if 'ChangeSet' in df_mot.columns:
+                    df_mot['Plataforma'] = df_mot['ChangeSet'].astype(str).str.strip().str.lower().map(
+                        lambda v: 'Elipse' if v == 'elipse' else 'ADMS')
+                else:
+                    df_mot['Plataforma'] = 'ADMS'
+
+                # ------------------------------------------------------------------
+                # BASES (calculadas uma vez e usadas por todas as visões)
+                # Devolução = entrada com motivo de revisão preenchido (regra da apresentação).
+                # Severidade da entrada = a mais alta entre os seus motivos.
+                # ------------------------------------------------------------------
+                motivos_ex = explodir_motivos(df_mot)
+                if not motivos_ex.empty:
+                    motivos_ex['Severidade'] = motivos_ex['Motivo'].map(classificar_motivo)
+                    motivos_ex['Nivel'] = motivos_ex['Severidade'].map(NIVEL_SEVERIDADE)
+                    nivel_card = motivos_ex.groupby('_entrada')['Nivel'].max()
+                else:
+                    nivel_card = pd.Series(dtype=int)
+                tem_motivo = motivo_preenchido(df_mot['Motivo_Revisao'])
+                base_ent = df_mot.assign(Devolvida=tem_motivo.values, _entrada=df_mot.index)
+                base_ent['Nivel'] = base_ent['_entrada'].map(nivel_card).fillna(0).astype(int)
+                base_ent['Sev'] = base_ent['Nivel'].map({3: SEV_CRITICO, 2: SEV_RISCO, 1: SEV_QUALIDADE})
+                devolvidas_ent = base_ent[base_ent['Devolvida']].sort_values('Criado', ascending=False)
+
+                total_entradas = len(df_mot)
+                n_devolvidas = int(tem_motivo.sum())
+                n_aprovadas = total_entradas - n_devolvidas
+                n_risco = int((base_ent['Nivel'] >= 2).sum())
+                n_critico = int((base_ent['Nivel'] >= 3).sum())
+                sem_motivo_df = df_mot[df_mot['Com_Revisao'] & ~tem_motivo]
+                motivo_sem_contagem = df_mot[tem_motivo & ~df_mot['Com_Revisao']]
+                taxa_media = n_devolvidas / max(total_entradas, 1) * 100
+
+                def pct_txt(parte, todo, casas=1):
+                    return (f"{(parte / todo * 100) if todo else 0:.{casas}f}%").replace('.', ',')
+
+                def num_br(valor, casas=1):
+                    return f"{valor:.{casas}f}".replace('.', ',')
+
+                colunas_lista = {'Chamado': 'Nº do chamado', 'Criado': 'Criado', 'Motivo_Revisao': 'Motivo',
+                                 'Sev': 'Severidade', 'Responsável_Formatado': 'Desenvolvedor', 'SRE_Nome': 'SRE',
+                                 'Empresa': 'Empresa', 'Plataforma': 'Plataforma', 'Tipo_Chamado': 'Tipo',
+                                 'Status': 'Status', 'Revisões': 'Revisões', 'Qtd. Revisões': 'Qtd. Revisões'}
+
+                def tabela_chamados(base, colunas=None, remover=()):
+                    colunas = {k: v for k, v in (colunas or colunas_lista).items()
+                               if k in base.columns and k not in remover}
+                    saida = base.sort_values('Criado', ascending=False)[list(colunas)].rename(columns=colunas)
+                    if 'Criado' in saida.columns:
+                        saida['Criado'] = saida['Criado'].dt.strftime('%d/%m/%Y %H:%M')
+                    return saida
+
+                def mostrar_tabela(tabela, altura_max=420):
+                    st.dataframe(tabela, use_container_width=True, hide_index=True,
+                                 height=min(altura_max, 36 * len(tabela) + 40))
+
+                # ------------------------------------------------------------------
+                # INDICADORES (uma única faixa — o funil da apresentação em números)
+                # ------------------------------------------------------------------
+                periodo_txt = (f"{df_mot['Criado'].min():%d/%m/%Y} a {df_mot['Criado'].max():%d/%m/%Y}"
+                               if total_entradas else "sem dados")
+                col_k1, col_k2, col_k3, col_k4, col_k5 = st.columns(5)
+                with col_k1:
+                    st.markdown(criar_card_indicador_simples(total_entradas, "Entradas validadas", "lista",
+                                                             subtitulo=periodo_txt), unsafe_allow_html=True)
+                with col_k2:
+                    st.markdown(criar_card_indicador_simples(pct_txt(n_aprovadas, total_entradas), "Aprovadas sem devolução",
+                                                             "check", cor=COR_VERDE_ESCURO,
+                                                             subtitulo=f"{fmt_milhar(n_aprovadas)} entradas"),
+                                unsafe_allow_html=True)
+                with col_k3:
+                    st.markdown(criar_card_indicador_simples(n_devolvidas, "Devolvidas ao desenvolvedor", "revisao",
+                                                             cor=COR_LARANJA, subtitulo=f"{pct_txt(n_devolvidas, total_entradas)} do volume"),
+                                unsafe_allow_html=True)
+                with col_k4:
+                    st.markdown(criar_card_indicador_simples(n_risco, "Risco operacional", "alerta", cor='#D84315',
+                                                             subtitulo=f"{pct_txt(n_risco, total_entradas)} · inclui dano físico"),
+                                unsafe_allow_html=True)
+                with col_k5:
+                    st.markdown(criar_card_indicador_simples(n_critico, "Potencial de dano físico", "alerta",
+                                                             cor=COR_VERMELHO,
+                                                             subtitulo=f"{pct_txt(n_critico, total_entradas, 2)} do volume"),
+                                unsafe_allow_html=True)
+                st.caption("Defeito retido = entrega reprovada antes da sincronização com produção. Não equivale a "
+                           "incidente confirmado: a condição de risco foi removida antes de existir em campo.")
+
+                if motivos_ex.empty:
+                    st.info("Nenhum motivo de revisão registrado com os filtros selecionados.", icon=":material/info:")
+                else:
+                    # Agregados reutilizados pelas visões
+                    cont_motivos = motivos_ex.groupby('Motivo')['_entrada'].nunique().sort_values(ascending=False)
+                    acum_motivos = cont_motivos.cumsum() / cont_motivos.sum() * 100
+                    n_vitais = min(int((acum_motivos < 80).sum()) + 1, len(cont_motivos))
+                    mensal_dev = (base_ent.groupby(['Ano_Mês', 'Mês_Label'])
+                                  .agg(Total=('Devolvida', 'size'), Devolvidas=('Devolvida', 'sum'))
+                                  .reset_index().sort_values('Ano_Mês'))
+                    mensal_dev['Taxa'] = (mensal_dev['Devolvidas'] / mensal_dev['Total'] * 100).round(1)
+                    por_dev = (base_ent.groupby('Responsável_Formatado')
+                               .agg(Entradas=('Devolvida', 'size'), Devolvidas=('Devolvida', 'sum'))
+                               .sort_values('Devolvidas', ascending=False))
+                    por_dev['Taxa'] = por_dev['Devolvidas'] / por_dev['Entradas'] * 100
+
+                    # ------------------------------------------------------------------
+                    # PRINCIPAIS ACHADOS (único bloco de considerações da aba)
+                    # ------------------------------------------------------------------
+                    achados = []
+                    achados.append((
+                        "Onde atacar primeiro",
+                        f"<b>{n_vitais}</b> de {len(cont_motivos)} motivos concentram ~80% das devoluções. O principal é "
+                        f"<i>{cont_motivos.index[0].lower()}</i> ({pct_txt(cont_motivos.iloc[0], n_devolvidas)})."))
+                    com_dev = por_dev[por_dev['Devolvidas'] > 0]
+                    if not com_dev.empty:
+                        top3 = com_dev.head(3)
+                        texto_p = (f"{', '.join(top3.index)} somam <b>{pct_txt(top3['Devolvidas'].sum(), n_devolvidas, 0)}</b> "
+                                   f"das devoluções.")
+                        alto = por_dev[(por_dev['Entradas'] >= 30) & (por_dev['Taxa'] >= taxa_media * 1.5)]
+                        if not alto.empty:
+                            p_alto = alto.sort_values('Taxa', ascending=False).iloc[0]
+                            texto_p += (f" Maior taxa com volume relevante: {alto.sort_values('Taxa', ascending=False).index[0]} "
+                                        f"({num_br(p_alto['Taxa'])}% contra {num_br(taxa_media)}% de média).")
+                        achados.append(("Quem concentra", texto_p))
+                    criticos_ex = motivos_ex[motivos_ex['Nivel'] == 3]
+                    reinc_crit = (criticos_ex.groupby(['Motivo', 'Responsável_Formatado', 'Empresa', 'Plataforma'])
+                                  .agg(Casos=('_entrada', 'nunique'), Meses=('Mês_Label', lambda m: list(pd.unique(m))))
+                                  .reset_index().sort_values('Casos', ascending=False))
+                    reinc_crit = reinc_crit[reinc_crit['Casos'] >= 2]
+                    if not reinc_crit.empty:
+                        r = reinc_crit.iloc[0]
+                        total_mesmo = criticos_ex[criticos_ex['Motivo'] == r['Motivo']]['_entrada'].nunique()
+                        achados.append((
+                            "Reincidência crítica",
+                            f"{r['Casos']} dos {total_mesmo} casos de <i>{r['Motivo'].lower()}</i> vêm de "
+                            f"{r['Responsável_Formatado']} ({r['Empresa']}, {r['Plataforma']}), em {', '.join(r['Meses'])}. "
+                            f"Um controle preventivo nessa origem elimina a classe inteira."))
+                    elif n_critico:
+                        achados.append(("Reincidência crítica", "Os casos com potencial de dano físico não se repetem "
+                                                                "na mesma origem (pessoa, distribuidora e plataforma)."))
+                    if len(mensal_dev) >= 4:
+                        ult3 = mensal_dev.tail(3)
+                        fator = ult3['Total'].mean() / max(mensal_dev.iloc[:-3]['Total'].mean(), 1)
+                        crit_rec = int(((base_ent['Nivel'] >= 3) & base_ent['Ano_Mês'].isin(ult3['Ano_Mês'])).sum())
+                        texto_r = (f"Nos últimos 3 meses ({', '.join(ult3['Mês_Label'])}) o volume médio foi "
+                                   f"{num_br(fator)}x o anterior e a taxa de devolução foi "
+                                   f"{pct_txt(ult3['Devolvidas'].sum(), ult3['Total'].sum())}.")
+                        if n_critico:
+                            texto_r += f" {crit_rec} dos {n_critico} críticos caem nesse período."
+                        achados.append(("Período recente", texto_r))
+                    cores_achados = [COR_LARANJA, COR_AZUL_PETROLEO, COR_VERMELHO, '#7E57C2']
+                    st.markdown("#### :material/lightbulb: Principais achados")
+                    colunas_ach = st.columns(len(achados))
+                    for i_a, (col_a, (tit_a, txt_a)) in enumerate(zip(colunas_ach, achados)):
+                        with col_a:
+                            st.markdown(
+                                f'<div class="metric-card" style="border-top: 4px solid {cores_achados[i_a % 4]}; min-height: 175px;">'
+                                f'<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">'
+                                f'<span style="display:inline-flex; align-items:center; justify-content:center; width:26px; '
+                                f'height:26px; border-radius:50%; background:{cores_achados[i_a % 4]}; color:#fff; font-weight:700; '
+                                f'font-size:0.85rem;">{i_a + 1}</span><b style="color:{COR_PRETO_SUAVE};">{tit_a}</b></div>'
+                                f'<div style="font-size:0.85rem; color:{COR_CINZA_TEXTO}; line-height:1.5;">{txt_a}</div></div>',
+                                unsafe_allow_html=True)
+
+                    # ------------------------------------------------------------------
+                    # SELETOR DE VISÃO (só a visão escolhida é desenhada)
+                    # ------------------------------------------------------------------
+                    qtd_qualidade = len(sem_motivo_df) + len(motivo_sem_contagem)
+                    visoes = {
+                        "Visão geral": ":material/monitoring: Visão geral",
+                        "Motivos": ":material/fact_check: Motivos",
+                        "Pessoas": ":material/groups: Pessoas",
+                        "Casos críticos": f":material/emergency: Casos críticos ({n_critico})",
+                        "Qualidade do dado": f":material/rule: Qualidade do dado ({qtd_qualidade})",
+                    }
+                    st.write("")
+                    if hasattr(st, 'segmented_control'):
+                        visao = st.segmented_control("Visão", list(visoes), default="Visão geral", key="visao_motivos",
+                                                     format_func=lambda v: visoes[v], label_visibility="collapsed")
+                    else:
+                        visao = st.radio("Visão", list(visoes), horizontal=True, key="visao_motivos",
+                                         format_func=lambda v: visoes[v], label_visibility="collapsed")
+                    visao = visao or "Visão geral"
+
+                    # ================== VISÃO GERAL ==================
+                    if visao == "Visão geral":
+                        meses = mensal_dev['Mês_Label'].tolist()
+                        sev_mes = (devolvidas_ent.groupby(['Ano_Mês', 'Sev']).size().unstack(fill_value=0)
+                                   .reindex(mensal_dev['Ano_Mês']).fillna(0))
+                        fig_mm = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.34, 0.66],
+                                               vertical_spacing=0.09, specs=[[{}], [{"secondary_y": True}]],
+                                               subplot_titles=("Entradas validadas por mês",
+                                                               "Devoluções por severidade e taxa de devolução"))
+                        fig_mm.add_trace(go.Bar(x=meses, y=mensal_dev['Total'], name='Entradas validadas',
+                                                marker_color='#B9DDE3', text=mensal_dev['Total'], textposition='inside',
+                                                insidetextanchor='end', textfont=dict(size=10, color=COR_AZUL_ESCURO),
+                                                hovertemplate='%{x}<br>Entradas: <b>%{y}</b><extra></extra>'), row=1, col=1)
+                        for sev in [SEV_QUALIDADE, SEV_RISCO, SEV_CRITICO]:
+                            valores_sev = sev_mes[sev] if sev in sev_mes.columns else [0] * len(meses)
+                            fig_mm.add_trace(go.Bar(x=meses, y=list(valores_sev), name=sev,
+                                                    marker_color=CORES_SEVERIDADE[sev],
+                                                    hovertemplate='%{x}<br>' + sev + ': <b>%{y}</b><extra></extra>'),
+                                             row=2, col=1, secondary_y=False)
+                        fig_mm.add_trace(go.Scatter(x=meses, y=mensal_dev['Taxa'], name='Taxa de devolução',
+                                                    mode='lines+markers+text',
+                                                    text=[num_br(v) + '%' for v in mensal_dev['Taxa']],
+                                                    textposition='top center', textfont=dict(size=10, color=COR_AZUL_ESCURO),
+                                                    line=dict(color=COR_AZUL_ESCURO, width=2, dash='dot'),
+                                                    marker=dict(size=6, color=COR_AZUL_ESCURO),
+                                                    hovertemplate='%{x}<br>Taxa: <b>%{y:.1f}%</b><extra></extra>'),
+                                         row=2, col=1, secondary_y=True)
+                        fig_mm.update_layout(barmode='stack', bargap=0.25, height=520, hovermode='x unified',
+                                             legend=dict(orientation='h', yanchor='top', y=-0.08, x=0),
+                                             margin=dict(t=40, b=60))
+                        fig_mm.update_xaxes(type='category', showgrid=False)
+                        fig_mm.update_yaxes(showticklabels=False, showgrid=False, row=1, col=1)
+                        fig_mm.update_yaxes(title_text='Devolvidas', row=2, col=1, secondary_y=False)
+                        fig_mm.update_yaxes(title_text='Taxa', ticksuffix='%', showgrid=False, rangemode='tozero',
+                                            range=[0, max(8, mensal_dev['Taxa'].max() * 1.35)],
+                                            row=2, col=1, secondary_y=True)
+                        for anotacao in fig_mm.layout.annotations:
+                            anotacao.update(x=0, xanchor='left', font=dict(size=13, color=COR_AZUL_ESCURO))
+                        st.plotly_chart(fig_mm, use_container_width=True)
+                        if mensal_dev['Ano_Mês'].iloc[-1] == agora().strftime('%Y-%m'):
+                            st.caption(f"{meses[-1]} é mês parcial (dados até {df_mot['Criado'].max():%d/%m}).")
+
+                        st.markdown("##### :material/apartment: Taxa de devolução por distribuidora e plataforma")
+                        por_emp = (base_ent.groupby('Empresa')
+                                   .agg(Validadas=('Devolvida', 'size'), Devolvidas=('Devolvida', 'sum')).reset_index())
+                        por_emp['Taxa'] = (por_emp['Devolvidas'] / por_emp['Validadas'] * 100).round(1)
+                        col_emp_g, col_emp_p = st.columns([2.3, 1])
+                        with col_emp_g:
+                            ordem_emp = por_emp.sort_values('Taxa')
+                            fig_emp = go.Figure(go.Bar(
+                                x=ordem_emp['Taxa'], y=ordem_emp['Empresa'], orientation='h',
+                                marker_color=[COR_LARANJA if t > taxa_media else '#FFCC80' for t in ordem_emp['Taxa']],
+                                text=[f"{num_br(t)}%  ·  {fmt_milhar(dv)} de {fmt_milhar(v)}"
+                                      for t, dv, v in zip(ordem_emp['Taxa'], ordem_emp['Devolvidas'], ordem_emp['Validadas'])],
+                                textposition='outside', cliponaxis=False,
+                                hovertemplate='<b>%{y}</b><br>Taxa: %{x:.1f}%<extra></extra>'))
+                            fig_emp.add_vline(x=taxa_media, line_dash='dash', line_color=COR_CINZA_TEXTO,
+                                              annotation_text=f"média {num_br(taxa_media)}%", annotation_position='top')
+                            fig_emp.update_layout(height=max(300, 32 * len(ordem_emp) + 90), bargap=0.3,
+                                                  xaxis=dict(ticksuffix='%', range=[0, ordem_emp['Taxa'].max() * 1.7 + 0.5]),
+                                                  yaxis=dict(showgrid=False), margin=dict(t=40, l=10, r=20, b=30))
+                            st.plotly_chart(fig_emp, use_container_width=True)
+                        with col_emp_p:
+                            por_plat = (base_ent.groupby('Plataforma')
+                                        .agg(Validadas=('Devolvida', 'size'), Devolvidas=('Devolvida', 'sum'))
+                                        .sort_values('Validadas', ascending=False))
+                            for plataforma, lp in por_plat.iterrows():
+                                st.markdown(criar_card_indicador_simples(
+                                    pct_txt(lp['Devolvidas'], lp['Validadas']), f"Devolução · {plataforma}", "base",
+                                    cor=COR_AZUL_PETROLEO if plataforma == 'ADMS' else '#7E57C2',
+                                    subtitulo=f"{fmt_milhar(lp['Devolvidas'])} de {fmt_milhar(lp['Validadas'])} validadas"),
+                                    unsafe_allow_html=True)
+                        st.caption("Barra laranja forte = acima da média. Distribuidoras com pouco volume mudam vários pontos "
+                                   "percentuais com poucos casos: compare o número absoluto antes de cobrar meta percentual.")
+
+                    # ================== MOTIVOS ==================
+                    elif visao == "Motivos":
+                        medida = st.radio(":material/straighten: Medir por:",
+                                          ["Entradas", "Revisões (Revisões + Qtd. Revisões)"], horizontal=True,
+                                          key="medida_motivo",
+                                          help="Entradas = quantas devoluções citam o motivo. Revisões = soma de Revisões + Qtd. Revisões.")
+                        por_entradas = medida == "Entradas"
+                        resumo_mot = (motivos_ex.groupby('Motivo')
+                                      .agg(Entradas=('_entrada', 'nunique'), Revisoes=('Revisões_Total', 'sum'),
+                                           Pessoas=('Responsável_Formatado', 'nunique'), Empresas=('Empresa', 'nunique'),
+                                           Ultimo=('Criado', 'max'))
+                                      .reset_index())
+                        resumo_mot['Severidade'] = resumo_mot['Motivo'].map(classificar_motivo)
+                        col_valor = 'Entradas' if por_entradas else 'Revisoes'
+                        resumo_mot = resumo_mot.sort_values([col_valor, 'Entradas'], ascending=False).reset_index(drop=True)
+                        resumo_mot['Pct'] = (resumo_mot[col_valor] / max(resumo_mot[col_valor].sum(), 1) * 100).round(1)
+                        resumo_mot['Acumulado'] = resumo_mot['Pct'].cumsum().clip(upper=100).round(1)
+                        vitais = min(int((resumo_mot['Acumulado'] < 80).sum()) + 1, len(resumo_mot))
+
+                        # Pareto horizontal: cor = severidade, tom cheio = motivos que somam ~80%
+                        limite_pareto = 12
+                        pareto = resumo_mot.head(limite_pareto).copy()
+                        if len(resumo_mot) > limite_pareto:
+                            resto = resumo_mot.iloc[limite_pareto:]
+                            pareto = pd.concat([pareto, pd.DataFrame([{
+                                'Motivo': f'Demais ({len(resto)})', col_valor: resto[col_valor].sum(),
+                                'Pct': resto['Pct'].sum().round(1), 'Acumulado': 100.0,
+                                'Severidade': SEV_QUALIDADE}])], ignore_index=True)
+                        pareto_h = pareto.iloc[::-1]
+                        fig_pareto = go.Figure(go.Bar(
+                            y=[quebrar_rotulo(m, 46) for m in pareto_h['Motivo']], x=pareto_h[col_valor], orientation='h',
+                            marker_color=[CORES_SEVERIDADE.get(sv, CORES_SEVERIDADE[SEV_QUALIDADE]) for sv in pareto_h['Severidade']],
+                            marker_opacity=[1 if i < vitais else 0.45 for i in range(len(pareto))][::-1],
+                            text=[f"<b>{fmt_milhar(v)}</b>  ·  {num_br(p)}%  ·  acum. {a:.0f}%"
+                                  for v, p, a in zip(pareto_h[col_valor], pareto_h['Pct'], pareto_h['Acumulado'])],
+                            textposition='outside', cliponaxis=False,
+                            customdata=pareto_h[['Motivo', 'Severidade']].values,
+                            hovertemplate='<b>%{customdata[0]}</b><br>%{x}<br>%{customdata[1]}<extra></extra>'))
+                        fig_pareto.update_layout(
+                            title=f'Pareto: {vitais} motivo(s) concentram ~80% · cor = severidade',
+                            xaxis=dict(title='Entradas' if por_entradas else 'Revisões',
+                                       range=[0, pareto[col_valor].max() * 1.45]),
+                            yaxis=dict(showgrid=False), height=max(380, 40 * len(pareto) + 100), bargap=0.3,
+                            showlegend=False, margin=dict(t=60, b=40, l=10, r=20))
+                        st.plotly_chart(fig_pareto, use_container_width=True)
+                        st.caption("Vermelho: potencial de dano físico · laranja: risco operacional · cinza: qualidade/processo. "
+                                   "Tom cheio = motivos que somam ~80%. Um card com mais de um motivo conta em cada um.")
+
+                        col_mv1, col_mv2 = st.columns([1.15, 1])
+                        with col_mv1:
+                            # Evolução mensal dos 5 principais motivos
+                            top5_mot = resumo_mot['Motivo'].head(5).tolist()
+                            evo = motivos_ex.assign(Grupo=motivos_ex['Motivo'].where(motivos_ex['Motivo'].isin(top5_mot), 'Demais'))
+                            if por_entradas:
+                                evo = evo.groupby(['Ano_Mês', 'Mês_Label', 'Grupo'])['_entrada'].nunique().reset_index(name='Valor')
+                            else:
+                                evo = evo.groupby(['Ano_Mês', 'Mês_Label', 'Grupo'])['Revisões_Total'].sum().reset_index(name='Valor')
+                            evo = evo.sort_values('Ano_Mês')
+                            ordem_meses_evo = evo.drop_duplicates('Ano_Mês')['Mês_Label'].tolist()
+                            cores_mot = [COR_LARANJA, COR_AZUL_ESCURO, COR_VERDE_ESCURO, COR_AZUL_PETROLEO, '#7E57C2']
+                            fig_evo = go.Figure()
+                            for idx_g, grupo in enumerate(top5_mot + ['Demais']):
+                                dados_g = evo[evo['Grupo'] == grupo]
+                                if dados_g.empty:
+                                    continue
+                                fig_evo.add_trace(go.Bar(
+                                    x=dados_g['Mês_Label'], y=dados_g['Valor'], name=quebrar_rotulo(grupo, 34),
+                                    marker_color=cores_mot[idx_g] if idx_g < len(top5_mot) else '#CED4DA',
+                                    hovertemplate='%{x}<br>' + grupo.replace('%', '%%')[:60] + ': <b>%{y}</b><extra></extra>'))
+                            fig_evo.update_layout(
+                                barmode='stack', height=430, bargap=0.25, hovermode='x unified',
+                                title='Top 5 motivos por mês',
+                                xaxis=dict(type='category', categoryorder='array', categoryarray=ordem_meses_evo, showgrid=False),
+                                legend=dict(orientation='h', yanchor='top', y=-0.12, x=0, font=dict(size=10)),
+                                margin=dict(t=50, b=110))
+                            st.plotly_chart(fig_evo, use_container_width=True)
+                        with col_mv2:
+                            # Um único mapa de calor com seletor (em vez de dois lado a lado)
+                            dimensoes = {'Empresa': 'Empresa', 'SRE': 'SRE_Nome', 'Plataforma': 'Plataforma'}
+                            dim_escolhida = st.radio("Cruzar motivos com:", list(dimensoes), horizontal=True, key="cruzar_motivos")
+                            coluna_cruz = dimensoes[dim_escolhida]
+                            top_motivos = resumo_mot['Motivo'].head(10).tolist()
+                            base_cruz = motivos_ex[motivos_ex['Motivo'].isin(top_motivos)]
+                            if por_entradas:
+                                piv = base_cruz.pivot_table(index='Motivo', columns=coluna_cruz, values='_entrada',
+                                                            aggfunc='nunique', fill_value=0)
+                            else:
+                                piv = base_cruz.pivot_table(index='Motivo', columns=coluna_cruz, values='Revisões_Total',
+                                                            aggfunc='sum', fill_value=0)
+                            piv = piv.reindex(top_motivos).fillna(0)
+                            piv = piv[piv.sum().sort_values(ascending=False).index]
+                            fig_cruz = go.Figure(go.Heatmap(
+                                z=piv.values, x=list(piv.columns), y=[quebrar_rotulo(m, 34) for m in piv.index],
+                                colorscale=[[0, '#FFF8F0'], [0.4, '#FFCC80'], [0.75, COR_LARANJA], [1, '#B35900']],
+                                xgap=2, ygap=2, text=piv.values.astype(int), texttemplate='%{text}',
+                                textfont=dict(size=10), showscale=False,
+                                customdata=[[m] * piv.shape[1] for m in piv.index],
+                                hovertemplate='<b>%{customdata}</b><br>%{x}: %{z}<extra></extra>'))
+                            fig_cruz.update_layout(height=430, margin=dict(t=10, b=60, l=10, r=10))
+                            fig_cruz.update_yaxes(autorange='reversed', showgrid=False, tickfont=dict(size=9))
+                            fig_cruz.update_xaxes(showgrid=False, tickangle=-35)
+                            st.plotly_chart(fig_cruz, use_container_width=True)
+
+                        with st.expander("Tabela completa dos motivos e chamados", icon=":material/table_chart:"):
+                            tabela_mot = resumo_mot.copy()
+                            tabela_mot.insert(0, 'Posição', [f"{i + 1}º" for i in range(len(tabela_mot))])
+                            tabela_mot['Ultimo'] = tabela_mot['Ultimo'].dt.strftime('%d/%m/%Y')
+                            colunas_mot = ['Posição', 'Motivo', 'Severidade', 'Entradas', 'Revisoes', 'Pct', 'Acumulado',
+                                           'Pessoas', 'Empresas', 'Ultimo']
+                            st.dataframe(
+                                tabela_mot[colunas_mot], use_container_width=True, hide_index=True,
+                                height=min(460, 36 * len(tabela_mot) + 40),
+                                column_config={
+                                    "Posição": st.column_config.TextColumn("Posição", width="small"),
+                                    "Motivo": st.column_config.TextColumn("Motivo", width="large"),
+                                    "Entradas": st.column_config.NumberColumn("Entradas", format="%d"),
+                                    "Revisoes": st.column_config.NumberColumn("Revisões", format="%d",
+                                                                              help="Soma de Revisões + Qtd. Revisões"),
+                                    "Pct": st.column_config.ProgressColumn("% do total", format="%.1f%%", min_value=0, max_value=100),
+                                    "Acumulado": st.column_config.NumberColumn("% acumulado", format="%.1f%%"),
+                                    "Pessoas": st.column_config.NumberColumn("Desenvolvedores", format="%d"),
+                                    "Empresas": st.column_config.NumberColumn("Empresas", format="%d"),
+                                    "Ultimo": st.column_config.TextColumn("Última ocorrência"),
+                                })
+                            st.download_button("Exportar motivos (CSV)", icon=":material/download:",
+                                               data=tabela_mot[colunas_mot].to_csv(index=False).encode('utf-8-sig'),
+                                               file_name=f"motivos_revisao_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                               mime="text/csv", key="btn_export_motivos")
+                            motivo_escolhido = st.selectbox("Ver chamados do motivo:", resumo_mot['Motivo'].tolist(),
+                                                            key="motivo_detalhe")
+                            entradas_motivo = motivos_ex[motivos_ex['Motivo'] == motivo_escolhido]['_entrada'].unique()
+                            det = devolvidas_ent[devolvidas_ent['_entrada'].isin(entradas_motivo)]
+                            st.caption(f"{fmt_milhar(len(det))} entrada(s) com este motivo")
+                            mostrar_tabela(tabela_chamados(det), 360)
+                        with st.expander("Como os motivos foram classificados", icon=":material/rule_settings:"):
+                            st.markdown(
+                                f"**{SEV_CRITICO}** (vermelho): " + "; ".join(SEVERIDADE_MOTIVOS[SEV_CRITICO]) + ".\n\n"
+                                f"**{SEV_RISCO}** (laranja): " + "; ".join(SEVERIDADE_MOTIVOS[SEV_RISCO]) + ".\n\n"
+                                f"**{SEV_QUALIDADE}** (cinza): todos os demais motivos.\n\n"
+                                "*Risco operacional* inclui também os casos de dano físico. Um card com vários motivos conta "
+                                "pela severidade mais alta. Para mudar a classificação, edite `SEVERIDADE_MOTIVOS` no início do código.")
+
+                    # ================== PESSOAS ==================
+                    elif visao == "Pessoas":
+                        col_pp1, col_pp2, col_pp3 = st.columns([1.2, 2, 0.9])
+                        with col_pp1:
+                            tipo_pessoa = st.radio(":material/person_search: Analisar por:",
+                                                   ["Desenvolvedor", "SRE"], horizontal=True, key="analise_pessoa_tipo",
+                                                   help="Desenvolvedor = quem recebeu a devolução. SRE = quem validou e devolveu.")
+                        col_pes = 'Responsável_Formatado' if tipo_pessoa == "Desenvolvedor" else 'SRE_Nome'
+                        rotulo_pes = tipo_pessoa
+
+                        resumo_pes = (base_ent.groupby(col_pes)
+                                      .agg(Entradas=('Devolvida', 'size'), Devolvidas=('Devolvida', 'sum'),
+                                           Risco=('Nivel', lambda n: int((n >= 2).sum())),
+                                           Criticos=('Nivel', lambda n: int((n >= 3).sum())))
+                                      .reset_index().rename(columns={col_pes: 'Pessoa'}))
+                        resumo_pes = resumo_pes[resumo_pes['Pessoa'].notna()]
+                        resumo_pes['Taxa'] = (resumo_pes['Devolvidas'] / resumo_pes['Entradas'] * 100).round(1)
+                        resumo_pes['Pct_Devolucoes'] = (resumo_pes['Devolvidas'] / max(n_devolvidas, 1) * 100).round(1)
+                        principal, principal_qtd, chamados_txt, ultima = [], [], [], []
+                        for pessoa in resumo_pes['Pessoa']:
+                            sub_m = motivos_ex[motivos_ex[col_pes] == pessoa]
+                            if sub_m.empty:
+                                principal.append("—")
+                                principal_qtd.append(0)
+                            else:
+                                contagem_m = sub_m.groupby('Motivo')['_entrada'].nunique().sort_values(ascending=False)
+                                principal.append(contagem_m.index[0])
+                                principal_qtd.append(int(contagem_m.iloc[0]))
+                            sub_d = devolvidas_ent[devolvidas_ent[col_pes] == pessoa]
+                            rep_ch = sub_d['Chamado'].astype(str).value_counts()
+                            chamados_txt.append(', '.join(f"{c} ({rep_ch[c]}x)" if rep_ch[c] > 1 else c
+                                                          for c in pd.unique(sub_d['Chamado'].astype(str))))
+                            ultima.append(sub_d['Criado'].max() if not sub_d.empty else pd.NaT)
+                        resumo_pes['Motivo_Principal'] = principal
+                        resumo_pes['Motivo_Principal_Qtd'] = principal_qtd
+                        resumo_pes['Chamados'] = chamados_txt
+                        resumo_pes['Ultima'] = ultima
+                        resumo_pes = resumo_pes.sort_values(['Devolvidas', 'Criticos', 'Taxa'],
+                                                            ascending=False).reset_index(drop=True)
+
+                        with col_pp2:
+                            pessoas_sel = st.multiselect(f":material/filter_alt: Filtrar {rotulo_pes.lower()}(es):",
+                                                         resumo_pes['Pessoa'].tolist(), key=f"filtro_pessoas_{col_pes}",
+                                                         placeholder="Todas (ordenadas por nº de devoluções)")
+                        with col_pp3:
+                            st.write("")
+                            so_com_devolucao = st.toggle("Só com devolução", value=True, key="so_com_devolucao")
+                        tabela_pes = resumo_pes.copy()
+                        if pessoas_sel:
+                            tabela_pes = tabela_pes[tabela_pes['Pessoa'].isin(pessoas_sel)]
+                        if so_com_devolucao:
+                            tabela_pes = tabela_pes[tabela_pes['Devolvidas'] > 0]
+
+                        if tabela_pes.empty:
+                            st.info("Nenhuma pessoa com os filtros selecionados.", icon=":material/info:")
+                        else:
+                            # ---- Ranking por pessoa (tabela principal desta visão)
+                            tabela_pes_exib = tabela_pes.copy()
+                            tabela_pes_exib.insert(0, 'Posição', [f"{i + 1}º" for i in range(len(tabela_pes_exib))])
+                            tabela_pes_exib['Motivo_Principal'] = [
+                                f"{m} ({q})" if q else m for m, q in zip(tabela_pes_exib['Motivo_Principal'],
+                                                                         tabela_pes_exib['Motivo_Principal_Qtd'])]
+                            tabela_pes_exib['Ultima'] = tabela_pes_exib['Ultima'].dt.strftime('%d/%m/%Y')
+                            colunas_rank_pes = ['Posição', 'Pessoa', 'Entradas', 'Devolvidas', 'Taxa', 'Pct_Devolucoes',
+                                                'Criticos', 'Risco', 'Motivo_Principal', 'Chamados', 'Ultima']
+                            st.dataframe(
+                                tabela_pes_exib[colunas_rank_pes], use_container_width=True, hide_index=True,
+                                height=min(440, 36 * len(tabela_pes_exib) + 40),
+                                column_config={
+                                    "Posição": st.column_config.TextColumn("Posição", width="small"),
+                                    "Pessoa": st.column_config.TextColumn(rotulo_pes, width="medium"),
+                                    "Entradas": st.column_config.NumberColumn("Entradas", format="%d"),
+                                    "Devolvidas": st.column_config.NumberColumn("Devolvidas", format="%d"),
+                                    "Taxa": st.column_config.ProgressColumn(
+                                        "Taxa devolução", format="%.1f%%", min_value=0,
+                                        max_value=max(20.0, float(tabela_pes_exib['Taxa'].max()))),
+                                    "Pct_Devolucoes": st.column_config.NumberColumn("% das devoluções", format="%.1f%%"),
+                                    "Criticos": st.column_config.NumberColumn("Dano físico", format="%d"),
+                                    "Risco": st.column_config.NumberColumn("Risco oper.", format="%d",
+                                                                           help="Inclui os casos de dano físico"),
+                                    "Motivo_Principal": st.column_config.TextColumn("Motivo principal", width="large"),
+                                    "Chamados": st.column_config.TextColumn("Nº dos chamados devolvidos", width="large"),
+                                    "Ultima": st.column_config.TextColumn("Última devolução"),
+                                })
+                            rec = (motivos_ex.groupby([col_pes, 'Motivo'])['_entrada'].nunique())
+                            n_rec = int((rec >= 3).sum())
+                            alto_pes = resumo_pes[(resumo_pes['Entradas'] >= 30) & (resumo_pes['Taxa'] >= taxa_media * 1.5)]
+                            nota = []
+                            if not alto_pes.empty:
+                                nota.append("Taxa ≥ 1,5x a média (" + num_br(taxa_media) + "%) com 30+ entradas: "
+                                            + "; ".join(f"{r.Pessoa} ({num_br(r.Taxa)}%)" for r in alto_pes.head(4).itertuples()))
+                            if n_rec:
+                                nota.append(f"{n_rec} combinação(ões) pessoa + motivo se repetem 3+ vezes")
+                            col_nota, col_exp = st.columns([4, 1])
+                            with col_nota:
+                                if nota:
+                                    st.caption(" · ".join(nota) + ".")
+                            with col_exp:
+                                st.download_button("Exportar (CSV)", icon=":material/download:",
+                                                   data=tabela_pes_exib[colunas_rank_pes].to_csv(index=False).encode('utf-8-sig'),
+                                                   file_name=f"ranking_{rotulo_pes.lower()}_motivos_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                                   mime="text/csv", use_container_width=True, key=f"btn_export_pessoas_{col_pes}")
+
+                            # ---- Um gráfico por vez (severidade ou pessoa × motivo)
+                            grafico_pes = st.radio("Gráfico:", ["Devoluções por severidade", f"{rotulo_pes} × Motivo"],
+                                                   horizontal=True, key="grafico_pessoas")
+                            pessoas_graf = tabela_pes['Pessoa'].head(15).tolist()
+                            if grafico_pes == "Devoluções por severidade":
+                                graf_pes = tabela_pes.head(15).iloc[::-1]
+                                sev_pes = (devolvidas_ent[devolvidas_ent[col_pes].isin(graf_pes['Pessoa'])]
+                                           .groupby([col_pes, 'Sev']).size().unstack(fill_value=0)
+                                           .reindex(graf_pes['Pessoa']).fillna(0))
+                                fig_pes = go.Figure()
+                                for sev in [SEV_QUALIDADE, SEV_RISCO, SEV_CRITICO]:
+                                    if sev in sev_pes.columns:
+                                        fig_pes.add_trace(go.Bar(
+                                            y=sev_pes.index, x=sev_pes[sev], orientation='h', name=sev,
+                                            marker_color=CORES_SEVERIDADE[sev],
+                                            hovertemplate='<b>%{y}</b><br>' + sev + ': %{x}<extra></extra>'))
+                                fig_pes.add_trace(go.Scatter(
+                                    y=graf_pes['Pessoa'], x=graf_pes['Devolvidas'], mode='text', showlegend=False,
+                                    text=[f"  <b>{d}</b> · taxa {num_br(t)}%" + (f" · {c} crítico(s)" if c else "")
+                                          for d, t, c in zip(graf_pes['Devolvidas'], graf_pes['Taxa'], graf_pes['Criticos'])],
+                                    textposition='middle right', hoverinfo='skip'))
+                                fig_pes.update_layout(
+                                    barmode='stack', height=max(300, 32 * len(graf_pes) + 100), bargap=0.3,
+                                    xaxis=dict(title='Entradas devolvidas', range=[0, graf_pes['Devolvidas'].max() * 1.6]),
+                                    yaxis=dict(showgrid=False), legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0),
+                                    margin=dict(t=40, l=10, r=20))
+                                st.plotly_chart(fig_pes, use_container_width=True)
+                            else:
+                                motivos_mapa = cont_motivos.index[:10].tolist()
+                                piv_pm = (motivos_ex[motivos_ex[col_pes].isin(pessoas_graf) & motivos_ex['Motivo'].isin(motivos_mapa)]
+                                          .pivot_table(index=col_pes, columns='Motivo', values='_entrada',
+                                                       aggfunc='nunique', fill_value=0)
+                                          .reindex(index=pessoas_graf, columns=motivos_mapa).fillna(0))
+                                fig_pm = go.Figure(go.Heatmap(
+                                    z=piv_pm.values, x=[quebrar_rotulo(m, 20) for m in piv_pm.columns], y=list(piv_pm.index),
+                                    colorscale=[[0, '#FFF8F0'], [0.4, '#FFCC80'], [0.75, COR_LARANJA], [1, '#B35900']],
+                                    xgap=2, ygap=2, text=piv_pm.values.astype(int), texttemplate='%{text}',
+                                    textfont=dict(size=11), showscale=False,
+                                    customdata=[[m for m in piv_pm.columns] for _ in piv_pm.index],
+                                    hovertemplate='<b>%{y}</b><br>%{customdata}: %{z}<extra></extra>'))
+                                fig_pm.update_layout(height=max(340, 34 * len(piv_pm) + 160), margin=dict(t=20, b=120, l=10, r=10))
+                                fig_pm.update_yaxes(autorange='reversed', showgrid=False)
+                                fig_pm.update_xaxes(showgrid=False, tickangle=-35)
+                                st.plotly_chart(fig_pm, use_container_width=True)
+
+                            # ---- Detalhe de uma pessoa: motivos + chamados + consideração
+                            st.markdown(f"##### :material/person: Detalhe por {rotulo_pes.lower()}")
+                            pessoa_det = st.selectbox(f"{rotulo_pes}:", tabela_pes['Pessoa'].tolist(),
+                                                      key=f"pessoa_detalhe_{col_pes}", label_visibility="collapsed")
+                            linha_p = resumo_pes[resumo_pes['Pessoa'] == pessoa_det].iloc[0]
+                            mot_p = motivos_ex[motivos_ex[col_pes] == pessoa_det]
+                            dev_p = devolvidas_ent[devolvidas_ent[col_pes] == pessoa_det]
+                            col_dg, col_dc = st.columns([1.1, 1])
+                            with col_dg:
+                                if not mot_p.empty:
+                                    mot_p_cont = (mot_p.groupby('Motivo')['_entrada'].nunique().sort_values()
+                                                  .rename('Qtd').reset_index())
+                                    fig_mp = go.Figure(go.Bar(
+                                        y=[quebrar_rotulo(m, 40) for m in mot_p_cont['Motivo']], x=mot_p_cont['Qtd'],
+                                        orientation='h', text=mot_p_cont['Qtd'], textposition='outside', cliponaxis=False,
+                                        marker_color=[CORES_SEVERIDADE[classificar_motivo(m)] for m in mot_p_cont['Motivo']],
+                                        hovertemplate='%{y}: <b>%{x}</b><extra></extra>'))
+                                    fig_mp.update_layout(title=f'Motivos de {pessoa_det.split()[0]}',
+                                                         height=max(240, 32 * len(mot_p_cont) + 90), bargap=0.3,
+                                                         xaxis=dict(range=[0, mot_p_cont['Qtd'].max() * 1.3]),
+                                                         yaxis=dict(showgrid=False), margin=dict(t=50, l=10, r=20))
+                                    st.plotly_chart(fig_mp, use_container_width=True)
+                                else:
+                                    st.success("Nenhuma devolução no período.", icon=":material/verified:")
+                            with col_dc:
+                                frases = []
+                                if linha_p['Devolvidas'] == 0:
+                                    frases.append("Sem devoluções no período filtrado.")
+                                else:
+                                    posicao = int(resumo_pes.index[resumo_pes['Pessoa'] == pessoa_det][0]) + 1
+                                    frases.append(f"<b>{posicao}ª</b> pessoa com mais devoluções: "
+                                                  f"{fmt_milhar(linha_p['Devolvidas'])} de {fmt_milhar(linha_p['Entradas'])} "
+                                                  f"entradas ({pct_txt(linha_p['Devolvidas'], n_devolvidas)} do total).")
+                                    dif = linha_p['Taxa'] - taxa_media
+                                    comparacao = f"{num_br(linha_p['Taxa'])}% contra {num_br(taxa_media)}% de média"
+                                    if linha_p['Entradas'] < 30:
+                                        frases.append(f"Taxa de {comparacao}, mas com pouco volume: compare pelo número absoluto.")
+                                    elif dif > taxa_media * 0.5:
+                                        frases.append(f"Taxa <b style='color:{COR_VERMELHO};'>acima da média</b> ({comparacao}).")
+                                    elif dif < -taxa_media * 0.3:
+                                        frases.append(f"Taxa <b style='color:{COR_VERDE_ESCURO};'>abaixo da média</b> ({comparacao}).")
+                                    else:
+                                        frases.append(f"Taxa próxima da média ({comparacao}).")
+                                    if linha_p['Motivo_Principal_Qtd'] >= 2:
+                                        share_m = linha_p['Motivo_Principal_Qtd'] / max(linha_p['Devolvidas'], 1) * 100
+                                        frases.append(f"Motivo recorrente: <i>{linha_p['Motivo_Principal'].lower()}</i> "
+                                                      f"({linha_p['Motivo_Principal_Qtd']}x, {share_m:.0f}% das devoluções)"
+                                                      + (" — vale um alinhamento específico." if share_m >= 40 else "."))
+                                    if linha_p['Criticos']:
+                                        crit_p = dev_p[dev_p['Nivel'] >= 3]['Chamado'].astype(str)
+                                        rep_c = crit_p.value_counts()
+                                        lista_c = [f"{c} ({rep_c[c]}x)" if rep_c[c] > 1 else c for c in pd.unique(crit_p)]
+                                        frases.append(f"<b style='color:{COR_VERMELHO};'>{int(linha_p['Criticos'])} caso(s) "
+                                                      f"com potencial de dano físico</b>: {', '.join(lista_c)}.")
+                                    frases.append(f"Última devolução em {dev_p['Criado'].max():%d/%m/%Y}.")
+                                st.markdown(
+                                    f'<div class="info-card" style="font-size:0.9rem; line-height:1.6;">'
+                                    f'<div style="display:flex; align-items:center; gap:8px; font-weight:700; color:{COR_AZUL_ESCURO}; margin-bottom:6px;">'
+                                    f'{icone("ideia", 18, COR_AZUL_ESCURO)} Consideração</div>'
+                                    + "".join(f"<div style='margin-bottom:4px;'>• {f}</div>" for f in frases)
+                                    + '</div>', unsafe_allow_html=True)
+                            if not dev_p.empty:
+                                mostrar_tabela(tabela_chamados(dev_p, remover=(col_pes,)), 380)
+
+                    # ================== CASOS CRÍTICOS ==================
+                    elif visao == "Casos críticos":
+                        escopo_crit = st.radio(":material/tune: Mostrar:", [SEV_CRITICO, f"{SEV_RISCO} + {SEV_CRITICO}"],
+                                               horizontal=True, key="escopo_criticos")
+                        nivel_min = 3 if escopo_crit == SEV_CRITICO else 2
+                        casos = devolvidas_ent[devolvidas_ent['Nivel'] >= nivel_min]
+                        if casos.empty:
+                            st.success("Nenhum caso nessa severidade no período filtrado.", icon=":material/verified:")
+                        else:
+                            st.caption(f"{fmt_milhar(len(casos))} entrada(s) · ordenadas da mais recente para a mais antiga")
+                            mostrar_tabela(tabela_chamados(casos), 440)
+                            casos_ex = motivos_ex[motivos_ex['Nivel'] >= nivel_min]
+                            reinc = (casos_ex.groupby(['Motivo', 'Responsável_Formatado', 'Empresa', 'Plataforma'])
+                                     .agg(Casos=('_entrada', 'nunique'),
+                                          Meses=('Mês_Label', lambda m: ', '.join(pd.unique(m))),
+                                          Chamados=('Chamado', lambda c: ', '.join(pd.unique(c.astype(str)))))
+                                     .reset_index().query('Casos >= 2').sort_values('Casos', ascending=False))
+                            st.markdown("##### :material/repeat: Reincidências")
+                            st.caption("Mesmo desenvolvedor, distribuidora, plataforma e motivo em 2 ou mais entradas.")
+                            if reinc.empty:
+                                st.caption("Nenhuma reincidência nesse recorte.")
+                            else:
+                                mostrar_tabela(reinc.rename(columns={'Responsável_Formatado': 'Desenvolvedor'}), 360)
+
+                    # ================== QUALIDADE DO DADO ==================
+                    else:
+                        st.caption(f"Motivo de revisão preenchido em {fmt_milhar(n_devolvidas)} dos {fmt_milhar(total_entradas)} "
+                                   f"registros. Abaixo, as inconsistências entre o motivo e a contagem de revisões.")
+                        col_q1, col_q2 = st.columns(2)
+                        for col_q, titulo_q, base_q, explicacao, chave in [
+                            (col_q1, f"Revisão sem motivo ({len(sem_motivo_df)})", sem_motivo_df,
+                             "Revisões + Qtd. Revisões > 0, mas 'Motivo Revisão' vazio.", "sem_motivo"),
+                            (col_q2, f"Motivo sem contagem de revisão ({len(motivo_sem_contagem)})", motivo_sem_contagem,
+                             "Motivo preenchido, mas Revisões + Qtd. Revisões = 0 (contador não atualizado?).", "motivo_zerado"),
+                        ]:
+                            with col_q:
+                                st.markdown(f"##### {titulo_q}")
+                                st.caption(explicacao)
+                                if base_q.empty:
+                                    st.success("Nenhum caso.", icon=":material/verified:")
+                                else:
+                                    tabela_q = tabela_chamados(base_q, {'Chamado': 'Nº do chamado', 'Criado': 'Criado',
+                                                                        'Responsável_Formatado': 'Desenvolvedor',
+                                                                        'SRE_Nome': 'SRE', 'Empresa': 'Empresa',
+                                                                        'Motivo_Revisao': 'Motivo', 'Revisões': 'Revisões',
+                                                                        'Qtd. Revisões': 'Qtd. Revisões'})
+                                    mostrar_tabela(tabela_q, 400)
+                                    st.download_button("Exportar (CSV)", icon=":material/download:",
+                                                       data=tabela_q.to_csv(index=False).encode('utf-8-sig'),
+                                                       file_name=f"{chave}_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                                       mime="text/csv", key=f"btn_export_{chave}")
+    with tab_mapa:
+        st.markdown("## :material/map: Mapa de Sincronizações por Empresa")
+        col_mapa_filtro1, col_mapa_filtro2, col_mapa_filtro3 = st.columns(3)
+        with col_mapa_filtro1:
+            empresas_disponiveis = df['Empresa'].dropna().unique()
+            empresas_opcoes = ['Todas'] + sorted([e for e in empresas_disponiveis if e in MAPEAMENTO_EMPRESAS])
+            empresas_selecionadas_mapa = st.multiselect(":material/apartment: Empresas", options=empresas_opcoes,
+                                                        default=['Todas'], key="mapa_empresas_folium")
+        with col_mapa_filtro2:
+            if 'Ano' in df.columns:
+                anos_disponiveis_mapa = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_mapa = ['Todos'] + list(anos_disponiveis_mapa)
+                ano_filtro_mapa = st.selectbox(":material/calendar_month: Ano", options=anos_opcoes_mapa, index=0, key="mapa_ano_folium")
+            else:
+                ano_filtro_mapa = 'Todos'
+        with col_mapa_filtro3:
+            if 'Mês' in df.columns and ano_filtro_mapa != 'Todos':
+                df_ano_mapa = df[df['Ano'] == int(ano_filtro_mapa)]
+                meses_disponiveis_mapa = sorted(df_ano_mapa['Mês'].dropna().unique().astype(int))
+                meses_opcoes_mapa = ['Todos'] + [f"{m:02d}" for m in meses_disponiveis_mapa]
+                mes_filtro_mapa = st.selectbox(":material/date_range: Mês", options=meses_opcoes_mapa, index=0, key="mapa_mes_folium",
+                                               format_func=lambda m: m if m == 'Todos' else MESES_NOMES[int(m)])
+            else:
+                mes_filtro_mapa = 'Todos'
+        df_mapa, total_sinc_filtrado = processar_dados_mapa(
+            df, empresas_selecionadas=empresas_selecionadas_mapa,
+            ano_filtro=ano_filtro_mapa, mes_filtro=mes_filtro_mapa
+        )
+        col_metrica1, col_metrica2, col_metrica3, col_metrica4 = st.columns(4)
+        empresas_ativas = len(df_mapa[df_mapa['sincronismos'] > 0]) if not df_mapa.empty else 0
+        with col_metrica1:
+            st.markdown(criar_card_indicador_simples(total_sinc_filtrado, "Total Sincronizações", "check",
+                                                     cor=COR_VERDE_ESCURO), unsafe_allow_html=True)
+        with col_metrica2:
+            st.markdown(criar_card_indicador_simples(empresas_ativas, "Empresas com Sinc.", "empresa",
+                                                     subtitulo=f"de {len(df_mapa)} mapeadas"), unsafe_allow_html=True)
+        with col_metrica3:
+            media_sinc = df_mapa['sincronismos'].mean() if not df_mapa.empty else 0
+            st.markdown(criar_card_indicador_simples(f"{media_sinc:.1f}".replace('.', ','), "Média por Empresa",
+                                                     "grafico", cor=COR_AZUL_PETROLEO), unsafe_allow_html=True)
+        with col_metrica4:
+            if not df_mapa.empty and df_mapa['sincronismos'].max() > 0:
+                max_sinc = df_mapa['sincronismos'].max()
+                empresa_max = df_mapa[df_mapa['sincronismos'] == max_sinc]['empresa_nome'].values[0]
+                st.markdown(criar_card_indicador_simples(int(max_sinc), f"Maior: {empresa_max[:20]}", "premio",
+                                                         cor=CORES_PODIO[1]), unsafe_allow_html=True)
+            else:
+                st.markdown(criar_card_indicador_simples(0, "Maior Sincronização", "premio"), unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown(titulo_secao("MAPA DE BOLHAS", "pino"), unsafe_allow_html=True)
+        m = criar_mapa_folium(df_mapa)
+        if m:
+            mapa_html = m._repr_html_()
+            wrapper = f"""
+            <div style="border-radius: 12px; overflow: hidden;
+                box-shadow: 0 4px 20px rgba(0,89,115,0.12);
+                border: 1px solid {COR_CINZA_BORDA}; margin-bottom: 20px;">
+                {mapa_html}
+            </div>
+            """
+            components.html(wrapper, height=620)
+        else:
+            st.info("Nenhuma empresa com sincronizações para exibir no mapa.", icon=":material/info:")
+        st.markdown(titulo_secao("RANKING DE SINCRONIZAÇÕES POR EMPRESA", "premio"), unsafe_allow_html=True)
+        fig_barras = criar_grafico_barras(df_mapa)
+        if fig_barras:
+            st.plotly_chart(fig_barras, use_container_width=True, config={'displayModeBar': True})
+        with st.expander("Ver Detalhes por Empresa", expanded=False, icon=":material/table_view:"):
+            if not df_mapa.empty:
+                tabela_detalhes = df_mapa[['empresa_nome', 'sigla', 'estado', 'regiao', 'sincronismos']].copy()
+                tabela_detalhes.columns = ['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações']
+                tabela_detalhes = tabela_detalhes.sort_values('Sincronizações', ascending=False).reset_index(drop=True)
+                total_geral = tabela_detalhes['Sincronizações'].sum()
+                posicoes = [f"{i + 1}º" for i in range(len(tabela_detalhes))]
+                tabela_detalhes.insert(0, 'Posição', posicoes)
+                tabela_detalhes['% Total'] = (tabela_detalhes['Sincronizações'] / total_geral * 100).round(1) if total_geral > 0 else 0
+                tabela_detalhes['Empresa (UF)'] = tabela_detalhes.apply(
+                    lambda x: f"{x['Empresa']} ({x['UF']})", axis=1)
+                df_exibir = tabela_detalhes[['Posição', 'Empresa (UF)', 'Estado', 'Região', 'Sincronizações', '% Total']].copy()
+                column_config = {
+                    "Posição": st.column_config.TextColumn("Posição", width="small"),
+                    "Empresa (UF)": st.column_config.TextColumn("Empresa", width="large"),
+                    "Estado": st.column_config.TextColumn("Estado", width="medium"),
+                    "Região": st.column_config.TextColumn("Região", width="medium"),
+                    "Sincronizações": st.column_config.NumberColumn("Sinc.", format="%d", width="small"),
+                    "% Total": st.column_config.ProgressColumn("% Total", format="%.1f%%", min_value=0,
+                                                              max_value=100, width="medium")
+                }
+                st.dataframe(df_exibir, use_container_width=True, column_config=column_config, height=400, hide_index=True)
+                csv = tabela_detalhes[['Empresa', 'UF', 'Estado', 'Região', 'Sincronizações', '% Total']].to_csv(index=False).encode('utf-8-sig')
+                st.download_button(label="Exportar dados para CSV", icon=":material/download:", data=csv,
+                                   file_name=f"sincronismos_empresas_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                   mime="text/csv", use_container_width=True)
+        with st.expander("Sobre as Cores do Mapa e Ranking", expanded=False, icon=":material/palette:"):
+            st.markdown(f"""
+            ### :material/palette: Escala de Cores
+            <div style="display: flex; gap: 30px; margin: 15px 0;">
+                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_AZUL_PETROLEO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Baixo volume</strong> - Até 33% do máximo</div>
+                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_LARANJA}; border-radius: 4px; vertical-align: middle;"></span> <strong>Médio volume</strong> - 33% a 66% do máximo</div>
+                <div><span style="display: inline-block; width: 30px; height: 20px; background: {COR_VERMELHO}; border-radius: 4px; vertical-align: middle;"></span> <strong>Alto volume</strong> - Acima de 66% do máximo</div>
+            </div>
+            ### :material/location_on: Mapa de Bolhas
+            - Quanto mais **<span style="color: {COR_VERMELHO};">vermelha</span>** a bolha, maior o número de sincronizações
+            - Quanto mais **<span style="color: {COR_AZUL_PETROLEO};">azul</span>** a bolha, menor o número de sincronizações
+            - O **tamanho** da bolha também é proporcional ao volume
+            - O texto **dentro da bolha** mostra a sigla da empresa e o número de sincronizações
+            - **Passe o mouse** sobre cada bolha para ver detalhes completos
+            ### :material/leaderboard: Ranking
+            - As **barras de progresso** mostram o percentual em relação ao total
+            - A cor da barra segue o mesmo gradiente do mapa
+            - Os três primeiros lugares recebem selos ouro, prata e bronze
+            ### :material/apartment: Empresas Mapeadas
+            | Empresa | Nome Completo | Estado |
+            |---------|---------------|--------|
+            | **EMR** | Energisa Minas Gerais | MG |
+            | **EPB** | Energisa Paraíba | PB |
+            | **ESE** | Energisa Sergipe | SE |
+            | **ESS** | Energisa Sul/Sudeste | SP |
+            | **EMS** | Energisa Mato Grosso do Sul | MS |
+            | **EMT** | Energisa Mato Grosso | MT |
+            | **ETO** | Energisa Tocantins | TO |
+            | **ERO** | Energisa Rondônia | RO |
+            | **EAC** | Energisa Acre | AC |
+            """, unsafe_allow_html=True)
+    with tab_ipe:
+        st.markdown(titulo_secao("KPI IPE - ÍNDICE DE PERFORMANCE DO ESPECIALISTA", "alvo"), unsafe_allow_html=True)
+        if 'SRE' in df.columns and 'Status' in df.columns and 'Retorno_Cliente' in df.columns:
+            def calcular_ipe(ca, cr, cd, ct, na):
+                # Fórmula mantida exatamente como na versão anterior
+                if cd <= 0 or na <= 0:
+                    return 0
+                numerador = ca - cr
+                termo1 = ct / cd
+                termo2 = termo1 / na
+                modulo = abs(termo2 - 1)
+                denominador = cd + modulo
+                if denominador <= 0:
+                    return 0
+                ipe = numerador / denominador
+                return min(ipe, 1.0)
+            st.markdown("### :material/filter_alt: Filtros de Período")
+            col_filtro_ipe1, col_filtro_ipe2 = st.columns(2)
+            with col_filtro_ipe1:
+                if 'Ano' in df.columns:
+                    anos_ipe = sorted(df['Ano'].dropna().unique().astype(int))
+                    anos_opcoes_ipe = ['Todos'] + list(anos_ipe)
+                    ano_ipe = st.selectbox(":material/calendar_month: Filtrar por Ano:", options=anos_opcoes_ipe, key="filtro_ano_ipe")
+                else:
+                    ano_ipe = 'Todos'
+            with col_filtro_ipe2:
+                if 'Mês' in df.columns:
+                    meses_disponiveis = sorted(df['Mês'].dropna().unique().astype(int))
+                    meses_opcoes_ipe = [MESES_NOMES[m] for m in meses_disponiveis]
+                    meses_selecionados_nomes = st.multiselect(":material/date_range: Selecionar Mês(es):",
+                                                              options=meses_opcoes_ipe,
+                                                              default=meses_opcoes_ipe,
+                                                              key="filtro_meses_ipe")
+                    meses_invertido = {v: k for k, v in MESES_NOMES.items()}
+                    meses_selecionados_numeros = [meses_invertido[m] for m in meses_selecionados_nomes] if meses_selecionados_nomes else []
+                else:
+                    meses_selecionados_numeros = []
+            df_ipe = df.copy()
+            if ano_ipe != 'Todos':
+                df_ipe = df_ipe[df_ipe['Ano'] == int(ano_ipe)]
+            if meses_selecionados_numeros:
+                df_ipe = df_ipe[df_ipe['Mês'].isin(meses_selecionados_numeros)]
+            st.markdown("### :material/table_chart: Performance Detalhada - Período Selecionado")
+            cards_total_periodo = len(df_ipe)
+            total_sres_periodo = df_ipe['SRE'].nunique()
+            sres_metrics = []
+            for sre in df_ipe['SRE'].dropna().unique():
+                df_sre_data = df_ipe[df_ipe['SRE'] == sre]
+                if len(df_sre_data) > 0:
+                    cd = len(df_sre_data)
+                    ca = int(df_sre_data['Sinc'].sum())
+                    cr = int(df_sre_data['Reaberto'].sum())
+                    ipe = calcular_ipe(ca, cr, cd, cards_total_periodo, total_sres_periodo)
+                    sres_metrics.append({
+                        'SRE': substituir_nome_sre(sre), 'Cards Demandados': cd,
+                        'Cards Analisados': ca, 'Cards Reabertos': cr,
+                        'IPE (%)': round(ipe * 100, 2),
+                        'Status': 'Na meta' if ipe >= 0.95 else 'Abaixo da meta'
+                    })
+            if sres_metrics:
+                df_sres = pd.DataFrame(sres_metrics).sort_values('IPE (%)', ascending=False)
+                col_ipe_graf, col_ipe_tab = st.columns([1, 1.25])
+                with col_ipe_graf:
+                    # NOVO: IPE por SRE com a linha da meta
+                    ordem_ipe = df_sres.sort_values('IPE (%)')
+                    fig_ipe_sre = go.Figure(go.Bar(
+                        x=ordem_ipe['IPE (%)'], y=ordem_ipe['SRE'], orientation='h',
+                        marker_color=[COR_VERDE_ESCURO if v >= 95 else COR_LARANJA for v in ordem_ipe['IPE (%)']],
+                        text=[f"{v:.1f}%".replace('.', ',') for v in ordem_ipe['IPE (%)']],
+                        textposition='outside', cliponaxis=False,
+                        hovertemplate='<b>%{y}</b><br>IPE: %{x:.2f}%<extra></extra>'))
+                    fig_ipe_sre.add_vline(x=95, line_dash='dash', line_color=COR_VERDE_ESCURO,
+                                          annotation_text='Meta 95%', annotation_position='top')
+                    fig_ipe_sre.update_layout(title='IPE por SRE', height=max(280, 48 * len(ordem_ipe) + 110),
+                                              xaxis=dict(range=[0, 110], ticksuffix='%'), yaxis=dict(showgrid=False),
+                                              margin=dict(t=60, b=30, l=10, r=30), bargap=0.35)
+                    st.plotly_chart(fig_ipe_sre, use_container_width=True)
+                with col_ipe_tab:
+                    st.dataframe(df_sres, use_container_width=True, hide_index=True, column_config={
+                        "SRE": st.column_config.TextColumn("SRE", width="medium"),
+                        "Cards Demandados": st.column_config.NumberColumn("Demandados", format="%d"),
+                        "Cards Analisados": st.column_config.NumberColumn("Analisados", format="%d"),
+                        "Cards Reabertos": st.column_config.NumberColumn("Reabertos", format="%d"),
+                        "IPE (%)": st.column_config.ProgressColumn("IPE %", format="%.2f%%", min_value=0, max_value=100),
+                        "Status": st.column_config.TextColumn("Status", width="small")
+                    })
+            st.markdown("---")
+            st.markdown("### :material/show_chart: IPE Acumulado por Mês")
+            st.caption("_Evolução do IPE acumulado mês a mês considerando TODO o período_")
+            if 'Criado' in df_ipe.columns and len(df_ipe) > 0:
+                df_ipe['Periodo'] = df_ipe['Criado'].dt.strftime('%Y-%m')
+                meses_ordenados = sorted(df_ipe['Periodo'].unique())
+                acumulados = []
+                for periodo in meses_ordenados:
+                    df_ate = df_ipe[df_ipe['Periodo'] <= periodo]
+                    cd_acum = len(df_ate)
+                    ca_acum = int(df_ate['Sinc'].sum())
+                    cr_acum = int(df_ate['Reaberto'].sum())
+                    na_acum = df_ate['SRE'].nunique()
+                    ipe_acum = calcular_ipe(ca_acum, cr_acum, cd_acum, cd_acum, na_acum)
+                    ano_p, mes_p = periodo.split('-')
+                    acumulados.append({
+                        # Corrigido: o rótulo agora inclui o ano (antes Janeiro/2025 e Janeiro/2026 se sobrepunham)
+                        'Mês': f"{MESES_NOMES[int(mes_p)]}/{ano_p[2:]}", 'CD_Acum': cd_acum,
+                        'CA_Acum': ca_acum, 'CR_Acum': cr_acum,
+                        'NA_Acum': na_acum, 'IPE Acumulado (%)': round(ipe_acum * 100, 2)
+                    })
+                if acumulados:
+                    df_acum = pd.DataFrame(acumulados)
+                    fig_linha = go.Figure()
+                    fig_linha.add_trace(go.Scatter(
+                        x=df_acum['Mês'], y=df_acum['IPE Acumulado (%)'],
+                        fill='tozeroy', fillcolor='rgba(2, 138, 159, 0.08)',
+                        line=dict(width=0), showlegend=False, hoverinfo='skip'))
+                    fig_linha.add_trace(go.Scatter(
+                        x=df_acum['Mês'], y=df_acum['IPE Acumulado (%)'],
+                        mode='lines+markers+text',
+                        line=dict(color=COR_AZUL_ESCURO, width=3.5, shape='spline'),
+                        marker=dict(size=11, color=[COR_VERDE_ESCURO if v >= 95 else COR_AZUL_PETROLEO
+                                                    for v in df_acum['IPE Acumulado (%)']],
+                                    line=dict(color=COR_BRANCO, width=2)),
+                        text=df_acum['IPE Acumulado (%)'].apply(lambda x: f'{x:.1f}%'.replace('.', ',')),
+                        textposition='top center', textfont=dict(size=11, color=COR_AZUL_ESCURO), name='IPE Acumulado',
+                        hovertemplate='<b>%{x}</b><br>IPE: %{y:.1f}%<br>CD: %{customdata[0]:,}<br>CA: %{customdata[1]:,}<br>CR: %{customdata[2]:,}<br>SREs: %{customdata[3]}<extra></extra>',
+                        customdata=df_acum[['CD_Acum', 'CA_Acum', 'CR_Acum', 'NA_Acum']].values
+                    ))
+                    fig_linha.add_hline(y=95, line_dash="dash", line_color=COR_VERDE_ESCURO, annotation_text="Meta 95%",
+                                        annotation_position="bottom right", annotation_font=dict(color=COR_VERDE_ESCURO))
+                    fig_linha.add_hline(y=100, line_dash="dot", line_color=COR_CINZA_TEXTO, annotation_text="Limite 100%",
+                                        annotation_position="top right")
+                    fig_linha.update_layout(title='Evolução do IPE Acumulado por Mês',
+                                            xaxis_title='Mês', yaxis_title='IPE Acumulado (%)',
+                                            xaxis=dict(type='category', showgrid=False,
+                                                       range=[-0.6, len(df_acum) - 0.4]),
+                                            yaxis=dict(range=[0, 108], ticksuffix='%'), height=480,
+                                            showlegend=False, margin=dict(t=60, r=30))
+                    st.plotly_chart(fig_linha, use_container_width=True)
+                    ultimo = df_acum.iloc[-1]
+                    primeiro = df_acum.iloc[0]
+                    st.markdown("### :material/target: Resumo do Período Acumulado")
+                    col_r1, col_r2, col_r3, col_r4 = st.columns(4)
+                    with col_r1:
+                        st.metric(":material/date_range: Período", f"{len(df_acum)} meses",
+                                  f"{primeiro['Mês']} - {ultimo['Mês']}", delta_color="off", **DELTA_SEM_SETA)
+                    with col_r2:
+                        st.metric(":material/assignment: Total Cards", fmt_milhar(ultimo['CD_Acum']))
+                    with col_r3:
+                        # Corrigido: "inverse" com valor negativo deixava o "abaixo da meta" verde
+                        st.metric(":material/target: IPE Acumulado", f"{ultimo['IPE Acumulado (%)']:.2f}%".replace('.', ','),
+                                  delta=f"{ultimo['IPE Acumulado (%)'] - 95:+.2f} pp vs meta",
+                                  delta_color="normal")
+                    with col_r4:
+                        st.metric(":material/groups: SREs Ativos", f"{ultimo['NA_Acum']}")
+                    with st.expander("Ver Tabela de Acumulados Mensais", expanded=False, icon=":material/table_view:"):
+                        st.dataframe(df_acum, use_container_width=True, hide_index=True,
+                                     column_config={"IPE Acumulado (%)": st.column_config.ProgressColumn(
+                                         "IPE %", format="%.2f%%", min_value=0, max_value=100)})
+                        csv_acum = df_acum.to_csv(index=False).encode('utf-8-sig')
+                        st.download_button("Exportar para CSV", icon=":material/download:", data=csv_acum,
+                                           file_name=f"ipe_acumulado_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                           mime="text/csv", use_container_width=True)
+            with st.expander("Entenda o Cálculo do IPE", icon=":material/menu_book:"):
+                st.markdown("""
+                **Fórmula:** `IPE = (CA - CR) / (CD + |((CT/CD)/NA) - 1|)`
+                - **CA** = Cards Analisados (Sincronizados)
+                - **CR** = Cards Reabertos (Cards com **'Retorno Cliente = Sim'**)
+                - **CD** = Cards Demandados (Total do período)
+                - **CT** = Cards Total (Total geral)
+                - **NA** = Número de Atendentes (SREs únicos)
+                **Meta: 95% | Limite máximo: 100%**
+                > **Importante:** Cards sem preenchimento na coluna 'Retorno Cliente' são considerados como **'Não'** (não contam como reabertos).
+                """)
+        else:
+            st.warning("Colunas necessárias ('SRE', 'Status', 'Retorno_Cliente') não encontradas.", icon=":material/warning:")
+    with tab_estatistica:
+        st.markdown("## :material/query_stats: ANÁLISE ESTATÍSTICA")
+        st.markdown("_Análise de distribuição, percentis e tendência de sincronizações_")
+        col_filtro_est1, col_filtro_est2, col_filtro_est3 = st.columns(3)
+        with col_filtro_est1:
+            if 'Ano' in df.columns:
+                anos_est = sorted(df['Ano'].dropna().unique().astype(int))
+                anos_opcoes_est = ['Todos os Anos'] + list(anos_est)
+                ano_est = st.selectbox(":material/calendar_month: Ano", options=anos_opcoes_est, key="filtro_ano_est", index=0)
+            else:
+                ano_est = 'Todos os Anos'
+        with col_filtro_est2:
+            if 'Mês' in df.columns:
+                if ano_est != 'Todos os Anos':
+                    df_ano_est = df[df['Ano'] == int(ano_est)]
+                    meses_est = sorted(df_ano_est['Mês'].dropna().unique().astype(int))
+                else:
+                    meses_est = sorted(df['Mês'].dropna().unique().astype(int))
+                meses_opcoes_est = ['Todos os Meses'] + [f"{m:02d}" for m in meses_est]
+                mes_est = st.selectbox(":material/date_range: Mês", options=meses_opcoes_est, key="filtro_mes_est", index=0,
+                                       format_func=lambda m: m if m == 'Todos os Meses' else MESES_NOMES[int(m)])
+            else:
+                mes_est = 'Todos os Meses'
+        with col_filtro_est3:
+            percentil_param = st.number_input(":material/target: Percentil de Referência (%)",
+                                              min_value=50, max_value=99, value=75, step=5,
+                                              key="percentil_param",
+                                              help="Percentil utilizado para análise de tendência")
+        df_est = df.copy()
+        if ano_est != 'Todos os Anos':
+            df_est = df_est[df_est['Ano'] == int(ano_est)]
+        if mes_est != 'Todos os Meses':
+            df_est = df_est[df_est['Mês'] == int(mes_est)]
+        df_sinc_est = df_est[df_est['Sinc']].copy()
+        df_tendencia = pd.DataFrame()
+        sinc_por_dia_est = pd.DataFrame()
+        if df_sinc_est.empty:
+            st.warning("Nenhum dado sincronizado encontrado com os filtros selecionados.", icon=":material/warning:")
+        else:
+            st.markdown("---")
+            st.markdown("### :material/bar_chart: DISTRIBUIÇÃO E PERCENTIS")
+            st.markdown(f"_Mediana, Quartis e Percentis - Percentil de Referência: {percentil_param}% · "
+                        f"dias úteis sem sincronização contam como zero_")
+            if 'Criado' in df_sinc_est.columns:
+                # Corrigido: inclui os dias úteis sem sincronização (antes eram ignorados e inflavam os percentis)
+                serie_est = serie_diaria(df_sinc_est['Data'])
+                sinc_por_dia_est = serie_est.rename_axis('Data').reset_index(name='Quantidade')
+                if not sinc_por_dia_est.empty:
+                    valores = sinc_por_dia_est['Quantidade']
+                    mediana = valores.median()
+                    q1 = valores.quantile(0.25)
+                    q3 = valores.quantile(0.75)
+                    p10 = valores.quantile(0.10)
+                    p90 = valores.quantile(0.90)
+                    p_selecionado = valores.quantile(percentil_param/100)
+                    # Contagens são inteiras: uma barra por valor, centrada no número (mais legível que o histograma)
+                    frequencia = valores.value_counts().sort_index()
+                    frequencia = frequencia.reindex(range(0, int(frequencia.index.max()) + 1), fill_value=0)
+                    fig_sep = go.Figure()
+                    fig_sep.add_trace(go.Bar(
+                        x=frequencia.index, y=frequencia.values, name='Frequência',
+                        marker_color='rgba(2, 138, 159, 0.45)',
+                        marker_line_color=COR_AZUL_PETROLEO, marker_line_width=1,
+                        hovertemplate='%{x} sincronizações no dia: <b>%{y}</b> dias<extra></extra>'
+                    ))
+                    linhas_ref = [(p10, f"P10: {p10:.0f}", COR_CINZA_TEXTO, "dot", "bottom left"),
+                                  (q1, f"Q1: {q1:.0f}", COR_AZUL_PETROLEO, "dot", "top left"),
+                                  (mediana, f"Mediana: {mediana:.0f}", COR_VERDE_ESCURO, "dash", "top"),
+                                  (q3, f"Q3: {q3:.0f}", COR_AZUL_PETROLEO, "dot", "top right"),
+                                  (p90, f"P90: {p90:.0f}", COR_CINZA_TEXTO, "dot", "bottom right")]
+                    for valor_ref, rotulo, cor_ref, traco, posicao in linhas_ref:
+                        fig_sep.add_vline(x=valor_ref, line_dash=traco, line_color=cor_ref,
+                                          annotation_text=rotulo, annotation_position=posicao,
+                                          annotation_font=dict(size=11, color=cor_ref))
+                    fig_sep.add_vline(x=p_selecionado, line_dash="solid", line_color=COR_VERMELHO, line_width=3,
+                                      annotation_text=f"P{percentil_param}: {p_selecionado:.0f}",
+                                      annotation_position="top right",
+                                      annotation_font=dict(size=12, color=COR_VERMELHO))
+                    rotulo_mes_est = MESES_NOMES[int(mes_est)] if mes_est != "Todos os Meses" else ""
+                    fig_sep.update_layout(
+                        title=f'Distribuição de Sincronizações Diárias - {ano_est if ano_est != "Todos os Anos" else ""} {rotulo_mes_est}'.strip(' -'),
+                        xaxis_title='Número de Sincronizações por Dia',
+                        yaxis_title='Frequência (dias)', height=450,
+                        showlegend=False, bargap=0.08,
+                        xaxis=dict(dtick=1 if frequencia.index.max() <= 30 else None, showgrid=False),
+                        margin=dict(t=70)
+                    )
+                    st.plotly_chart(fig_sep, use_container_width=True)
+                    col_sep1, col_sep2, col_sep3, col_sep4, col_sep5 = st.columns(5)
+                    with col_sep1:
+                        st.metric(":material/vertical_align_bottom: P10", f"{p10:.0f}")
+                    with col_sep2:
+                        st.metric(":material/align_vertical_bottom: Q1 (P25)", f"{q1:.0f}")
+                    with col_sep3:
+                        st.metric(":material/align_vertical_center: Mediana (P50)", f"{mediana:.0f}")
+                    with col_sep4:
+                        st.metric(":material/align_vertical_top: Q3 (P75)", f"{q3:.0f}")
+                    with col_sep5:
+                        st.metric(f":material/target: P{percentil_param}", f"{p_selecionado:.0f}")
+            st.markdown("---")
+            st.markdown("### :material/timeline: ANÁLISE DE PERCENTIL PARA TENDÊNCIA")
+            st.markdown(f"_Evolução dos percentis ao longo do tempo - Percentil de Referência: {percentil_param}%_")
+            if 'Criado' in df_sinc_est.columns:
+                df_sinc_est['Mes_Ano'] = df_sinc_est['Criado'].dt.strftime('%Y-%m')
+                meses_unicos = sorted(df_sinc_est['Mes_Ano'].unique())
+                dados_tendencia = []
+                for mes in meses_unicos:
+                    df_mes = df_sinc_est[df_sinc_est['Mes_Ano'] == mes]
+                    if not df_mes.empty:
+                        valores_mes = serie_diaria(df_mes['Data'])
+                        if not valores_mes.empty:
+                            ano_t, mes_t = mes.split('-')
+                            dados_tendencia.append({
+                                'Mês': mes,
+                                'Mês_Label': f"{MESES_ABREV[int(mes_t)]}/{ano_t}",
+                                'P25': valores_mes.quantile(0.25),
+                                'P50': valores_mes.quantile(0.50),
+                                f'P{percentil_param}': valores_mes.quantile(percentil_param/100),
+                                'P90': valores_mes.quantile(0.90),
+                                'Média': valores_mes.mean(),
+                                'Total': len(df_mes)
+                            })
+                if dados_tendencia:
+                    df_tendencia = pd.DataFrame(dados_tendencia)
+                    st.markdown("#### :material/show_chart: Evolução dos Percentis")
+                    fig_tendencia = go.Figure()
+                    fig_tendencia.add_trace(go.Scatter(
+                        x=df_tendencia['Mês_Label'], y=df_tendencia['P90'],
+                        mode='lines', name='P25-P90 (Faixa)', line=dict(width=0), showlegend=False, hoverinfo='skip'
+                    ))
+                    fig_tendencia.add_trace(go.Scatter(
+                        x=df_tendencia['Mês_Label'], y=df_tendencia['P25'],
+                        mode='lines', fill='tonexty', fillcolor='rgba(2, 138, 159, 0.15)',
+                        line=dict(width=0), name='Faixa P25–P90', hoverinfo='skip'
+                    ))
+                    fig_tendencia.add_trace(go.Scatter(
+                        x=df_tendencia['Mês_Label'], y=df_tendencia[f'P{percentil_param}'],
+                        mode='lines+markers', name=f'P{percentil_param}',
+                        line=dict(color=COR_VERMELHO, width=3, shape='spline'),
+                        marker=dict(size=9, color=COR_VERMELHO, line=dict(color=COR_BRANCO, width=2))
+                    ))
+                    fig_tendencia.add_trace(go.Scatter(
+                        x=df_tendencia['Mês_Label'], y=df_tendencia['P50'],
+                        mode='lines+markers', name='P50 (Mediana)',
+                        line=dict(color=COR_AZUL_ESCURO, width=2.5, shape='spline'),
+                        marker=dict(size=8, color=COR_AZUL_ESCURO, line=dict(color=COR_BRANCO, width=2))
+                    ))
+                    fig_tendencia.add_trace(go.Scatter(
+                        x=df_tendencia['Mês_Label'], y=df_tendencia['Média'],
+                        mode='lines+markers', name='Média',
+                        line=dict(color=COR_VERDE_ESCURO, width=2, dash='dash', shape='spline'),
+                        marker=dict(size=7, color=COR_VERDE_ESCURO)
+                    ))
+                    fig_tendencia.update_layout(
+                        title=f'Evolução dos Percentis de Sincronizações Diárias',
+                        xaxis_title='Mês', yaxis_title='Sincronizações por Dia',
+                        xaxis=dict(type='category', showgrid=False), yaxis=dict(rangemode='tozero'),
+                        height=450, hovermode='x unified', margin=dict(t=80),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5)
+                    )
+                    st.plotly_chart(fig_tendencia, use_container_width=True)
+                    st.markdown("#### :material/insights: Análise da Tendência")
+                    # O mês corrente (incompleto) fica fora da comparação para não distorcer o resultado
+                    tend_fechada = df_tendencia[df_tendencia['Mês'] < agora().strftime('%Y-%m')]
+                    if len(tend_fechada) < 2:
+                        tend_fechada = df_tendencia
+                    if len(tend_fechada) > 1:
+                        primeiro = tend_fechada.iloc[0]
+                        ultimo = tend_fechada.iloc[-1]
+                        col_tend1, col_tend2, col_tend3 = st.columns(3)
+                        # Corrigido: delta_color "inverse" em queda deixava a seta verde
+                        with col_tend1:
+                            variacao_p50 = ((ultimo['P50'] - primeiro['P50']) / primeiro['P50'] * 100) if primeiro['P50'] > 0 else 0
+                            st.metric(":material/align_vertical_center: Mediana (P50)", f"{ultimo['P50']:.0f}",
+                                      delta=f"{variacao_p50:+.1f}%", delta_color="normal",
+                                      help=f"{ultimo['Mês_Label']} vs {primeiro['Mês_Label']}")
+                        with col_tend2:
+                            variacao_p_param = ((ultimo[f'P{percentil_param}'] - primeiro[f'P{percentil_param}']) / primeiro[f'P{percentil_param}'] * 100) if primeiro[f'P{percentil_param}'] > 0 else 0
+                            st.metric(f":material/target: P{percentil_param}", f"{ultimo[f'P{percentil_param}']:.0f}",
+                                      delta=f"{variacao_p_param:+.1f}%", delta_color="normal",
+                                      help=f"{ultimo['Mês_Label']} vs {primeiro['Mês_Label']}")
+                        with col_tend3:
+                            variacao_media = ((ultimo['Média'] - primeiro['Média']) / primeiro['Média'] * 100) if primeiro['Média'] > 0 else 0
+                            st.metric(":material/functions: Média", f"{ultimo['Média']:.1f}".replace('.', ','),
+                                      delta=f"{variacao_media:+.1f}%", delta_color="normal",
+                                      help=f"{ultimo['Mês_Label']} vs {primeiro['Mês_Label']}")
+                        st.markdown("#### :material/lightbulb: Resumo da Tendência")
+                        periodo_txt = f"({primeiro['Mês_Label']} → {ultimo['Mês_Label']}, meses fechados)"
+                        if variacao_p50 > 10:
+                            st.success(f"**Tendência POSITIVA** - A mediana cresceu {variacao_p50:.1f}% no período analisado {periodo_txt}",
+                                       icon=":material/trending_up:")
+                        elif variacao_p50 > 0:
+                            st.info(f"**Leve crescimento** - A mediana cresceu {variacao_p50:.1f}% no período {periodo_txt}",
+                                    icon=":material/north_east:")
+                        elif variacao_p50 > -10:
+                            st.warning(f"**Estável** - A mediana variou {variacao_p50:.1f}% no período {periodo_txt}",
+                                       icon=":material/trending_flat:")
+                        else:
+                            st.error(f"**Tendência NEGATIVA** - A mediana caiu {abs(variacao_p50):.1f}% no período {periodo_txt}",
+                                     icon=":material/trending_down:")
+                    with st.expander("Ver Tabela de Tendência Completa", expanded=False, icon=":material/table_view:"):
+                        st.dataframe(df_tendencia, use_container_width=True, hide_index=True,
+                                     column_config={
+                                         "Mês_Label": st.column_config.TextColumn("Mês"),
+                                         "P25": st.column_config.NumberColumn("P25", format="%.1f"),
+                                         "P50": st.column_config.NumberColumn("P50", format="%.1f"),
+                                         f"P{percentil_param}": st.column_config.NumberColumn(f"P{percentil_param}", format="%.1f"),
+                                         "P90": st.column_config.NumberColumn("P90", format="%.1f"),
+                                         "Média": st.column_config.NumberColumn("Média", format="%.1f"),
+                                         "Total": st.column_config.NumberColumn("Total Chamados", format="%d")
+                                     })
+            st.markdown("---")
+            st.markdown("### :material/download: Exportar Dados")
+            col_export1, col_export2 = st.columns(2)
+            with col_export1:
+                if not df_tendencia.empty:
+                    csv_tendencia = df_tendencia.to_csv(index=False).encode('utf-8-sig')
+                    st.download_button(label="Exportar Tendência de Percentis", icon=":material/download:",
+                                       data=csv_tendencia,
+                                       file_name=f"tendencia_percentis_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                       mime="text/csv", use_container_width=True)
+            with col_export2:
+                if not sinc_por_dia_est.empty:
+                    csv_sinc = (sinc_por_dia_est.assign(Data=sinc_por_dia_est['Data'].dt.strftime('%d/%m/%Y'))
+                                .to_csv(index=False).encode('utf-8-sig'))
+                    st.download_button(label="Exportar Sincronizações Diárias", icon=":material/download:",
+                                       data=csv_sinc,
+                                       file_name=f"sincronizacoes_diarias_{agora().strftime('%Y%m%d_%H%M%S')}.csv",
+                                       mime="text/csv", use_container_width=True)
+else:
+    st.markdown(f"""
+    <div style="text-align: center; padding: 4rem; background: {COR_CINZA_FUNDO}; border-radius: 12px; border: 2px dashed {COR_CINZA_BORDA};">
+        <div style="margin-bottom: 0.6rem;">{icone('atividade', 46, COR_AZUL_PETROLEO, 1.8)}</div>
+        <h3 style="color: {COR_PRETO_SUAVE};">Esteira ADMS Dashboard</h3>
+        <p style="color: {COR_CINZA_TEXTO}; margin-bottom: 2rem;">
+            Sistema de análise e monitoramento de chamados - Setor SRE
+        </p>
+        <div style="margin-top: 2rem; padding: 2rem; background: {COR_BRANCO}; border-radius: 8px; display: inline-block; text-align: left;">
+            <h4 style="color: {COR_AZUL_ESCURO}; display:flex; align-items:center; gap:8px;">{icone('lista', 20, COR_AZUL_ESCURO)} Para começar:</h4>
+            <p>1. <strong>Use a barra lateral esquerda</strong> para fazer upload do arquivo CSV</p>
+            <p>2. <strong>Use a seção "Importar Dados"</strong> no final da barra lateral</p>
+            <p>3. <strong>Ou coloque um arquivo CSV</strong> no mesmo diretório do app</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+st.markdown("---")
+ultima_atualizacao = st.session_state.get('ultima_atualizacao') or get_horario_brasilia()
+st.markdown(f"""
+<div class="footer">
+    <div style="margin-bottom: 0.8rem;">
+        <p style="margin: 0; color: {COR_PRETO_SUAVE}; font-weight: 500;">
+        Desenvolvido por: <span style="color: {COR_AZUL_ESCURO};">TIME SRE | GAUT</span>
+        </p>
+        <p style="margin: 0.3rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.8rem; display:inline-flex; align-items:center; gap:6px;">
+        {icone('email', 14, COR_CINZA_TEXTO)} Contato: <a href="mailto:kewin.ferreira@energisa.com.br" style="color: {COR_AZUL_ESCURO}; text-decoration: none;">kewin.ferreira@energisa.com.br</a>
+        </p>
+    </div>
+    <div>
+        <p style="margin: 0; color: {COR_CINZA_TEXTO}; font-size: 0.75rem;">
+        © {agora().year} Esteira ADMS Dashboard | Sistema proprietário - Energisa Group
+        </p>
+        <p style="margin: 0.2rem 0 0 0; color: {COR_CINZA_TEXTO}; font-size: 0.7rem;">
+        Versão 5.6 | Sistema de Performance SRE | Última atualização: {ultima_atualizacao} (Brasília)
+        </p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
