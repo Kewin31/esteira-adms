@@ -1208,6 +1208,14 @@ if st.session_state.df_original is not None:
                                                          subtitulo=f"em {fmt_milhar(cards_com_rev)} cards", cor=COR_LARANJA),
                             unsafe_allow_html=True)
         st.markdown("---")
+        # Regra única para contar sincronismos (vale para "Sincronização Diária" e "Análise Avançada SRE")
+        modo_data_sinc = st.radio(
+            ":material/event: Contar sincronismos por:", ["Data da sincronização", "Data de criação do card"],
+            horizontal=True, key="modo_data_sinc",
+            help="Data da sincronização = coluna 'Modificado', usada só quando quem modificou o card é o "
+                 "próprio SRE dele. Se outra pessoa alterou o card depois, usa a data de criação. "
+                 "Vale para as abas Sincronização Diária e Análise Avançada SRE.")
+        por_data_sinc = modo_data_sinc == "Data da sincronização" and 'Data_Sinc' in df.columns
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             ":material/calendar_month: Evolução de Demandas",
             ":material/rate_review: Análise de Revisões",
@@ -1371,13 +1379,8 @@ if st.session_state.df_original is not None:
                                    delta_color="off", **DELTA_SEM_SETA)
         with tab3:
             st.markdown(titulo_secao("CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA", "subida"), unsafe_allow_html=True)
-            modo_data_sinc = st.radio(
-                ":material/event: Contar por:", ["Data da sincronização", "Data de criação do card"],
-                horizontal=True, key="modo_data_sinc",
-                help="Data da sincronização = coluna 'Modificado', usada só quando quem modificou o card é o "
-                     "próprio SRE. Se outra pessoa alterou o card depois, usa a data de criação.")
             base_sinc = df.copy()
-            if modo_data_sinc == "Data da sincronização" and 'Data_Sinc' in base_sinc.columns:
+            if por_data_sinc:
                 base_sinc['Data'] = base_sinc['Data_Sinc']
                 base_sinc['Ano'] = base_sinc['Data'].dt.year
                 base_sinc['Mês'] = base_sinc['Data'].dt.month
@@ -1416,7 +1419,7 @@ if st.session_state.df_original is not None:
                 df_sincronizados = df_sinc[df_sinc['Sinc']].copy()
                 if not df_sincronizados.empty:
                     df_sincronizados = df_sincronizados.sort_values('Data')
-                    if modo_data_sinc == "Data da sincronização" and 'Sinc_Data_Confirmada' in df_sincronizados.columns:
+                    if por_data_sinc and 'Sinc_Data_Confirmada' in df_sincronizados.columns:
                         n_conf = int(df_sincronizados['Sinc_Data_Confirmada'].sum())
                         n_reserva = len(df_sincronizados) - n_conf
                         st.caption(f"{fmt_milhar(n_conf)} sincronismo(s) contados pela data em que o próprio SRE "
@@ -1684,12 +1687,15 @@ if st.session_state.df_original is not None:
                 ano_sre, mes_sre = 'Todos', 'Todos'
                 with col_filtro1:
                     if 'Ano' in df.columns:
-                        anos_sre = sorted(df['Ano'].dropna().unique().astype(int))
+                        anos_base = set(df['Ano'].dropna().astype(int))
+                        if por_data_sinc:
+                            anos_base |= set(df['Data_Sinc'].dt.year.dropna().astype(int))
+                        anos_sre = sorted(anos_base)
                         anos_opcoes_sre = ['Todos'] + list(anos_sre)
                         ano_sre = st.selectbox(":material/calendar_month: Filtrar por Ano:", options=anos_opcoes_sre, key="filtro_ano_sre")
                 with col_filtro2:
                     if 'Mês' in df.columns:
-                        meses_sre = sorted(df['Mês'].dropna().unique().astype(int))
+                        meses_sre = list(range(1, 13)) if por_data_sinc else sorted(df['Mês'].dropna().unique().astype(int))
                         meses_opcoes_sre = ['Todos'] + [str(m) for m in meses_sre]
                         mes_sre = st.selectbox(":material/date_range: Filtrar por Mês:", options=meses_opcoes_sre, key="filtro_mes_sre",
                                                format_func=lambda m: m if m == 'Todos' else MESES_NOMES[int(m)])
@@ -1698,7 +1704,17 @@ if st.session_state.df_original is not None:
                     df_sre = df_sre[df_sre['Ano'] == int(ano_sre)]
                 if 'Mês' in df_sre.columns and mes_sre != 'Todos':
                     df_sre = df_sre[df_sre['Mês'] == int(mes_sre)]
-                df_sincronizados = df_sre[df_sre['Sinc']].copy()
+                # Sincronizados: período aplicado à data da sincronização (ou à criação, conforme o seletor)
+                df_sincronizados = df[df['Sinc']].copy()
+                if por_data_sinc:
+                    df_sincronizados['Ano'] = df_sincronizados['Data_Sinc'].dt.year
+                    df_sincronizados['Mês'] = df_sincronizados['Data_Sinc'].dt.month
+                if ano_sre != 'Todos':
+                    df_sincronizados = df_sincronizados[df_sincronizados['Ano'] == int(ano_sre)]
+                if mes_sre != 'Todos':
+                    df_sincronizados = df_sincronizados[df_sincronizados['Mês'] == int(mes_sre)]
+                st.caption("Sincronizados contados pela " + ("data da sincronização" if por_data_sinc else "data de criação do card")
+                           + " (seletor acima das abas). Total de cards e retornos da tabela consideram os cards criados no período.")
                 if not df_sincronizados.empty and 'SRE' in df_sincronizados.columns:
                     st.markdown("### :material/bar_chart: Sincronizados por SRE")
                     sinc_por_sre_nome = (df_sincronizados.groupby('SRE_Nome').size()
@@ -1757,19 +1773,30 @@ if st.session_state.df_original is not None:
                                 """, unsafe_allow_html=True)
                     st.markdown("### :material/table_chart: Performance Detalhada dos SREs")
                     df_sres_metrics = (df_sre.groupby('SRE_Nome')
-                                       .agg(Total_Cards=('Sinc', 'size'), Sincronizados=('Sinc', 'sum'),
+                                       .agg(Total_Cards=('Sinc', 'size'),
                                             Cards_Retorno=('Com_Revisao', 'sum'), Revisoes=('Revisões_Total', 'sum'))
-                                       .reset_index().rename(columns={'SRE_Nome': 'SRE'}))
+                                       .reset_index())
+                    # Sincronizados vêm da mesma base do gráfico acima (mesma regra de data)
+                    sinc_sre = df_sincronizados.groupby('SRE_Nome').size().rename('Sincronizados').reset_index()
+                    df_sres_metrics = (df_sres_metrics.merge(sinc_sre, on='SRE_Nome', how='outer')
+                                       .fillna({'Total_Cards': 0, 'Cards_Retorno': 0, 'Revisoes': 0, 'Sincronizados': 0})
+                                       .rename(columns={'SRE_Nome': 'SRE'}))
+                    for c_int in ['Total_Cards', 'Cards_Retorno', 'Revisoes', 'Sincronizados']:
+                        df_sres_metrics[c_int] = df_sres_metrics[c_int].astype(int)
+                    df_sres_metrics = df_sres_metrics[['SRE', 'Total_Cards', 'Sincronizados', 'Cards_Retorno', 'Revisoes']]
                     df_sres_metrics['Taxa_Retorno'] = (df_sres_metrics['Cards_Retorno'] /
-                                                       df_sres_metrics['Total_Cards'] * 100).round(1)
+                                                       df_sres_metrics['Total_Cards'].where(df_sres_metrics['Total_Cards'] > 0)
+                                                       * 100).fillna(0).round(1)
                     df_sres_metrics['Participacao'] = (df_sres_metrics['Sincronizados'] /
                                                        max(df_sres_metrics['Sincronizados'].sum(), 1) * 100).round(1)
                     df_sres_metrics = df_sres_metrics.sort_values('Sincronizados', ascending=False)
                     st.dataframe(df_sres_metrics, use_container_width=True, hide_index=True,
                                  column_config={
                                      "SRE": st.column_config.TextColumn("SRE"),
-                                     "Total_Cards": st.column_config.NumberColumn("Total Cards", format="%d"),
-                                     "Sincronizados": st.column_config.NumberColumn("Sincronizados", format="%d"),
+                                     "Total_Cards": st.column_config.NumberColumn("Cards criados", format="%d",
+                                                                                  help="Cards criados no período"),
+                                     "Sincronizados": st.column_config.NumberColumn("Sincronizados", format="%d",
+                                                                                    help="Mesma regra de data do gráfico acima"),
                                      "Cards_Retorno": st.column_config.NumberColumn("Cards Retorno", format="%d",
                                                                                     help="Cards com Revisões + Qtd. Revisões > 0"),
                                      "Revisoes": st.column_config.NumberColumn("Total Revisões", format="%d",
