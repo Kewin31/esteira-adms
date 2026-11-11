@@ -6,6 +6,7 @@ import plotly.io as pio
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import io
+import unicodedata
 import os
 import time
 import hashlib
@@ -352,6 +353,13 @@ def formatar_nome_responsavel(nome):
         return nome_formatado
     return nome_str.title()
 
+def normalizar_nome(valor):
+    """Nome sem acento, minúsculo e com espaços simples (para comparar SRE x 'Modificado por')."""
+    if pd.isna(valor):
+        return ""
+    texto = unicodedata.normalize('NFKD', str(valor)).encode('ascii', 'ignore').decode('ascii').lower()
+    return " ".join(texto.split())
+
 def substituir_nome_sre(sre_nome):
     """Nome de exibição do SRE (única definição — antes existia duplicada em duas abas)."""
     if pd.isna(sre_nome):
@@ -651,6 +659,20 @@ def carregar_dados(uploaded_file=None, caminho_arquivo=None, conteudo_bytes=None
         if 'Criado' in df.columns:
             df['Data'] = df['Criado'].dt.normalize()
             df['Mês_Label'] = df['Mês'].map(MESES_ABREV) + '/' + df['Criado'].dt.strftime('%y')
+
+            # DATA DA SINCRONIZAÇÃO (o export do ADMS não tem essa coluna)
+            # Usa "Modificado" SOMENTE quando quem modificou o card é o próprio SRE dele
+            # (trava de segurança: uma edição posterior feita por outra pessoa não muda o dia).
+            # Nos demais casos, não dá para saber o dia do sincronismo e usamos a data de criação.
+            if {'Modificado', 'Modificado_por', 'SRE'}.issubset(df.columns):
+                mapa_nomes = {v: normalizar_nome(v) for v in pd.unique(pd.concat([df['Modificado_por'], df['SRE']]).dropna())}
+                modificado_pelo_sre = (df['SRE'].notna() & df['Modificado'].notna()
+                                       & df['Modificado_por'].map(mapa_nomes).eq(df['SRE'].map(mapa_nomes)).fillna(False))
+            else:
+                modificado_pelo_sre = pd.Series(False, index=df.index)
+            df['Sinc_Data_Confirmada'] = (df['Sinc'] & modificado_pelo_sre).astype(bool)
+            df['Data_Sinc'] = df['Modificado'].dt.normalize().where(df['Sinc_Data_Confirmada'], df['Data']) \
+                if 'Modificado' in df.columns else df['Data']
 
         # Hash só do conteúdo (antes incluía o timestamp e nunca batia na comparação)
         hash_conteudo = calcular_hash_arquivo(conteudo.encode('utf-8'))
@@ -1349,29 +1371,39 @@ if st.session_state.df_original is not None:
                                    delta_color="off", **DELTA_SEM_SETA)
         with tab3:
             st.markdown(titulo_secao("CHAMADOS SINCRONIZADOS POR DIA - ANÁLISE COMPLETA", "subida"), unsafe_allow_html=True)
+            modo_data_sinc = st.radio(
+                ":material/event: Contar por:", ["Data da sincronização", "Data de criação do card"],
+                horizontal=True, key="modo_data_sinc",
+                help="Data da sincronização = coluna 'Modificado', usada só quando quem modificou o card é o "
+                     "próprio SRE. Se outra pessoa alterou o card depois, usa a data de criação.")
+            base_sinc = df.copy()
+            if modo_data_sinc == "Data da sincronização" and 'Data_Sinc' in base_sinc.columns:
+                base_sinc['Data'] = base_sinc['Data_Sinc']
+                base_sinc['Ano'] = base_sinc['Data'].dt.year
+                base_sinc['Mês'] = base_sinc['Data'].dt.month
             col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
             ano_sinc, mes_sinc, sre_sinc, empresa_sinc = 'Todos os Anos', 'Todos os Meses', 'Todos os SREs', 'Todas Empresas'
             with col_filtro1:
-                if 'Ano' in df.columns:
-                    anos_sinc = sorted(df['Ano'].dropna().unique().astype(int))
+                if 'Ano' in base_sinc.columns:
+                    anos_sinc = sorted(base_sinc['Ano'].dropna().unique().astype(int))
                     anos_opcoes_sinc = ['Todos os Anos'] + list(anos_sinc)
                     ano_sinc = st.selectbox(":material/calendar_month: Ano:", options=anos_opcoes_sinc, key="filtro_ano_sinc")
             with col_filtro2:
-                if 'Mês' in df.columns:
-                    meses_sinc = sorted(df['Mês'].dropna().unique().astype(int))
+                if 'Mês' in base_sinc.columns:
+                    meses_sinc = sorted(base_sinc['Mês'].dropna().unique().astype(int))
                     meses_opcoes_sinc = ['Todos os Meses'] + [str(m) for m in meses_sinc]
                     mes_sinc = st.selectbox(":material/date_range: Mês:", options=meses_opcoes_sinc, key="filtro_mes_sinc",
                                             format_func=lambda m: m if m == 'Todos os Meses' else MESES_NOMES[int(m)])
             with col_filtro3:
-                if 'SRE' in df.columns:
-                    sres_sinc = ['Todos os SREs'] + sorted(df['SRE'].dropna().unique())
+                if 'SRE' in base_sinc.columns:
+                    sres_sinc = ['Todos os SREs'] + sorted(base_sinc['SRE'].dropna().unique())
                     sre_sinc = st.selectbox(":material/engineering: SRE:", options=sres_sinc, key="filtro_sre_sinc",
                                             format_func=lambda v: v if v == 'Todos os SREs' else substituir_nome_sre(v))
             with col_filtro4:
-                if 'Empresa' in df.columns:
-                    empresas_sinc = ['Todas Empresas'] + sorted(df['Empresa'].dropna().unique())
+                if 'Empresa' in base_sinc.columns:
+                    empresas_sinc = ['Todas Empresas'] + sorted(base_sinc['Empresa'].dropna().unique())
                     empresa_sinc = st.selectbox(":material/apartment: Empresa:", options=empresas_sinc, key="filtro_empresa_sinc")
-            df_sinc = df.copy()
+            df_sinc = base_sinc.copy()
             if ano_sinc != 'Todos os Anos':
                 df_sinc = df_sinc[df_sinc['Ano'] == int(ano_sinc)]
             if mes_sinc != 'Todos os Meses':
@@ -1383,7 +1415,13 @@ if st.session_state.df_original is not None:
             if 'Status' in df_sinc.columns and 'Criado' in df_sinc.columns:
                 df_sincronizados = df_sinc[df_sinc['Sinc']].copy()
                 if not df_sincronizados.empty:
-                    df_sincronizados = df_sincronizados.sort_values('Criado')
+                    df_sincronizados = df_sincronizados.sort_values('Data')
+                    if modo_data_sinc == "Data da sincronização" and 'Sinc_Data_Confirmada' in df_sincronizados.columns:
+                        n_conf = int(df_sincronizados['Sinc_Data_Confirmada'].sum())
+                        n_reserva = len(df_sincronizados) - n_conf
+                        st.caption(f"{fmt_milhar(n_conf)} sincronismo(s) contados pela data em que o próprio SRE "
+                                   f"modificou o card · {fmt_milhar(n_reserva)} pela data de criação, porque o "
+                                   f"último a modificar o card não foi o SRE dele.")
                     dias_semana_pt = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
                     # Série diária COM os dias úteis zerados (corrige "Dias sem Sinc." sempre 0)
                     serie_sinc = serie_diaria(df_sincronizados['Data'])
